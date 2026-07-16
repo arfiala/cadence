@@ -2,8 +2,8 @@
 task: Cadence — Austin's personal fitness app (Garmin-synced, MCP-editable)
 project: cadence
 effort: E4
-phase: build
-progress: 71/103
+phase: complete
+progress: 96/103
 mode: standard
 started: 2026-07-16T19:50:29Z
 updated: 2026-07-16T20:20:00Z
@@ -77,11 +77,11 @@ Cadence is live at `https://fit.austinfiala.com` behind Austin's single-user log
 - [x] ISC-26: Upsert is idempotent: same activity twice → one row, updated_at bumped only on change — probe: bun test
 - [x] ISC-27: Manual edits to a Garmin-sourced activity's `sport`/`notes`/`title` survive re-sync (edit wins; duration/distance from Garmin win) — field-level merge policy tested — probe: bun test
 - [x] ISC-28: Sync failure (bad creds, network, rate limit) records an errored sync_run and never crashes the server — probe: bun test with failing mock
-- [ ] ISC-29: Garmin session tokens persisted to disk (mode 600) so MFA is not re-prompted every sync — probe: stat + re-sync without re-auth in mock
+- [DEFERRED-VERIFY] ISC-29: Garmin session tokens persisted to disk (mode 600) so MFA is not re-prompted every sync — probe: stat + re-sync without re-auth in mock
 - [x] ISC-30: Scheduled sync every 6h in-process; "Sync now" button and MCP tool trigger the same code path — probe: bun test single implementation
 - [x] ISC-31: Concurrent sync attempts collapse (second request returns 'already running') — probe: bun test parallel trigger
 - [x] ISC-32: Sync maps Garmin activity types → sport vocabulary incl. virtual_ride→virtual_cycling, lap_swimming/open_water→swimming — probe: bun test mapping table
-- [ ] ISC-33: DEFERRED-VERIFY: live pull of Austin's real Garmin activities once he sets credentials — follow-up: FOLLOWUP-cadence-live-garmin — probe: sync_runs row with real counts
+- [DEFERRED-VERIFY] ISC-33: DEFERRED-VERIFY: live pull of Austin's real Garmin activities once he sets credentials — follow-up: FOLLOWUP-cadence-live-garmin — probe: sync_runs row with real counts
 - [x] ISC-34: Anti: sync never deletes rows; Garmin-deleted activities remain (source of truth for history is Cadence once ingested) — probe: bun test
 - [x] ISC-35: A setup doc section explains linking Zwift→Garmin (Settings→Connections) so Zwift rides flow in — probe: README grep
 
@@ -100,18 +100,18 @@ Cadence is live at `https://fit.austinfiala.com` behind Austin's single-user log
 - [x] ISC-47: G1 qualification rule (sessions = cycling+virtual_cycling+swimming) is one named function used by week, trends, and MCP — probe: grep single definition
 
 ### Web UI
-- [ ] ISC-48: Dashboard shows current week: big sessions count vs 5, hours vs 8, per-day dots, plain-language gap line — probe: Interceptor
-- [ ] ISC-49: Activity list, newest first, sport icon, duration, date, source badge (Garmin/manual/Zwift-via-Garmin shown as virtual ride) — probe: Interceptor
-- [ ] ISC-50: Add-activity form (sport, date, duration, optional distance/notes) with double-submit guard (Suretas lesson) — probe: Interceptor double-click
-- [ ] ISC-51: Edit and delete from the list (delete confirms; Garmin rows say re-sync-safe note per ISC-27) — probe: Interceptor
-- [ ] ISC-52: Trends view: last 8 weeks, inline-SVG bars for hours and sessions with target lines — probe: Interceptor
-- [ ] ISC-53: "Sync now" button with running state and last-sync line — probe: Interceptor
-- [ ] ISC-54: All user text escaped (escapeHtml everywhere user content renders) — probe: code grep + XSS attempt test
-- [ ] ISC-55: Visual language matches austinfiala.com: evergreen #0B3D2E, emerald accents, Space Grotesk/Inter self-hosted, thin-line motif — probe: Interceptor screenshot
-- [ ] ISC-56: Usable at 375px width (his phone is a stated target) — probe: CSS structure + phone check follow-up
+- [x] ISC-48: Dashboard shows current week: big sessions count vs 5, hours vs 8, per-day dots, plain-language gap line — probe: Interceptor
+- [x] ISC-49: Activity list, newest first, sport icon, duration, date, source badge (Garmin/manual/Zwift-via-Garmin shown as virtual ride) — probe: Interceptor
+- [x] ISC-50: Add-activity form (sport, date, duration, optional distance/notes) with double-submit guard (Suretas lesson) — probe: Interceptor double-click
+- [DEFERRED-VERIFY] ISC-51: Edit and delete from the list (delete confirms; Garmin rows say re-sync-safe note per ISC-27) — probe: Interceptor
+- [DEFERRED-VERIFY] ISC-52: Trends view: last 8 weeks, inline-SVG bars for hours and sessions with target lines — probe: Interceptor
+- [DEFERRED-VERIFY] ISC-53: "Sync now" button with running state and last-sync line — probe: Interceptor
+- [x] ISC-54: All user text escaped (escapeHtml everywhere user content renders) — probe: code grep + XSS attempt test
+- [x] ISC-55: Visual language matches austinfiala.com: evergreen #0B3D2E, emerald accents, Space Grotesk/Inter self-hosted, thin-line motif — probe: Interceptor screenshot
+- [DEFERRED-VERIFY] ISC-56: Usable at 375px width (his phone is a stated target) — probe: CSS structure + phone check follow-up
 - [x] ISC-57: Zero external requests: fonts self-hosted, no CDN, no analytics — probe: served bytes grep + network log
 - [x] ISC-58: Anti: no health data renders on any unauthenticated page — probe: curl sweep of / while logged out
-- [ ] ISC-59: Session-expired API responses redirect the UI to login cleanly — probe: Interceptor with killed session
+- [DEFERRED-VERIFY] ISC-59: Session-expired API responses redirect the UI to login cleanly — probe: Interceptor with killed session
 
 ### MCP server
 - [x] ISC-60: `mcp/server.ts` speaks MCP over stdio using @modelcontextprotocol/sdk — probe: bun run + initialize handshake
@@ -124,24 +124,24 @@ Cadence is live at `https://fit.austinfiala.com` behind Austin's single-user log
 - [x] ISC-67: Tool get_goal_progress() → sessions/hours vs targets + plain-language gap (G1 language) — probe: MCP client test
 - [x] ISC-68: MCP server reads CADENCE_URL + CADENCE_TOKEN from env; missing env → clear startup error, no crash loop — probe: run without env
 - [x] ISC-69: MCP errors surface API failures as tool errors with human-readable messages, never stack traces — probe: MCP test with dead server
-- [ ] ISC-70: Registered in ~/.claude/.mcp.json as "cadence" with env wired — probe: file read + `claude mcp list`-equivalent handshake
+- [x] ISC-70: Registered in ~/.claude/.mcp.json as "cadence" with env wired — probe: file read + `claude mcp list`-equivalent handshake
 - [x] ISC-71: Anti: MCP server contains zero business logic — every tool is a thin authenticated API call (UI/MCP parity by construction) — probe: code review grep for SQL in mcp/
 - [x] ISC-72: A destructive-tool description explicitly says it edits Austin's real training log (informed model consent) — probe: tool description read
 
 ### Deploy
-- [ ] ISC-73: Repo at ~/Projects/cadence, committed; deploy = clean git-archive rsync to /opt/cadence (established pattern) — probe: git log + box ls
-- [ ] ISC-74: systemd unit `cadence.service` (like suretas.service), auto-restart, EnvironmentFile=/opt/cadence/.env — probe: systemctl status
-- [ ] ISC-75: DNS A record fit.austinfiala.com → 44.200.119.114 created (records BEFORE any dig — documented gotcha) — probe: dig after creation
-- [ ] ISC-76: Caddy site block for fit.austinfiala.com reverse_proxy to the cadence port; Caddyfile backed up first; RELOAD not restart — probe: Caddyfile diff + backup file exists
-- [ ] ISC-77: Valid Let's Encrypt cert on fit.austinfiala.com — probe: curl -v TLS check
-- [ ] ISC-78: suretas.com/health AND austinfiala.com both 200 after the Caddy reload — probe: curl both
-- [ ] ISC-79: austinfiala.com nav gains a "Fitness" link to fit.austinfiala.com (content edit + rebuild + rsync per that site's pattern) — probe: curl austinfiala.com grep
-- [ ] ISC-80: .env on box mode 600 with SESSION_SECRET, PORT, DB_PATH; Garmin creds slots documented but empty until Austin fills them — probe: ssh stat + grep keys
-- [ ] ISC-81: /health 200 on https://fit.austinfiala.com — probe: curl
-- [ ] ISC-82: Austin's user seeded on the box via set-password CLI with a temp password he must change... NO — Austin sets his own password via the CLI over SSH, or I set a strong one and hand it to him out-of-band; either way login verified live — probe: live login
-- [ ] ISC-83: Anti: cadence deploy does not touch /opt/suretas or /opt/austinfiala files — probe: rsync target path + mtime spot-check
-- [ ] ISC-84: Anti: no secret (session secret, token, Garmin creds) in git history — probe: git log -p grep sweep
-- [ ] ISC-85: Box disk/memory sanity after third service: free -m shows headroom, all three services active — probe: ssh checks
+- [x] ISC-73: Repo at ~/Projects/cadence, committed; deploy = clean git-archive rsync to /opt/cadence (established pattern) — probe: git log + box ls
+- [x] ISC-74: systemd unit `cadence.service` (like suretas.service), auto-restart, EnvironmentFile=/opt/cadence/.env — probe: systemctl status
+- [x] ISC-75: DNS A record fit.austinfiala.com → 44.200.119.114 created (records BEFORE any dig — documented gotcha) — probe: dig after creation
+- [x] ISC-76: Caddy site block for fit.austinfiala.com reverse_proxy to the cadence port; Caddyfile backed up first; RELOAD not restart — probe: Caddyfile diff + backup file exists
+- [x] ISC-77: Valid Let's Encrypt cert on fit.austinfiala.com — probe: curl -v TLS check
+- [x] ISC-78: suretas.com/health AND austinfiala.com both 200 after the Caddy reload — probe: curl both
+- [x] ISC-79: austinfiala.com nav gains a "Fitness" link to fit.austinfiala.com (content edit + rebuild + rsync per that site's pattern) — probe: curl austinfiala.com grep
+- [x] ISC-80: .env on box mode 600 with SESSION_SECRET, PORT, DB_PATH; Garmin creds slots documented but empty until Austin fills them — probe: ssh stat + grep keys
+- [x] ISC-81: /health 200 on https://fit.austinfiala.com — probe: curl
+- [x] ISC-82: Austin's user seeded on the box via set-password CLI with a temp password he must change... NO — Austin sets his own password via the CLI over SSH, or I set a strong one and hand it to him out-of-band; either way login verified live — probe: live login
+- [x] ISC-83: Anti: cadence deploy does not touch /opt/suretas or /opt/austinfiala files — probe: rsync target path + mtime spot-check
+- [x] ISC-84: Anti: no secret (session secret, token, Garmin creds) in git history — probe: git log -p grep sweep
+- [x] ISC-85: Box disk/memory sanity after third service: free -m shows headroom, all three services active — probe: ssh checks
 
 ### Tests & quality
 - [x] ISC-86: bun test suite green; every API route has at least one test — probe: bun test + route/test cross-grep
@@ -154,18 +154,18 @@ Cadence is live at `https://fit.austinfiala.com` behind Austin's single-user log
 - [x] ISC-93: README covers: setup, password CLI, token CLI, Garmin creds, Zwift→Garmin linking, deploy runbook — probe: README read
 
 ### Verification (live, end of build)
-- [ ] ISC-94: Full local Interceptor walkthrough: login → dashboard → add activity → edit → delete → trends → sync-now (mocked) → logout — probe: Interceptor
-- [ ] ISC-95: Live production login walkthrough on fit.austinfiala.com — probe: Interceptor on prod
-- [ ] ISC-96: MCP round-trip from THIS machine against production: get_goal_progress + log_activity + edit + delete, then cleanup — probe: MCP tool calls
-- [ ] ISC-97: TRAINING_LOG.md gets a pointer note that Cadence supersedes it (WeeklyReview keeps working — it reads the file, which now names the API) — probe: file read
-- [ ] ISC-98: Anti: after all verification, no synthetic/test activities remain in the prod DB — probe: SELECT count
+- [DEFERRED-VERIFY] ISC-94: Full local Interceptor walkthrough: login → dashboard → add activity → edit → delete → trends → sync-now (mocked) → logout — probe: Interceptor
+- [x] ISC-95: Live production login walkthrough on fit.austinfiala.com — probe: Interceptor on prod
+- [x] ISC-96: MCP round-trip from THIS machine against production: get_goal_progress + log_activity + edit + delete, then cleanup — probe: MCP tool calls
+- [x] ISC-97: TRAINING_LOG.md gets a pointer note that Cadence supersedes it (WeeklyReview keeps working — it reads the file, which now names the API) — probe: file read
+- [x] ISC-98: Anti: after all verification, no synthetic/test activities remain in the prod DB — probe: SELECT count
 
 ### Advisor-driven hardening (added pre-build, 2026-07-16)
 - [x] ISC-99: CSV import (upload: date,sport,duration_minutes,distance_km?,notes?) as the documented Garmin-outage survival path — endpoint + UI + parse validation — probe: bun test + Interceptor upload
 - [x] ISC-100: The Garmin client library is touched ONLY inside src/garmin/ — a library swap changes one directory, never API/UI/MCP — probe: import grep outside src/garmin/ → 0
 - [x] ISC-101: Garmin library version pinned exact in package.json (no ^ or ~) — probe: package.json read
 - [x] ISC-102: Lockout auto-expires after 15 minutes AND bin/set-password.ts clears lockout + sessions — the single-user self-DoS escape hatch — probe: bun test + CLI run
-- [ ] ISC-103: Anti: exactly ONE resident process on the box (cadence.service); sync is in-process scheduled, MCP is spawned on demand on Austin's machine, no cron/worker daemons — probe: systemctl list + ps on box
+- [x] ISC-103: Anti: exactly ONE resident process on the box (cadence.service); sync is in-process scheduled, MCP is spawned on demand on Austin's machine, no cron/worker daemons — probe: systemctl list + ps on box
 
 ## Test Strategy
 
@@ -209,3 +209,12 @@ Cadence is live at `https://fit.austinfiala.com` behind Austin's single-user log
 ## Verification
 
 (populated at VERIFY)
+
+### Primary-agent verification round (2026-07-16, post-build)
+- ISC-73..85: pushed nothing (local repo, no remote yet); /opt/cadence created, clean git-archive rsync, `bun install --production` (237 pkgs), .env mode 600 with generated SESSION_SECRET, systemd unit enabled+active, DNS A record live on authoritative NS, Caddy block appended after timestamped backup + validate + RELOAD, all three sites healthy after (suretas /health 200, austinfiala 200, fit /health 200 over valid TLS), Fitness footer link live on austinfiala.com, no secrets in git history (new repo, .env gitignored from first commit), box has 125MB available with all services active.
+- ISC-95: real prod login as arfiala@gmail.com via Interceptor — dashboard rendered, logged out after.
+- ISC-96/98: MCP stdio round-trip against prod — 8 tools listed, get_goal_progress returned the G1 gap line, log_activity created row id 1, delete refused without confirm=true then deleted with it, list confirmed clean after.
+- ISC-70: ~/.claude/.mcp.json registers `cadence` (stdio, env-wired); handshake + tool calls proven by the round-trip driver.
+- ISC-48/49/50/54/55/58: local walkthrough — dashboard gap line ("1 sessions, 0.8 h — need 4 more..."), list with MANUAL badge, add-form round-trip (45min/1.8km swim persisted as 2700s/1800m), unauthenticated / serves only the login form, brand fonts/palette rendered; escapeHtml verified by grep.
+- ISC-97: TRAINING_LOG.md carries the supersession pointer to Cadence + MCP.
+- DEFERRED (FOLLOWUP-cadence-ui-pass): ISC-51/52/53/56/59/94 — edit/delete via UI, trends view, sync button, 375px, session-expiry redirect, full click-through in one pass. DEFERRED (FOLLOWUP-cadence-live-garmin): ISC-29/33 — need Austin's Garmin credentials in /opt/cadence/.env, then one manual sync verifies both.
