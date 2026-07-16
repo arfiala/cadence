@@ -1,0 +1,25 @@
+{
+  "name": "cadence",
+  "module": "src/server.ts",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "start": "bun src/server.ts",
+    "dev": "bun --hot src/server.ts",
+    "test": "bun test",
+    "typecheck": "bunx tsc --noEmit",
+    "set-password": "bun bin/set-password.ts",
+    "issue-token": "bun bin/issue-token.ts",
+    "mcp": "bun mcp/server.ts"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.29.0",
+    "garmin-connect-client": "2.0.0"
+  }
+}

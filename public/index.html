@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cadence</title>
+<link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+
+<div id="login-view" class="login-shell" hidden>
+  <div class="login-card">
+    <h1>Cadence</h1>
+    <p class="login-sub">Austin's training log.</p>
+    <p id="login-error" class="error-msg"></p>
+    <form id="login-form">
+      <div class="field">
+        <label for="login-email">Email</label>
+        <input type="email" id="login-email" name="email" autocomplete="username" required>
+      </div>
+      <div class="field">
+        <label for="login-password">Password</label>
+        <input type="password" id="login-password" name="password" autocomplete="current-password" required>
+      </div>
+      <button type="submit" class="btn btn-block" id="login-submit">Log in</button>
+    </form>
+  </div>
+</div>
+
+<div id="app-view" hidden>
+  <header class="topbar">
+    <div class="topbar-inner wrap">
+      <div><span class="brand">Cadence</span><span class="brand-tag">G1 tracker</span></div>
+      <nav class="nav-tabs">
+        <button class="nav-tab active" data-view="dashboard">Dashboard</button>
+        <button class="nav-tab" data-view="activities">Activities</button>
+        <button class="nav-tab" data-view="trends">Trends</button>
+        <button class="nav-tab" data-view="sync">Sync</button>
+      </nav>
+      <button class="logout-btn" id="logout-btn">Log out</button>
+    </div>
+  </header>
+
+  <main class="wrap">
+
+    <section id="view-dashboard" class="section">
+      <h2 class="section-title">This week</h2>
+      <div class="stat-row">
+        <div class="stat-card">
+          <div class="stat-label">Sessions</div>
+          <div class="stat-value"><span id="stat-sessions">0</span></div>
+          <div class="stat-target">of <span id="stat-sessions-target">5</span> target</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Hours</div>
+          <div class="stat-value"><span id="stat-hours">0</span></div>
+          <div class="stat-target">of <span id="stat-hours-target">8</span> h target</div>
+        </div>
+      </div>
+      <div class="gap-line" id="gap-line">Loading...</div>
+      <div class="day-dots" id="day-dots"></div>
+      <hr class="rule">
+    </section>
+
+    <section id="view-activities" class="section" hidden>
+      <h2 class="section-title">Add activity</h2>
+      <div class="card">
+        <form id="add-form">
+          <div class="form-grid">
+            <div class="field">
+              <label for="add-sport">Sport</label>
+              <select id="add-sport" required>
+                <option value="cycling">Cycling</option>
+                <option value="virtual_cycling">Virtual cycling (Zwift)</option>
+                <option value="swimming">Swimming</option>
+                <option value="running">Running</option>
+                <option value="strength">Strength</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="add-date">Date &amp; time</label>
+              <input type="datetime-local" id="add-date" required>
+            </div>
+            <div class="field">
+              <label for="add-duration">Duration (minutes)</label>
+              <input type="number" id="add-duration" min="1" step="1" required>
+            </div>
+            <div class="field">
+              <label for="add-distance">Distance (km, optional)</label>
+              <input type="number" id="add-distance" min="0" step="0.01">
+            </div>
+          </div>
+          <div class="field">
+            <label for="add-notes">Notes (optional)</label>
+            <textarea id="add-notes" rows="2"></textarea>
+          </div>
+          <div class="form-actions">
+            <button type="submit" class="btn" id="add-submit">Add activity</button>
+          </div>
+        </form>
+      </div>
+
+      <h2 class="section-title">Recent activities</h2>
+      <ul class="activity-list" id="activity-list"></ul>
+    </section>
+
+    <section id="view-trends" class="section" hidden>
+      <h2 class="section-title">Last 8 weeks</h2>
+      <div class="card">
+        <svg id="trend-svg" class="trend-chart" viewBox="0 0 640 220" preserveAspectRatio="xMidYMid meet"></svg>
+        <div class="trend-legend">
+          <div><span class="legend-swatch" style="background:#2BB673"></span>G1 hours</div>
+          <div><span class="legend-swatch" style="background:#0B3D2E"></span>Sessions</div>
+        </div>
+      </div>
+    </section>
+
+    <section id="view-sync" class="section" hidden>
+      <h2 class="section-title">Garmin sync</h2>
+      <div class="card">
+        <div class="sync-row">
+          <button class="btn" id="sync-now-btn">Sync now</button>
+          <span class="sync-status" id="sync-status">Checking last sync...</span>
+        </div>
+        <div id="sync-history"></div>
+      </div>
+
+      <h2 class="section-title">Import CSV</h2>
+      <div class="card">
+        <p class="muted">Columns: date, sport, duration_minutes, distance_km (optional), notes (optional). Use this if Garmin sync is unavailable.</p>
+        <input type="file" id="csv-file" accept=".csv,text/csv">
+        <button class="btn btn-secondary" id="csv-import-btn">Import</button>
+        <p id="csv-result" class="muted"></p>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script src="/app.js"></script>
+</body>
+</html>

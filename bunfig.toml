@@ -1,0 +1,6 @@
+[test]
+# Preload sets DB_PATH to an isolated temp file and disables the Garmin
+# scheduler BEFORE any src/ module (which binds the db singleton at import
+# time) is loaded, so tests never touch a real cadence.db or make network
+# calls. Runs once per test process, before any test file.
+preload = ["./test/setup.ts"]
