@@ -125,6 +125,49 @@ Garmin integration covers Zwift + outdoor rides + swims. In Zwift:
 **Settings → Connections → Garmin Connect** and authorize. Zwift rides then
 appear in Cadence as `virtual_cycling` (they count toward G1).
 
+## ZwiftPower race results
+
+ZwiftPower holds race data (finishing category, position, power) that never
+flows through Garmin, so Cadence connects to it directly. The feature is
+**dormant until configured**: with `ZWIFT_USERNAME` / `ZWIFT_PASSWORD` unset
+there is no scheduler, no background work, no errors, and the **Races** tab
+shows a "not connected" panel.
+
+To connect, set in `.env`:
+
+- `ZWIFT_USERNAME` / `ZWIFT_PASSWORD`: your Zwift SSO credentials (used to log
+  in to ZwiftPower). These live only on the box, never in git, the DB, or logs.
+- `ZWIFT_PROFILE_ID`: your numeric ZwiftPower profile id (the number in your
+  `zwiftpower.com/profile.php?z=NNNN` URL).
+- `ZWIFT_COOKIE_PATH` (optional): where the session cookies are persisted,
+  mode 600, so re-auth is not needed every sync. Defaults to
+  `./zwiftpower-tokens/session.json`.
+
+**One-time ZwiftPower activation:** your ZwiftPower profile must be activated
+once by logging in at `zwiftpower.com` and linking your Zwift account. Until
+that is done, the results feed is empty even with valid credentials.
+
+Sync every 6h in-process (only when configured), or on demand via the "Sync
+ZwiftPower" button on the Races tab, or the `get_race_results` MCP tool.
+Results upsert idempotently and never touch the `activities` table.
+
+## Training load (fitness, fatigue, form)
+
+Cadence computes a TrainingPeaks-equivalent training-load model natively (the
+TrainingPeaks partner API is closed to individuals). Per activity it picks the
+best available tier: a power-based load when a power number and your FTP are
+present, else a heart-rate-based load from average HR and your LTHR, else a
+duration estimate. From the daily load series it derives Fitness (42-day
+average), Fatigue (7-day average), and Form (freshness), shown as an inline
+SVG chart on the **Trends** tab.
+
+Set your thresholds on the Trends tab (or `PATCH /api/settings` with
+`ftp_watts` / `lthr_bpm`) for a sharper estimate. With no thresholds set the
+duration tier still produces a real number and the UI prompts you to set them.
+`GET /api/metrics/training-load` returns the daily series; the
+`get_training_load` MCP tool returns the current fitness / fatigue / form and
+this week's load.
+
 ## CSV import (Garmin-outage survival path)
 
 If the unofficial Garmin library breaks, import history by CSV instead.
@@ -153,8 +196,9 @@ zero SQL, zero business logic (UI/MCP parity by construction). Reads
 
 Tools: `get_week_summary`, `get_goal_progress`, `list_activities`,
 `log_activity`, `edit_activity`, `delete_activity`, `trigger_sync`,
-`get_sync_status`. The three write tools name Austin's *real training log* in
-their descriptions (informed model consent).
+`get_sync_status`, `get_race_results`, `get_training_load`. The three write
+tools name Austin's *real training log* in their descriptions (informed model
+consent).
 
 ## Tests & quality
 
