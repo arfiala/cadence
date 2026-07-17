@@ -2,11 +2,11 @@
 task: Cadence — Austin's personal fitness app (Garmin-synced, MCP-editable)
 project: cadence
 effort: E4
-phase: build
-progress: 96/117
+phase: verify
+progress: 108/117
 mode: standard
 started: 2026-07-16T19:50:29Z
-updated: 2026-07-16T23:28:00Z
+updated: 2026-07-17T01:55:00Z
 ---
 
 ## Problem
@@ -168,19 +168,19 @@ Cadence is live at `https://fit.austinfiala.com` behind Austin's single-user log
 - [x] ISC-103: Anti: exactly ONE resident process on the box (cadence.service); sync is in-process scheduled, MCP is spawned on demand on Austin's machine, no cron/worker daemons — probe: systemctl list + ps on box
 
 ### Stretching plan — ATG daily routine (added 2026-07-16, Austin's request)
-- [ ] ISC-104: "Stretch" tab appears in the nav and switches to the stretch view — probe: Interceptor click
-- [ ] ISC-105: Plan data contains exactly 8 items in ATG order (backward-walk warm-up, ATG split squat, couch stretch, elephant walk, pancake good morning, butterfly, pigeon, calf stretch), each with name, dose, target area, coaching cue — probe: data read + count
-- [ ] ISC-106: All 8 stretch SVGs served 200 from /img/stretch/ — probe: curl ×8
-- [ ] ISC-107: Anti: SVGs make zero external requests (no http refs inside) — probe: grep
-- [ ] ISC-108: "Log stretch session" button creates a manual activity (sport=strength, 15 min, title "ATG Daily Stretch") via the existing activities API — probe: click + API read-back
-- [ ] ISC-109: Anti: a logged stretch session never counts toward G1 qualification — probe: bun test
-- [ ] ISC-110: Log button disables during the request (double-submit guard, Suretas lesson) — probe: code grep + double-click test
-- [ ] ISC-111: After logging, the view shows a "done today" state that survives reload (derived from today's activities) — probe: Interceptor reload
-- [ ] ISC-112: Anti: zero new runtime dependencies — probe: package.json/bun.lock diff
-- [ ] ISC-113: Anti: zero schema changes — probe: db.ts diff
-- [ ] ISC-114: bun test green (incl. new tests) and bunx tsc --noEmit clean — probe: Bash
-- [ ] ISC-115: Stretch view single-column readable at 375px via existing responsive CSS — probe: CSS structural check (phone screenshot rides FOLLOWUP-cadence-ui-pass)
-- [ ] ISC-116: Anti: dashboard, activities, trends, sync views render unchanged — probe: Interceptor spot-check
+- [x] ISC-104: "Stretch" tab appears in the nav and switches to the stretch view — probe: Interceptor click
+- [x] ISC-105: Plan data contains exactly 8 items in ATG order (backward-walk warm-up, ATG split squat, couch stretch, elephant walk, pancake good morning, butterfly, pigeon, calf stretch), each with name, dose, target area, coaching cue — probe: data read + count
+- [x] ISC-106: All 8 stretch SVGs served 200 from /img/stretch/ — probe: curl ×8
+- [x] ISC-107: Anti: SVGs make zero external requests (no http refs inside) — probe: grep
+- [x] ISC-108: "Log stretch session" button creates a manual activity (sport=strength, 15 min, title "ATG Daily Stretch") via the existing activities API — probe: click + API read-back
+- [x] ISC-109: Anti: a logged stretch session never counts toward G1 qualification — probe: bun test
+- [x] ISC-110: Log button disables during the request (double-submit guard, Suretas lesson) — probe: code grep + double-click test
+- [x] ISC-111: After logging, the view shows a "done today" state that survives reload (derived from today's activities) — probe: Interceptor reload
+- [x] ISC-112: Anti: zero new runtime dependencies — probe: package.json/bun.lock diff
+- [x] ISC-113: Anti: zero schema changes — probe: db.ts diff
+- [x] ISC-114: bun test green (incl. new tests) and bunx tsc --noEmit clean — probe: Bash
+- [x] ISC-115: Stretch view single-column readable at 375px via existing responsive CSS — probe: CSS structural check (phone screenshot rides FOLLOWUP-cadence-ui-pass)
+- [x] ISC-116: Anti: dashboard, activities, trends, sync views render unchanged — probe: Interceptor spot-check
 - [ ] ISC-117: Deployed to production and the stretch tab live-verified — probe: Interceptor on fit.austinfiala.com (gated on Austin's deploy approval)
 
 ## Test Strategy
@@ -234,7 +234,24 @@ Cadence is live at `https://fit.austinfiala.com` behind Austin's single-user log
 - ISC-97: TRAINING_LOG.md carries the supersession pointer to Cadence + MCP.
 - DEFERRED (FOLLOWUP-cadence-ui-pass): ISC-51/52/53/56/59/94 — edit/delete via UI, trends view, sync button, 375px, session-expiry redirect, full click-through in one pass. DEFERRED (FOLLOWUP-cadence-live-garmin): ISC-29/33 — need Austin's Garmin credentials in /opt/cadence/.env, then one manual sync verifies both.
 
+### Stretch-plan verification round (2026-07-17, commit b980e5b)
+- ISC-104/105: Interceptor walkthrough on throwaway instance (port 4199, temp DB) — Stretch tab in nav, all 8 cards rendered in ATG order with name/dose/target/cue; full-page screenshot reviewed.
+- ISC-106: all 8 SVGs → `200 image/svg+xml` over HTTP; encoded (`..%2f`) and `--path-as-is` traversal probes fall through to the HTML app shell, never a composed file path; charset-reject tested in suite.
+- ISC-107: refined grep — zero fetchable external refs (only xmlns namespace URIs; first grep false-positived on xmlns).
+- ISC-108: button click → API read-back showed exact row (sport=strength, duration_s=900, title "ATG Daily Stretch").
+- ISC-109: bun test (isG1Qualifying + weekSummary) AND live dashboard after logging: "0 sessions, 0 h — need 5 more" — G1 unpolluted.
+- ISC-110: `stretchLogInFlight` + `btn.disabled` with `finally` re-enable (code read); pre-click guard confirmed.
+- ISC-111: fresh page load → Stretch tab shows "✓ Logged today" (API-derived, reload-proof).
+- ISC-112/113: git diff on package.json/bun.lock empty; no schema changes (db.ts untouched).
+- ISC-114: 97 pass / 0 fail (233 expects), tsc clean — run independently by primary, not just builder-reported.
+- ISC-115: structural — .stretch-list flex column, img max-width 100%, 480px breakpoint rules; phone screenshot rides FOLLOWUP-cadence-ui-pass.
+- ISC-116: Dashboard/Activities/Trends/Sync all rendered post-change in the same walkthrough.
+- Cleanup: throwaway DB + WAL + log deleted, verify server killed by port-matched PID, session screenshots removed, Interceptor tab closed.
+- ISC-117: PENDING Austin's deploy approval (clean git-archive rsync + systemd restart, no migration).
+
 ## Changelog
 
 - conjectured: garmin-connect-client was the right library because it alone documented an MFA resume flow (ISC-24 decision at build time). refuted by: first real sync in production — its native dependency node-libcurl-ja3 binds raw V8 C++ APIs (undefined symbol v8::Object::DefineOwnProperty) that Bun does not implement; the module can never load under Bun, and every sync crashed the service (systemd auto-restart absorbed it). learned: for a Bun deployment, "zero native modules" is a HARD library-selection criterion that outranks feature checklists — a dependency's install scripts being blocked by default (bun pm untrusted) is the early warning, and MFA-capability claims must be probed on the deploy runtime, not on paper. criterion now: ISC-92 effectively extends to "no native .node modules in the production tree" (verified: find -name '*.node' → 0 after the swap), and ISC-24's choice is superseded by garmin-connect-sdk@1.0.0-alpha.4 (pure TS, typed MFA errors, FileTokenStorage restore) — exact-pinned per ISC-101, isolated per ISC-100, which made the swap a one-file change exactly as designed.
+
+- conjectured: the static handler would serve /img/stretch/ subdirectory files because fonts/ appeared to be a served subdirectory (stretch-plan brief, 2026-07-16). refuted by: reading src/server.ts — STATIC_ROUTES is a flat allowlist where every fonts file is its own explicit key; no wildcard or directory serving exists, so subdirectory files 404'd into the app-shell fallthrough. learned: Cadence's static surface is a deliberate explicit allowlist (part of the health-data-private-by-construction posture); any new static asset class needs its own route, and that route must constrain the path to a server-composed string. criterion now: ISC-106 passes through a regex-gated route (`^/img/stretch/([a-z0-9-]+)\.svg$`) with traversal probes verified live and a charset-reject test in the suite.
 
