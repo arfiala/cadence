@@ -22,6 +22,8 @@ function serializeActivity(row: ActivityRow) {
     distance_m: row.distance_m,
     calories: row.calories,
     avg_hr: row.avg_hr,
+    avg_power: row.avg_power,
+    norm_power: row.norm_power,
     title: row.title,
     notes: row.notes,
     created_at: row.created_at,

@@ -13,6 +13,10 @@ export type GarminActivity = {
   distanceMeters: number | null;
   calories: number | null;
   avgHr: number | null;
+  // Power metrics (ISC-135), null unless the Garmin summary carried them
+  // (power meter or smart trainer). Feed the native training-load engine.
+  avgPower: number | null;
+  normPower: number | null;
 };
 
 export interface GarminClient {

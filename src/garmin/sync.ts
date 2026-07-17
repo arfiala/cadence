@@ -40,8 +40,8 @@ function upsertActivity(activity: GarminActivity): { isNew: boolean; changed: bo
   if (existing === null) {
     db.query(
       `INSERT INTO activities
-         (source, garmin_id, sport, raw_type, start_time, duration_s, distance_m, calories, avg_hr, title, notes)
-       VALUES ('garmin', ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)`,
+         (source, garmin_id, sport, raw_type, start_time, duration_s, distance_m, calories, avg_hr, avg_power, norm_power, title, notes)
+       VALUES ('garmin', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)`,
     ).run(
       activity.garminId,
       mappedSport,
@@ -51,6 +51,8 @@ function upsertActivity(activity: GarminActivity): { isNew: boolean; changed: bo
       activity.distanceMeters,
       activity.calories,
       activity.avgHr,
+      activity.avgPower,
+      activity.normPower,
       activity.title,
     );
     return { isNew: true, changed: true };
@@ -72,16 +74,20 @@ function upsertActivity(activity: GarminActivity): { isNew: boolean; changed: bo
     existing.duration_s !== activity.durationSeconds ||
     existing.distance_m !== activity.distanceMeters ||
     existing.calories !== activity.calories ||
-    existing.avg_hr !== activity.avgHr;
+    existing.avg_hr !== activity.avgHr ||
+    existing.avg_power !== activity.avgPower ||
+    existing.norm_power !== activity.normPower;
 
   if (!changed) {
     return { isNew: false, changed: false };
   }
 
+  // Power (like duration/distance/calories/HR) is a Garmin-owned number, so it
+  // always reflects the latest sync, never subject to the human-edit merge.
   db.query(
     `UPDATE activities SET
        sport = ?, raw_type = ?, start_time = ?, duration_s = ?, distance_m = ?,
-       calories = ?, avg_hr = ?, title = ?, updated_at = ?
+       calories = ?, avg_hr = ?, avg_power = ?, norm_power = ?, title = ?, updated_at = ?
      WHERE id = ?`,
   ).run(
     nextSport,
@@ -91,6 +97,8 @@ function upsertActivity(activity: GarminActivity): { isNew: boolean; changed: bo
     activity.distanceMeters,
     activity.calories,
     activity.avgHr,
+    activity.avgPower,
+    activity.normPower,
     nextTitle,
     nowIso(),
     existing.id,

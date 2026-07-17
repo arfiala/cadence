@@ -130,7 +130,23 @@ function toGarminActivity(raw: Record<string, unknown>): GarminActivity {
     distanceMeters: typeof raw.distance === "number" ? raw.distance : null,
     calories: typeof raw.calories === "number" ? raw.calories : null,
     avgHr: typeof raw.averageHR === "number" ? raw.averageHR : null,
+    // Garmin's activity summary carries power under a few names depending on
+    // sport/firmware; the SDK's zod .passthrough() keeps them. We read the
+    // common ones defensively and leave null when none are present. (See ISA
+    // Decisions: the exact field names cannot be confirmed without a live
+    // power-meter activity, so this maps the documented Garmin Connect summary
+    // keys and degrades to null otherwise.)
+    avgPower: firstNumber(raw.avgPower, raw.averagePower),
+    normPower: firstNumber(raw.normPower, raw.normalizedPower, raw.normPowerBike),
   };
+}
+
+// Returns the first argument that is a finite positive number, else null.
+function firstNumber(...values: unknown[]): number | null {
+  for (const v of values) {
+    if (typeof v === "number" && Number.isFinite(v) && v > 0) return Math.round(v);
+  }
+  return null;
 }
 
 export function createRealGarminClient(): GarminClient {

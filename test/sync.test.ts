@@ -41,6 +41,8 @@ const RIDE: GarminActivity = {
   distanceMeters: 30000,
   calories: 700,
   avgHr: 145,
+  avgPower: null,
+  normPower: null,
 };
 
 describe("upsert (ISC-25, ISC-26)", () => {
