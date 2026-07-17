@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 220" role="img" aria-labelledby="t">
+  <title id="t">Butterfly: seated, soles of the feet together, knees sinking toward the floor</title>
+  <g fill="none" stroke="#0B3D2E" stroke-width="7" stroke-linecap="round" stroke-linejoin="round">
+    <!-- torso upright -->
+    <line x1="160" y1="158" x2="160" y2="98"/>
+    <!-- thighs out to knees -->
+    <line x1="160" y1="158" x2="106" y2="172"/>
+    <line x1="160" y1="158" x2="214" y2="172"/>
+    <!-- shins folding back in, feet together -->
+    <polyline points="106,172 150,184"/>
+    <polyline points="214,172 170,184"/>
+    <line x1="150" y1="184" x2="170" y2="184"/>
+    <!-- hands pressing knees -->
+    <polyline points="160,112 112,166"/>
+    <polyline points="160,112 208,166"/>
+  </g>
+  <circle cx="160" cy="82" r="13" fill="#0B3D2E"/>
+  <!-- highlight: groin / inner thighs -->
+  <g fill="none" stroke="#2BB673" stroke-width="8" stroke-linecap="round" opacity="0.85">
+    <line x1="154" y1="160" x2="116" y2="170"/>
+    <line x1="166" y1="160" x2="204" y2="170"/>
+  </g>
+  <line x1="20" y1="192" x2="300" y2="192" stroke="#9FB0A8" stroke-width="2.5" stroke-linecap="round"/>
+</svg>

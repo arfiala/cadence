@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 220" role="img" aria-labelledby="t">
+  <title id="t">Backward walk warm-up: walk backward with small smooth steps</title>
+  <g fill="none" stroke="#0B3D2E" stroke-width="7" stroke-linecap="round" stroke-linejoin="round">
+    <!-- torso -->
+    <line x1="185" y1="65" x2="180" y2="122"/>
+    <!-- arms -->
+    <polyline points="183,80 163,108"/>
+    <polyline points="183,80 203,106"/>
+    <!-- trailing leg (stepping back) -->
+    <polyline points="180,122 156,152 146,190"/>
+    <polyline points="146,190 134,190"/>
+    <!-- support leg -->
+    <polyline points="180,122 196,155 205,190"/>
+    <polyline points="205,190 218,190"/>
+  </g>
+  <!-- head -->
+  <circle cx="185" cy="52" r="13" fill="#0B3D2E"/>
+  <!-- highlight: shins/knees working -->
+  <g fill="none" stroke="#2BB673" stroke-width="8" stroke-linecap="round" opacity="0.85">
+    <line x1="156" y1="152" x2="146" y2="190"/>
+    <line x1="196" y1="155" x2="205" y2="190"/>
+  </g>
+  <!-- movement arrow (backward) -->
+  <g stroke="#2BB673" stroke-width="5" stroke-linecap="round">
+    <line x1="130" y1="60" x2="80" y2="60"/>
+  </g>
+  <polygon points="66,60 82,52 82,68" fill="#2BB673"/>
+  <!-- floor -->
+  <line x1="20" y1="192" x2="300" y2="192" stroke="#9FB0A8" stroke-width="2.5" stroke-linecap="round"/>
+</svg>

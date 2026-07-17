@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 220" role="img" aria-labelledby="t">
+  <title id="t">Elephant walk: forward fold, hands down, straighten one knee at a time</title>
+  <g fill="none" stroke="#0B3D2E" stroke-width="7" stroke-linecap="round" stroke-linejoin="round">
+    <!-- torso folded from high hips to low shoulders -->
+    <line x1="200" y1="84" x2="138" y2="112"/>
+    <!-- arms to floor -->
+    <polyline points="138,112 128,186"/>
+    <polyline points="142,116 140,186"/>
+    <!-- bent leg -->
+    <polyline points="200,84 178,142 186,190"/>
+    <polyline points="186,190 172,190"/>
+    <!-- straight leg -->
+    <line x1="200" y1="84" x2="208" y2="190"/>
+    <polyline points="208,190 222,190"/>
+  </g>
+  <circle cx="128" cy="130" r="13" fill="#0B3D2E"/>
+  <!-- highlight: hamstring of the straight leg -->
+  <g fill="none" stroke="#2BB673" stroke-width="8" stroke-linecap="round" opacity="0.85">
+    <line x1="201" y1="90" x2="208" y2="188"/>
+  </g>
+  <line x1="20" y1="192" x2="300" y2="192" stroke="#9FB0A8" stroke-width="2.5" stroke-linecap="round"/>
+</svg>

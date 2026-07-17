@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 220" role="img" aria-labelledby="t">
+  <title id="t">Calf stretch: ball of the foot on a step, straight knee, heel driving down</title>
+  <!-- step -->
+  <rect x="196" y="158" width="80" height="34" fill="#E8EFEA" stroke="#9FB0A8" stroke-width="2.5" rx="3"/>
+  <!-- wall -->
+  <line x1="296" y1="40" x2="296" y2="156" stroke="#9FB0A8" stroke-width="5" stroke-linecap="round"/>
+  <g fill="none" stroke="#0B3D2E" stroke-width="7" stroke-linecap="round" stroke-linejoin="round">
+    <!-- torso -->
+    <line x1="222" y1="55" x2="226" y2="102"/>
+    <!-- arms to wall -->
+    <polyline points="224,66 288,88"/>
+    <polyline points="224,70 288,98"/>
+    <!-- working leg: straight, heel below step edge -->
+    <polyline points="226,102 216,128 206,150"/>
+    <polyline points="222,146 206,150 198,166"/>
+    <!-- rear leg resting on step -->
+    <polyline points="226,102 240,132 246,156"/>
+    <polyline points="246,156 260,156"/>
+  </g>
+  <circle cx="222" cy="42" r="13" fill="#0B3D2E"/>
+  <!-- highlight: calf of the straight leg -->
+  <g fill="none" stroke="#2BB673" stroke-width="8" stroke-linecap="round" opacity="0.85">
+    <line x1="215" y1="126" x2="205" y2="149"/>
+  </g>
+  <line x1="20" y1="192" x2="196" y2="192" stroke="#9FB0A8" stroke-width="2.5" stroke-linecap="round"/>
+</svg>

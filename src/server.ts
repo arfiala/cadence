@@ -110,6 +110,15 @@ export async function fetchHandler(req: Request, server: IpProvider): Promise<Re
     return serveStatic(staticFile);
   }
 
+  // Stretch illustrations live in a subdirectory (public/img/stretch/), unlike
+  // the flat allowlist above. The slug is constrained to [a-z0-9-] with a fixed
+  // `.svg` suffix, so there is no `.`/`/` for a traversal — the served path is
+  // still a server-composed fixed string, never the raw request path.
+  const stretchImg = /^\/img\/stretch\/([a-z0-9-]+)\.svg$/.exec(path);
+  if (stretchImg !== null) {
+    return serveStatic(join("img", "stretch", `${stretchImg[1]}.svg`));
+  }
+
   // Every other path (including "/") serves the single app shell. The HTML
   // itself never embeds health data (ISC-58) — the shell's JS calls the
   // authenticated API and toggles between a login view and the dashboard.

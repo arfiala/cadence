@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 220" role="img" aria-labelledby="t">
+  <title id="t">Pancake good morning: wide straddle, hips back, flat back reaching forward</title>
+  <g fill="none" stroke="#0B3D2E" stroke-width="7" stroke-linecap="round" stroke-linejoin="round">
+    <!-- wide legs (front view, seated straddle) -->
+    <line x1="160" y1="158" x2="74" y2="182"/>
+    <polyline points="74,182 64,174"/>
+    <line x1="160" y1="158" x2="246" y2="182"/>
+    <polyline points="246,182 256,174"/>
+    <!-- torso hinged toward viewer (foreshortened) -->
+    <line x1="160" y1="158" x2="160" y2="116"/>
+    <!-- arms reaching forward-down -->
+    <polyline points="160,124 128,158"/>
+    <polyline points="160,124 192,158"/>
+  </g>
+  <circle cx="160" cy="100" r="13" fill="#0B3D2E"/>
+  <!-- highlight: inner thighs / adductors -->
+  <g fill="none" stroke="#2BB673" stroke-width="8" stroke-linecap="round" opacity="0.85">
+    <line x1="156" y1="160" x2="112" y2="172"/>
+    <line x1="164" y1="160" x2="208" y2="172"/>
+  </g>
+  <line x1="20" y1="192" x2="300" y2="192" stroke="#9FB0A8" stroke-width="2.5" stroke-linecap="round"/>
+</svg>

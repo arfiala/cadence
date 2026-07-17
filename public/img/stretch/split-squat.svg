@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 220" role="img" aria-labelledby="t">
+  <title id="t">ATG split squat: deep lunge, front knee travels over the toes, back leg long</title>
+  <g fill="none" stroke="#0B3D2E" stroke-width="7" stroke-linecap="round" stroke-linejoin="round">
+    <!-- torso, slight forward lean -->
+    <line x1="148" y1="63" x2="138" y2="118"/>
+    <!-- arms forward for balance -->
+    <polyline points="146,80 178,96"/>
+    <polyline points="146,80 174,104"/>
+    <!-- front leg: knee over toe -->
+    <polyline points="138,118 200,146 174,188"/>
+    <!-- front foot flat -->
+    <line x1="162" y1="190" x2="200" y2="190"/>
+    <!-- back leg: long, knee near floor -->
+    <polyline points="138,118 100,170 66,186"/>
+    <polyline points="66,186 56,190"/>
+  </g>
+  <circle cx="148" cy="50" r="13" fill="#0B3D2E"/>
+  <!-- highlight: front knee/shin loaded stretch -->
+  <g fill="none" stroke="#2BB673" stroke-width="8" stroke-linecap="round" opacity="0.85">
+    <polyline points="200,146 174,188"/>
+  </g>
+  <!-- highlight: back hip flexor, lighter -->
+  <line x1="138" y1="118" x2="104" y2="164" stroke="#2BB673" stroke-width="8" stroke-linecap="round" opacity="0.45"/>
+  <line x1="20" y1="192" x2="300" y2="192" stroke="#9FB0A8" stroke-width="2.5" stroke-linecap="round"/>
+</svg>

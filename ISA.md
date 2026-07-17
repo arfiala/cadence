@@ -2,11 +2,11 @@
 task: Cadence — Austin's personal fitness app (Garmin-synced, MCP-editable)
 project: cadence
 effort: E4
-phase: complete
-progress: 96/103
+phase: build
+progress: 96/117
 mode: standard
 started: 2026-07-16T19:50:29Z
-updated: 2026-07-16T20:20:00Z
+updated: 2026-07-16T23:28:00Z
 ---
 
 ## Problem
@@ -19,7 +19,7 @@ Austin asks "how's my week" in any conversation and gets an answer from his real
 
 ## Out of Scope
 
-Nutrition/MyFitnessPal integration (deferred by Austin, v2 candidate). Multi-user anything: registration, roles, sharing. Training PLANS and coaching logic (v1 is truth about what happened, not prescriptions). Native mobile apps. Strava. Direct Zwift API integration — Zwift reaches the app through Zwift's own auto-upload to Garmin Connect. Public visibility of any health data. Charts libraries and frontend frameworks — inline SVG and vanilla JS only, matching austinfiala.com's zero-dependency ethos.
+Nutrition/MyFitnessPal integration (deferred by Austin, v2 candidate). Multi-user anything: registration, roles, sharing. Training PLANS and coaching logic (v1 is truth about what happened, not prescriptions) — AMENDED 2026-07-16: Austin explicitly requested a static ATG daily stretching plan (ISC-104+); the exclusion now covers dynamic/adaptive coaching logic only, not this fixed reference plan. Native mobile apps. Strava. Direct Zwift API integration — Zwift reaches the app through Zwift's own auto-upload to Garmin Connect. Public visibility of any health data. Charts libraries and frontend frameworks — inline SVG and vanilla JS only, matching austinfiala.com's zero-dependency ethos.
 
 ## Principles
 
@@ -167,6 +167,22 @@ Cadence is live at `https://fit.austinfiala.com` behind Austin's single-user log
 - [x] ISC-102: Lockout auto-expires after 15 minutes AND bin/set-password.ts clears lockout + sessions — the single-user self-DoS escape hatch — probe: bun test + CLI run
 - [x] ISC-103: Anti: exactly ONE resident process on the box (cadence.service); sync is in-process scheduled, MCP is spawned on demand on Austin's machine, no cron/worker daemons — probe: systemctl list + ps on box
 
+### Stretching plan — ATG daily routine (added 2026-07-16, Austin's request)
+- [ ] ISC-104: "Stretch" tab appears in the nav and switches to the stretch view — probe: Interceptor click
+- [ ] ISC-105: Plan data contains exactly 8 items in ATG order (backward-walk warm-up, ATG split squat, couch stretch, elephant walk, pancake good morning, butterfly, pigeon, calf stretch), each with name, dose, target area, coaching cue — probe: data read + count
+- [ ] ISC-106: All 8 stretch SVGs served 200 from /img/stretch/ — probe: curl ×8
+- [ ] ISC-107: Anti: SVGs make zero external requests (no http refs inside) — probe: grep
+- [ ] ISC-108: "Log stretch session" button creates a manual activity (sport=strength, 15 min, title "ATG Daily Stretch") via the existing activities API — probe: click + API read-back
+- [ ] ISC-109: Anti: a logged stretch session never counts toward G1 qualification — probe: bun test
+- [ ] ISC-110: Log button disables during the request (double-submit guard, Suretas lesson) — probe: code grep + double-click test
+- [ ] ISC-111: After logging, the view shows a "done today" state that survives reload (derived from today's activities) — probe: Interceptor reload
+- [ ] ISC-112: Anti: zero new runtime dependencies — probe: package.json/bun.lock diff
+- [ ] ISC-113: Anti: zero schema changes — probe: db.ts diff
+- [ ] ISC-114: bun test green (incl. new tests) and bunx tsc --noEmit clean — probe: Bash
+- [ ] ISC-115: Stretch view single-column readable at 375px via existing responsive CSS — probe: CSS structural check (phone screenshot rides FOLLOWUP-cadence-ui-pass)
+- [ ] ISC-116: Anti: dashboard, activities, trends, sync views render unchanged — probe: Interceptor spot-check
+- [ ] ISC-117: Deployed to production and the stretch tab live-verified — probe: Interceptor on fit.austinfiala.com (gated on Austin's deploy approval)
+
 ## Test Strategy
 
 | isc | type | check | threshold | tool |
@@ -180,6 +196,7 @@ Cadence is live at `https://fit.austinfiala.com` behind Austin's single-user log
 | 73-85 | deploy | ssh probes, curl, dig, systemctl | all live | Bash |
 | 86-93 | quality | bun test, tsc, greps | 0 fail / 0 errors | Bash |
 | 94-98 | live | prod walkthrough + MCP round-trip + cleanup | complete | Interceptor/MCP |
+| 104-117 | feature | data/SVG probes, bun test, Interceptor walkthrough, deploy check | green + flows complete | Bash/Interceptor |
 
 ## Features
 
@@ -193,6 +210,7 @@ Cadence is live at `https://fit.austinfiala.com` behind Austin's single-user log
 | mcp-server | stdio server, 8 tools, registration | ISC-60..72 | api | false |
 | deploy | DNS, Caddy, systemd, env, nav link, live checks | ISC-73..85 | web-ui, mcp-server | false |
 | verification | suites, walkthroughs, prod round-trip, cleanup | ISC-86..98 | all | false |
+| stretch-plan | ATG daily stretching tab: plan data, 8 SVG illustrations, log-session button | ISC-104..117 | web-ui, api | true (SVGs and code build in parallel) |
 
 ## Decisions
 
@@ -201,6 +219,7 @@ Cadence is live at `https://fit.austinfiala.com` behind Austin's single-user log
 - 2026-07-16T19:50Z — ISC floor math (E4 soft ≥128): natural granularity yielded 103 atomic ISCs (98 + 5 advisor-driven). Shown math rather than padded: v1 has ONE integration (nutrition deferred by Austin's answer), one user (no RBAC surface), and no payment/email subsystems — the domains that inflate counts in comparable apps are structurally absent. Every ISC above is one tool probe; splitting further would manufacture rows, not tests.
 - 2026-07-16T20:05Z — Advisor pre-build review (Rule 2): confirmed the one-resident-service topology (MCP spawned on demand on Austin's machine, sync in-process — the box gains exactly one daemon); added ISC-99 (CSV import survival path for when the unofficial Garmin lib breaks — and they do break), ISC-100 (lib isolated to src/garmin/), ISC-101 (exact version pin), ISC-102 (lockout self-DoS escape: auto-expiry + CLI clear), ISC-103 (anti: no extra daemons). Token-scoping suggestion partially adopted: the bearer token is already separately issued, hashed, and revocable (ISC-20/21) which covers rotate-without-password; per-tool scoping rejected as over-engineering for a single-user personal app. Advisor's state-mismatch warning was an --auto-state artifact (it read the previous task's ISA); the builder receives this file's absolute path pinned verbatim.
 - 2026-07-16T19:50Z — Delegation: Engineer agent builds from this ISA (session-standard; codex absent → `SOURCE: codex-unavailable`, Forge slot falls back to Engineer). Primary (me) does independent verification, deploy, DNS/Caddy surgery on the shared box, and the MCP registration on this machine.
+- 2026-07-16T23:28Z — Stretch plan (Austin: "build a daily stretching plan based off of the kneesovertoes guy, create images for it, add it to the fitness app"). Content grounded in fetched sources this session (a1athlete.com ATG stretch guide; Ben Patrick's own TikTok note that couch stretch belongs AFTER ATG split squat; search-corroborated doses: pancake pulses ×20, couch 45-60s/side, elephant walk ×20). Out of Scope amended (fixed plan in, adaptive coaching still out). Images: hand-authored SVG — probed this session: no image-gen keys on this box (KNOWLEDGE/Research/linux-machine-image-gen-gap.md still accurate). Log-as-activity uses sport=strength (isG1Qualifying filters to cycling/swim family, so G1 stays clean — ISC-109 tests it). Deploy gated on Austin's explicit approval per Permission Boundaries; everything staged ready. `SOURCE: codex-unavailable` re-probed this session — Forge slot again falls back to Engineer.
 
 ## Verification
 

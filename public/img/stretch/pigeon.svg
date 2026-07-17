@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 220" role="img" aria-labelledby="t">
+  <title id="t">Pigeon: front shin folded across, rear leg long behind, chest tall</title>
+  <g fill="none" stroke="#0B3D2E" stroke-width="7" stroke-linecap="round" stroke-linejoin="round">
+    <!-- torso tall -->
+    <line x1="150" y1="71" x2="158" y2="128"/>
+    <!-- arms down to floor -->
+    <polyline points="152,90 120,150"/>
+    <polyline points="152,90 138,156"/>
+    <!-- front leg folded on the floor -->
+    <polyline points="158,128 104,160 148,176"/>
+    <!-- rear leg extended back -->
+    <polyline points="158,128 216,166 274,174"/>
+    <polyline points="274,174 286,168"/>
+  </g>
+  <circle cx="150" cy="58" r="13" fill="#0B3D2E"/>
+  <!-- highlight: front glute/hip -->
+  <g fill="none" stroke="#2BB673" stroke-width="8" stroke-linecap="round" opacity="0.85">
+    <line x1="158" y1="128" x2="108" y2="158"/>
+  </g>
+  <line x1="20" y1="192" x2="300" y2="192" stroke="#9FB0A8" stroke-width="2.5" stroke-linecap="round"/>
+</svg>

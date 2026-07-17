@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 220" role="img" aria-labelledby="t">
+  <title id="t">Couch stretch: kneel with rear shin vertical against the wall, torso tall</title>
+  <!-- wall -->
+  <line x1="272" y1="58" x2="272" y2="192" stroke="#9FB0A8" stroke-width="5" stroke-linecap="round"/>
+  <g fill="none" stroke="#0B3D2E" stroke-width="7" stroke-linecap="round" stroke-linejoin="round">
+    <!-- torso upright -->
+    <line x1="196" y1="65" x2="200" y2="124"/>
+    <!-- arms down -->
+    <polyline points="197,84 176,120"/>
+    <polyline points="197,84 186,124"/>
+    <!-- front leg: kneeling lunge -->
+    <polyline points="200,124 152,146 148,188"/>
+    <line x1="138" y1="190" x2="168" y2="190"/>
+    <!-- rear leg: knee on floor, shin up the wall -->
+    <polyline points="200,124 238,186 252,124"/>
+    <polyline points="252,124 264,118"/>
+  </g>
+  <circle cx="196" cy="52" r="13" fill="#0B3D2E"/>
+  <!-- highlight: rear quad + hip flexor -->
+  <g fill="none" stroke="#2BB673" stroke-width="8" stroke-linecap="round" opacity="0.85">
+    <line x1="200" y1="124" x2="238" y2="186"/>
+  </g>
+  <line x1="20" y1="192" x2="300" y2="192" stroke="#9FB0A8" stroke-width="2.5" stroke-linecap="round"/>
+</svg>

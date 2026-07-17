@@ -25,6 +25,23 @@
     other: "Other",
   };
 
+  // The ATG daily mobility plan, in order. Slug drives the illustration
+  // path (/img/stretch/<slug>.svg). Content is a fixed constant — no user
+  // input — but every field is still routed through escapeHtml on render,
+  // per the app-wide innerHTML rule.
+  const STRETCH_PLAN = [
+    { slug: "backward-walk", name: "Backward Walk (warm-up)", dose: "2–3 min easy", target: "Knees, ankles", cue: "Small smooth steps; toes push the floor behind you." },
+    { slug: "split-squat", name: "ATG Split Squat", dose: "8 slow reps / side", target: "Knees, hip flexors, quads", cue: "Front knee travels over the toes as far as comfortable; back leg long; 3s down." },
+    { slug: "couch-stretch", name: "Couch Stretch", dose: "60s / side", target: "Hip flexors, quads", cue: "Rear shin vertical against the wall, glute squeezed, torso tall. Do it right after split squats." },
+    { slug: "elephant-walk", name: "Elephant Walk", dose: "20 alternating reps", target: "Hamstrings", cue: "Hands stay down; straighten one knee at a time." },
+    { slug: "pancake", name: "Pancake Good Morning", dose: "15 slow reps + 30s hold", target: "Adductors, low back", cue: "Wide stance, hips back, flat back." },
+    { slug: "butterfly", name: "Butterfly", dose: "2 min", target: "Groin, adductors", cue: "Soles together, knees heavy; add light weight on the knees when easy." },
+    { slug: "pigeon", name: "Pigeon", dose: "60s / side", target: "Glutes, hips", cue: "Front shin across, chest tall; elevate the hip if it pinches." },
+    { slug: "calf-stretch", name: "Calf Stretch (step)", dose: "60s / side", target: "Calves, ankles", cue: "Straight knee, heel drives down off a step or slant." },
+  ];
+
+  const STRETCH_LOG_TITLE = "ATG Daily Stretch";
+
   // Escapes user-controlled text before it is ever interpolated into
   // innerHTML (ISC-54). Every render function below routes activity
   // title/notes through this.
@@ -76,6 +93,7 @@
     if (name === "dashboard") loadDashboard();
     if (name === "activities") loadActivities();
     if (name === "trends") loadTrends();
+    if (name === "stretch") loadStretch();
     if (name === "sync") loadSyncStatus();
   }
 
@@ -289,6 +307,91 @@
 
     svg.innerHTML = targetLine + bars;
   }
+
+  // --- Stretch ------------------------------------------------------
+
+  // The America/New_York calendar day (YYYY-MM-DD) an instant falls on.
+  // Mirrors the server's week.ts NY-day logic so the "done today" state is
+  // computed against the same timezone the rest of the app anchors to.
+  function nyDateKey(iso) {
+    return new Intl.DateTimeFormat("en-CA", {
+      timeZone: "America/New_York",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).format(new Date(iso));
+  }
+
+  function renderStretchCards() {
+    const list = document.getElementById("stretch-list");
+    list.innerHTML = STRETCH_PLAN.map((s, i) => {
+      const src = `/img/stretch/${encodeURIComponent(s.slug)}.svg`;
+      return `
+      <div class="stretch-card">
+        <div class="stretch-num">${i + 1}</div>
+        <img class="stretch-img" src="${src}" alt="${escapeHtml(s.name)} illustration">
+        <div class="stretch-body">
+          <div class="stretch-name">${escapeHtml(s.name)}</div>
+          <div class="stretch-dose">${escapeHtml(s.dose)}</div>
+          <div class="stretch-target"><span class="stretch-tag">Targets</span> ${escapeHtml(s.target)}</div>
+          <div class="stretch-cue">${escapeHtml(s.cue)}</div>
+        </div>
+      </div>`;
+    }).join("");
+  }
+
+  // Derives the "done today" state from the API (never local state) so it
+  // survives a reload: look for a manual "ATG Daily Stretch" activity whose
+  // NY calendar day is today.
+  async function refreshStretchLogState() {
+    const btn = document.getElementById("stretch-log-btn");
+    const doneEl = document.getElementById("stretch-done");
+    let data;
+    try {
+      data = await api("/api/activities?limit=50");
+    } catch {
+      return;
+    }
+    const todayKey = nyDateKey(new Date().toISOString());
+    const loggedToday = data.activities.some(
+      (a) => a.title === STRETCH_LOG_TITLE && nyDateKey(a.start_time) === todayKey,
+    );
+    btn.hidden = loggedToday;
+    doneEl.hidden = !loggedToday;
+  }
+
+  async function loadStretch() {
+    renderStretchCards();
+    await refreshStretchLogState();
+  }
+
+  let stretchLogInFlight = false; // double-submit guard, same pattern as add-activity
+  document.getElementById("stretch-log-btn").addEventListener("click", async () => {
+    if (stretchLogInFlight) return;
+    const btn = document.getElementById("stretch-log-btn");
+    stretchLogInFlight = true;
+    btn.disabled = true;
+    try {
+      await api("/api/activities", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sport: "strength",
+          start_time: new Date().toISOString(),
+          duration_s: 15 * 60,
+          title: STRETCH_LOG_TITLE,
+          notes: "Knees Over Toes daily plan",
+        }),
+      });
+      await refreshStretchLogState();
+      loadDashboard();
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      stretchLogInFlight = false;
+      btn.disabled = false;
+    }
+  });
 
   // --- Sync ------------------------------------------------------
 
