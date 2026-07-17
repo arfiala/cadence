@@ -2,8 +2,8 @@
 task: Cadence — Austin's personal fitness app (Garmin-synced, MCP-editable)
 project: cadence
 effort: E4
-phase: verify
-progress: 108/117
+phase: complete
+progress: 109/117
 mode: standard
 started: 2026-07-16T19:50:29Z
 updated: 2026-07-17T01:55:00Z
@@ -181,7 +181,7 @@ Cadence is live at `https://fit.austinfiala.com` behind Austin's single-user log
 - [x] ISC-114: bun test green (incl. new tests) and bunx tsc --noEmit clean — probe: Bash
 - [x] ISC-115: Stretch view single-column readable at 375px via existing responsive CSS — probe: CSS structural check (phone screenshot rides FOLLOWUP-cadence-ui-pass)
 - [x] ISC-116: Anti: dashboard, activities, trends, sync views render unchanged — probe: Interceptor spot-check
-- [ ] ISC-117: Deployed to production and the stretch tab live-verified — probe: Interceptor on fit.austinfiala.com (gated on Austin's deploy approval)
+- [x] ISC-117: Deployed to production and the stretch tab live-verified — probe: Interceptor on fit.austinfiala.com (gated on Austin's deploy approval)
 
 ## Test Strategy
 
@@ -247,7 +247,7 @@ Cadence is live at `https://fit.austinfiala.com` behind Austin's single-user log
 - ISC-115: structural — .stretch-list flex column, img max-width 100%, 480px breakpoint rules; phone screenshot rides FOLLOWUP-cadence-ui-pass.
 - ISC-116: Dashboard/Activities/Trends/Sync all rendered post-change in the same walkthrough.
 - Cleanup: throwaway DB + WAL + log deleted, verify server killed by port-matched PID, session screenshots removed, Interceptor tab closed.
-- ISC-117: PENDING Austin's deploy approval (clean git-archive rsync + systemd restart, no migration).
+- ISC-117: DEPLOYED 2026-07-17 on Austin's "deploy" — pre-deploy DB backup (`~/db-backups/cadence-pre-stretch-20260717T122315.db`), clean git-archive rsync (no --delete, .env untouched), `sudo systemctl restart cadence` → active. Live-verified: /health 200, all 8 SVGs 200 over HTTPS, "data-view=stretch" + disclaimer in served bytes, Interceptor render of the full 8-card tab on fit.austinfiala.com through Austin's real session (log button deliberately NOT clicked — no synthetic data in prod), suretas.com + austinfiala.com both 200 after restart.
 
 ## Changelog
 
