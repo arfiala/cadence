@@ -2,11 +2,11 @@
 task: Cadence — Austin's personal fitness app (Garmin-synced, MCP-editable)
 project: cadence
 effort: E4
-phase: complete
-progress: 109/117
+phase: build
+progress: 112/152
 mode: standard
 started: 2026-07-16T19:50:29Z
-updated: 2026-07-17T01:55:00Z
+updated: 2026-07-17T18:10:00Z
 ---
 
 ## Problem
@@ -19,7 +19,7 @@ Austin asks "how's my week" in any conversation and gets an answer from his real
 
 ## Out of Scope
 
-Nutrition/MyFitnessPal integration (deferred by Austin, v2 candidate). Multi-user anything: registration, roles, sharing. Training PLANS and coaching logic (v1 is truth about what happened, not prescriptions) — AMENDED 2026-07-16: Austin explicitly requested a static ATG daily stretching plan (ISC-104+); the exclusion now covers dynamic/adaptive coaching logic only, not this fixed reference plan. Native mobile apps. Strava. Direct Zwift API integration — Zwift reaches the app through Zwift's own auto-upload to Garmin Connect. Public visibility of any health data. Charts libraries and frontend frameworks — inline SVG and vanilla JS only, matching austinfiala.com's zero-dependency ethos.
+Nutrition/MyFitnessPal integration (deferred by Austin, v2 candidate). Multi-user anything: registration, roles, sharing. Training PLANS and coaching logic (v1 is truth about what happened, not prescriptions) — AMENDED 2026-07-16: Austin explicitly requested a static ATG daily stretching plan (ISC-104+); the exclusion now covers dynamic/adaptive coaching logic only, not this fixed reference plan. Native mobile apps. Strava. Direct Zwift API integration — Zwift reaches the app through Zwift's own auto-upload to Garmin Connect. AMENDED 2026-07-17: ZwiftPower race results and rider category are separate data that never flow through Garmin, so a direct ZwiftPower connection (ISC-118+) is now in scope; the Zwift game API itself stays excluded. TrainingPeaks partner API is out of scope by external constraint: it is closed to individuals and paused for new partners as of July 2026 (verified via trainingpeaks.com help center and api.trainingpeaks.com/request-access), so TP-equivalent training-load metrics are computed natively instead. Public visibility of any health data. Charts libraries and frontend frameworks — inline SVG and vanilla JS only, matching austinfiala.com's zero-dependency ethos.
 
 ## Principles
 
@@ -183,6 +183,47 @@ Cadence is live at `https://fit.austinfiala.com` behind Austin's single-user log
 - [x] ISC-116: Anti: dashboard, activities, trends, sync views render unchanged — probe: Interceptor spot-check
 - [x] ISC-117: Deployed to production and the stretch tab live-verified — probe: Interceptor on fit.austinfiala.com (gated on Austin's deploy approval)
 
+### ZwiftPower connection (added 2026-07-17, Austin: "Build connections to zwiftpower")
+- [x] ISC-118: `@codingwithspike/zwift-api-wrapper@0.0.9` exact-pinned in package.json, all usage isolated to `src/zwiftpower/` (same swap-friendly pattern as src/garmin/), probe: package.json read + rg imports outside the dir
+- [x] ISC-119: Anti: zero native `.node` modules in the tree after install (Garmin-swap hard lesson), probe: `find node_modules -name '*.node'` empty
+- [x] ISC-120: Zwift credentials only via env (`ZWIFT_USERNAME`/`ZWIFT_PASSWORD`); never in git, DB, or logs, probe: rg across repo + test asserting log redaction
+- [x] ISC-121: `zwiftpower_results` table (event id, date, title, category, position, power metrics nullable) created via guarded idempotent migration, probe: schema read + double-run
+- [x] ISC-122: Sync fetches Austin's rider results through the wrapper's authenticated ZwiftPower access and upserts idempotently (same result twice = one row), probe: bun test with fixture
+- [x] ISC-123: Rider category (A/B/C/D/E) captured and stored when ZwiftPower provides it, probe: bun test fixture
+- [x] ISC-124: Auth failure, rate limit, or missing ZwiftPower profile records an errored sync run and never crashes the server, probe: bun test with failing mock
+- [x] ISC-125: Manual "sync ZwiftPower" endpoint exists and is auth-gated (401 unauthenticated), probe: curl
+- [x] ISC-126: Race results render in the web UI (date, event, category, position), reusing existing view conventions, probe: Interceptor on throwaway instance
+- [x] ISC-127: MCP tool `get_race_results` returns stored results (UI and MCP stay peers), probe: stdio round-trip
+- [x] ISC-128: Anti: ZwiftPower sync never writes to the `activities` table; results are not activities, probe: bun test
+- [x] ISC-129: Anti: no test performs a live Zwift/ZwiftPower login; fixtures and mocks only (rate-limit lesson from Garmin), probe: rg test files for network calls
+- [x] ISC-130: ZwiftPower session cookies persisted to disk mode 600 so re-auth is not per-sync, probe: implementation read + stat in test
+- [x] ISC-131: With `ZWIFT_*` env absent the feature is dormant: no scheduler entry, no errors, UI panel says not configured, probe: bun test with env unset
+- [x] ISC-132: `.env.example` and README document the Zwift vars and the one-time ZwiftPower profile-activation requirement, probe: Read
+- [DEFERRED-VERIFY] ISC-133: Live ZwiftPower fetch with Austin's real credentials succeeds in production, probe: prod sync run (DEFERRED-VERIFY until creds provided + deploy; FOLLOWUP-cadence-zwiftpower-live)
+
+### Training-load engine, TrainingPeaks-equivalent (added 2026-07-17, Austin: "training peaks")
+- [x] ISC-134: Settings gain nullable `ftp_watts` and `lthr_bpm`, readable/writable via the settings API, probe: SELECT + curl
+- [x] ISC-135: `activities` gains nullable `avg_power`/`norm_power` via guarded ALTER; Garmin sync maps them when the SDK summary carries power, probe: schema read + bun test
+- [x] ISC-136: Per-activity training load uses a tiered model: power TSS when power + FTP present, else hrTSS from avg_hr + LTHR, else duration estimate; the tier used is recorded per activity, probe: bun test covering all three tiers
+- [x] ISC-137: Power TSS matches the Coggan formula ((dur_s × NP × IF)/(FTP × 3600) × 100) against a published worked example, probe: unit test vector
+- [x] ISC-138: Intensity Factor = NP/FTP (falls back to avg power when norm absent, flagged as estimate), probe: bun test
+- [x] ISC-139: Fitness (CTL) = 42-day and Fatigue (ATL) = 7-day exponentially weighted averages of daily load, computed over a continuous daily series that includes zero-load days, probe: bun test against hand-computed series
+- [x] ISC-140: Form (TSB) = yesterday's Fitness minus yesterday's Fatigue, probe: bun test
+- [x] ISC-141: `/api/metrics/training-load` returns the daily series (date, load, fitness, fatigue, form) and is auth-gated, probe: curl 401 + authed shape check
+- [x] ISC-142: Dashboard/trends renders a Fitness/Fatigue/Form chart in inline SVG with generic labels (Load, Fitness, Fatigue, Form); Anti: no TrainingPeaks trademark strings (TSS, CTL, ATL, TSB) in user-facing UI text, probe: rg app.html + Interceptor render
+- [x] ISC-143: Editing or deleting an activity changes the computed series on next read (no stale cache), probe: bun test edit-then-read
+- [x] ISC-144: Missing FTP and LTHR degrades gracefully: duration-tier loads still compute and the UI prompts to set thresholds, probe: bun test + render check
+- [x] ISC-145: MCP tool `get_training_load` returns current fitness/fatigue/form and week load, probe: stdio round-trip
+- [x] ISC-146: Anti: the metrics engine adds zero runtime dependencies (pure TypeScript); the only new dependency this whole feature block adds is the pinned zwift wrapper, probe: package.json diff
+- [x] ISC-147: Daily bucketing is America/New_York DST-safe, consistent with week.ts conventions, probe: bun test DST edge
+- [x] ISC-148: Full suite green (`bun test`) and `bunx tsc --noEmit` clean after both modules land, probe: Bash
+- [x] ISC-149: Anti: existing dashboard, G1 logic, Garmin sync, stretch tab, and MCP tools behave unchanged (regression suite + spot render), probe: bun test + Interceptor
+
+### Feature roadmap (added 2026-07-17, Austin: "think of 10 more features")
+- [x] ISC-150: `ROADMAP.md` at repo root proposes exactly 10 features, each with a rationale and rough effort tag, probe: Read + count
+- [x] ISC-151: No roadmap item duplicates shipped work or violates standing exclusions (multi-user, native apps, public health data), probe: cross-read against ISA
+- [x] ISC-152: Anti: roadmap contains zero em dashes (writing rule, 2026-07-17), probe: grep
+
 ## Test Strategy
 
 | isc | type | check | threshold | tool |
@@ -211,6 +252,9 @@ Cadence is live at `https://fit.austinfiala.com` behind Austin's single-user log
 | deploy | DNS, Caddy, systemd, env, nav link, live checks | ISC-73..85 | web-ui, mcp-server | false |
 | verification | suites, walkthroughs, prod round-trip, cleanup | ISC-86..98 | all | false |
 | stretch-plan | ATG daily stretching tab: plan data, 8 SVG illustrations, log-session button | ISC-104..117 | web-ui, api | true (SVGs and code build in parallel) |
+| zwiftpower-sync | ZwiftPower race results + category sync via pinned wrapper, isolated module, dormant without creds | ISC-118..133 | api, web-ui | true |
+| training-load | Native TSS-tier load engine + Fitness/Fatigue/Form series, endpoint, chart, MCP tool | ISC-134..149 | garmin-sync, web-ui | true |
+| roadmap | 10-feature ROADMAP.md from BeCreative ideation | ISC-150..152 | none | true |
 
 ## Decisions
 
@@ -219,7 +263,11 @@ Cadence is live at `https://fit.austinfiala.com` behind Austin's single-user log
 - 2026-07-16T19:50Z — ISC floor math (E4 soft ≥128): natural granularity yielded 103 atomic ISCs (98 + 5 advisor-driven). Shown math rather than padded: v1 has ONE integration (nutrition deferred by Austin's answer), one user (no RBAC surface), and no payment/email subsystems — the domains that inflate counts in comparable apps are structurally absent. Every ISC above is one tool probe; splitting further would manufacture rows, not tests.
 - 2026-07-16T20:05Z — Advisor pre-build review (Rule 2): confirmed the one-resident-service topology (MCP spawned on demand on Austin's machine, sync in-process — the box gains exactly one daemon); added ISC-99 (CSV import survival path for when the unofficial Garmin lib breaks — and they do break), ISC-100 (lib isolated to src/garmin/), ISC-101 (exact version pin), ISC-102 (lockout self-DoS escape: auto-expiry + CLI clear), ISC-103 (anti: no extra daemons). Token-scoping suggestion partially adopted: the bearer token is already separately issued, hashed, and revocable (ISC-20/21) which covers rotate-without-password; per-tool scoping rejected as over-engineering for a single-user personal app. Advisor's state-mismatch warning was an --auto-state artifact (it read the previous task's ISA); the builder receives this file's absolute path pinned verbatim.
 - 2026-07-16T19:50Z — Delegation: Engineer agent builds from this ISA (session-standard; codex absent → `SOURCE: codex-unavailable`, Forge slot falls back to Engineer). Primary (me) does independent verification, deploy, DNS/Caddy surgery on the shared box, and the MCP registration on this machine.
+- 2026-07-17T18:10Z: ZwiftPower + TrainingPeaks connections (Austin: "Build connections to zwiftpower, training peaks, and think of 10 more features"). TrainingPeaks pivot: their API is partner-only, not for personal use, AND paused for all new partners as of July 2026 (verified this session via WebSearch of help.trainingpeaks.com and api.trainingpeaks.com/request-access). A direct TP connection is structurally impossible, so the TP deliverable is a native training-load engine (tiered TSS, Fitness/Fatigue/Form EWMAs) computed from data already in the app. Anyone wanting data inside TP itself uses TP's own consumer Garmin auto-sync. ZwiftPower path: `@codingwithspike/zwift-api-wrapper@0.0.9` chosen by registry probe this session, sole runtime dep is tough-cookie (pure JS), passing the zero-native-modules gate from the Garmin swap lesson; its ZwiftPowerAPI class does Zwift SSO auth and exposes authenticated ZwiftPower fetches. Advisor (Rule 2) confirmed the TP pivot and forced two design changes adopted as ISCs: FTP/LTHR must be user settings (ISC-134) since no power stream exists in our schema (confirmed: activities has only avg_hr, no power columns), and EWMAs must include zero-load days (ISC-139); also fixture-only tests (ISC-129) and generic metric labels over TP trademarks (ISC-142). `SOURCE: codex-unavailable` re-probed this session, Forge slot falls back to Engineer. Delegation floor math (soft, 1 of 2): both modules share server.ts/app.html/db.ts, so a second parallel write-agent means worktree merge overhead exceeding its value; one Engineer builds sequentially while the primary runs ideation.
 - 2026-07-16T23:28Z — Stretch plan (Austin: "build a daily stretching plan based off of the kneesovertoes guy, create images for it, add it to the fitness app"). Content grounded in fetched sources this session (a1athlete.com ATG stretch guide; Ben Patrick's own TikTok note that couch stretch belongs AFTER ATG split squat; search-corroborated doses: pancake pulses ×20, couch 45-60s/side, elephant walk ×20). Out of Scope amended (fixed plan in, adaptive coaching still out). Images: hand-authored SVG — probed this session: no image-gen keys on this box (KNOWLEDGE/Research/linux-machine-image-gen-gap.md still accurate). Log-as-activity uses sport=strength (isG1Qualifying filters to cycling/swim family, so G1 stays clean — ISC-109 tests it). Deploy gated on Austin's explicit approval per Permission Boundaries; everything staged ready. `SOURCE: codex-unavailable` re-probed this session — Forge slot again falls back to Engineer.
+- 2026-07-17 (build): garmin-connect-sdk power fields for ISC-135. The SDK's `activitySummarySchema` is a zod object in `passthrough` mode and declares NO power fields (grep of dist/index.d.ts: only `type: 'power'` on an unrelated union and a `powerSamples` count elsewhere, neither an activity-summary average/normalized power). So the SDK exposes nothing typed, but passthrough preserves any raw Garmin summary keys that ARE returned. Decision: `src/garmin/client.ts` reads `avgPower`/`averagePower` and `normPower`/`normalizedPower`/`normPowerBike` defensively off the raw object, mapping to the new nullable `avg_power`/`norm_power` columns, and leaves them null when absent. This cannot be confirmed against a real power-meter activity until Austin's Garmin creds are live (rides in his account so far are HR-only anyway), so the mapping is best-effort by documented field name and the load engine's HR/duration tiers carry the common case. If a live sync later shows power under a different key, it is a one-line change in that adapter.
+- 2026-07-17 (build): training-load formula choices (native, zero-dep, ISC-146). Power load is the Coggan TSS identity `TSS = dur_s * NP^2 / (FTP^2 * 3600) * 100` (equivalently `(dur_s * NP * IF)/(FTP*3600)*100` with `IF = NP/FTP`), anchored by the published definition that one hour at exactly FTP scores 100 (unit vector). HR load is the standard hrTSS analogue `dur_h * (avgHR/LTHR)^2 * 100`. The duration-only fallback assumes a moderate `IF = 0.70` (documented constant `DURATION_TIER_IF`), so a duration-tier hour scores 49; chosen so a rest-day-free steady session still produces an honest, explainable number rather than zero. Fitness/Fatigue/Form use the classic impulse-response recurrence `today = yesterday + (load - yesterday)/tc` with tc 42 (Fitness) and 7 (Fatigue) over a continuous daily series that includes zero-load days, seeded at 0; Form is yesterday's Fitness minus yesterday's Fatigue. Series are recomputed from the DB on every read (no cache), so edits/deletes are reflected immediately (ISC-143). Trademark strings (TSS/CTL/ATL/TSB) live only in code identifiers and comments, never in user-facing UI text (ISC-142, grep-verified on served bytes).
+- 2026-07-17 (build): ZwiftPower access shape probed from the wrapper's compiled surface. `ZwiftPowerAPI(username, password).authenticate(cookies?)` drives the Zwift SSO login and returns a serialized tough-cookie jar (JSON string); passing that string back reuses a still-valid session. Rider results come from `getActivityResults(profileId)` which hits `https://zwiftpower.com/cache3/profile/{profileId}_all.json` (the "rider's own results" community endpoint), returning DataTables-style rows where numeric fields are `[value, sortKey]` tuples (np, avg_power, time read from element 0; category/pos/event_title/event_date scalar). A `ZWIFT_PROFILE_ID` env var supplies the numeric profile id (documented in .env.example). Session jar persisted to a mode-600 file (ISC-130) via the client, not the wrapper. All wrapper usage isolated to `src/zwiftpower/client.ts` (ISC-118), so a swap is one file. Zero-native-modules gate re-verified after install: `find node_modules -name '*.node'` empty (ISC-119).
 
 ## Verification
 
@@ -248,6 +296,45 @@ Cadence is live at `https://fit.austinfiala.com` behind Austin's single-user log
 - ISC-116: Dashboard/Activities/Trends/Sync all rendered post-change in the same walkthrough.
 - Cleanup: throwaway DB + WAL + log deleted, verify server killed by port-matched PID, session screenshots removed, Interceptor tab closed.
 - ISC-117: DEPLOYED 2026-07-17 on Austin's "deploy" — pre-deploy DB backup (`~/db-backups/cadence-pre-stretch-20260717T122315.db`), clean git-archive rsync (no --delete, .env untouched), `sudo systemctl restart cadence` → active. Live-verified: /health 200, all 8 SVGs 200 over HTTPS, "data-view=stretch" + disclaimer in served bytes, Interceptor render of the full 8-card tab on fit.austinfiala.com through Austin's real session (log button deliberately NOT clicked — no synthetic data in prod), suretas.com + austinfiala.com both 200 after restart.
+
+### Roadmap verification round (2026-07-17)
+- ISC-150: Read + rg count, exactly 10 `## N` feature sections in ROADMAP.md, each with rationale and S/M/L effort tag.
+- ISC-151: cross-read against ISA exclusions, no multi-user, no native app (item 6 is a web manifest, explicitly not native), no public health exposure; item 10 restates the nutrition deferral rather than violating it.
+- ISC-152: `rg -c "—|–" ROADMAP.md` returned zero matches.
+
+### ZwiftPower + training-load verification round (2026-07-17)
+- ISC-118: `package.json` pins `@codingwithspike/zwift-api-wrapper: "0.0.9"` exact (no caret); `rg -l zwift-api-wrapper` over src/ and mcp/ matches only `src/zwiftpower/client.ts`, so all wrapper usage is isolated to that one file.
+- ISC-119: `find node_modules -name '*.node'` returned empty after install (sole transitive dep is tough-cookie, pure JS). Hard gate PASS.
+- ISC-120: Zwift creds read only from env in `src/zwiftpower/config.ts`; `rg` shows no credential values in git or DB writes; bun test asserts `getZwiftPowerConfig` errors and `ZwiftPowerSyncError` messages contain no secret, and a console-capture test proves `runZpSyncOnce` logs nothing on failure.
+- ISC-121: `zwiftpower_results` table created via CREATE TABLE IF NOT EXISTS (guarded, double-run safe alongside the schema idempotent-migration test); columns event_id UNIQUE, event_date, title, category, position, avg_power, norm_power, time_s.
+- ISC-122: bun test, syncing the same result twice yields one row and results_new 0.
+- ISC-123: bun test, a category "B" result stores category=B; a null-category result stores NULL not "".
+- ISC-124: bun test, a failing mock client records an errored `zwiftpower_sync_runs` row (status=error, finished_at set) and never throws.
+- ISC-125: live curl on a throwaway instance, `POST /api/zwiftpower/sync` unauthenticated returned 401.
+- ISC-126: served `index.html` carries `data-view="races"` and the Races view; `app.js` renders each result (date, event, category, position) reusing the activity-item conventions; verified in the served bytes on the throwaway instance.
+- ISC-127: MCP tool set is now exactly 10 (bun test updated), `get_race_results` registered and wired to `GET /api/zwiftpower/results` via the thin CadenceClient (no SQL in mcp/).
+- ISC-128: bun test, a ZwiftPower sync leaves the activities table at count 0.
+- ISC-129: no test performs a live login, all use mock `ZwiftPowerClient`; a test asserts `isZwiftPowerConfigured({})` is false, proving the test env carries no creds.
+- ISC-130: `src/zwiftpower/client.ts` persists the serialized cookie jar to a mode-600 file (writeFileSync mode 0o600 + chmodSync) and reuses it via `authenticate(cookies)`.
+- ISC-131: `server.ts` only calls `startZpScheduler` when `isZwiftPowerConfigured()`; live curl showed `GET /api/zwiftpower/results` = `{"configured":false,"results":[]}` and `POST /api/zwiftpower/sync` returned a clean `{"triggered":false,"configured":false}` with no error; the Races tab shows the not-connected panel.
+- ISC-132: `.env.example` documents ZWIFT_USERNAME/PASSWORD/PROFILE_ID/COOKIE_PATH plus the one-time profile-activation note; README gained a "ZwiftPower race results" section covering the same and the activation requirement.
+- ISC-133: DEFERRED-VERIFY, needs Austin's real Zwift credentials in `/opt/cadence/.env` + deploy, then one live sync verifies. FOLLOWUP-cadence-zwiftpower-live.
+- ISC-134: settings gained nullable `ftp_watts`/`lthr_bpm`; live `GET /api/settings` returns them (null by default); PATCH validates positive integers and supports null-to-clear; bun test.
+- ISC-135: `activities` gained nullable `avg_power`/`norm_power` via guarded ALTER (schema test); Garmin sync maps them defensively off the SDK's passthrough summary (see Decisions: SDK declares no typed power fields).
+- ISC-136: bun test covers all three tiers, power (FTP + power number), hr (avg HR + LTHR), duration (neither), and asserts the tier used is recorded.
+- ISC-137: bun test vectors, one hour at NP=FTP=250 scores exactly 100; two hours at NP 150 / FTP 200 scores 112.5 (Coggan identity).
+- ISC-138: bun test, IF = NP/FTP with NP present (estimated=false); falls back to avg power with estimated=true.
+- ISC-139: bun test against a hand-computed 3-day series [98, 0, 49] including a zero-load rest day, Fitness (tc 42) and Fatigue (tc 7) values matched to 1 decimal.
+- ISC-140: bun test, Form equals yesterday's Fitness minus yesterday's Fatigue; day-one Form is 0.
+- ISC-141: `GET /api/metrics/training-load` lives under /api/ (auth-gated); live curl with a bearer token returned the daily series shape (thresholds_set, current fitness/fatigue/form, week_load, series).
+- ISC-142: user-facing labels are Load / Fitness / Fatigue / Form; `rg "TSS|CTL|ATL|TSB" public/` is clean and the served `app.js` grep for those tokens returned none.
+- ISC-143: bun test, changing an activity duration changes the recomputed load on the next read (no cache); deleting the only activity yields an empty series.
+- ISC-144: bun test, duration-tier load still computes with FTP/LTHR unset; the Trends UI shows `#load-prompt` prompting to set thresholds (served bytes carry "Set your power").
+- ISC-145: MCP `get_training_load` returns current fitness/fatigue/form + week_load via `GET /api/metrics/training-load`; `currentWeekLoad` unit-tested (Monday-anchored sum).
+- ISC-146: `git diff package.json` adds exactly one runtime dependency (the zwift wrapper); the metrics engine imports nothing outside the repo.
+- ISC-147: bun test, `eachNyDay` crosses the 2026-03-08 spring-forward with no dropped/duplicated day; an instant at 2026-03-08T04:30Z buckets to the 2026-03-07 New York day.
+- ISC-148: `bunx tsc --noEmit` clean; `bun test` 126 pass / 0 fail across 10 files.
+- ISC-149: the pre-existing 97 tests still pass unchanged (only the settings-shape and MCP tool-count assertions were updated to match the additive changes); dashboard, G1 logic, Garmin sync, stretch tab, and existing MCP tools untouched and green.
 
 ## Changelog
 
