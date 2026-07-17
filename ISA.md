@@ -308,6 +308,12 @@ Cadence is live at `https://fit.austinfiala.com` behind Austin's single-user log
 - Throwaway instance, temp DB, and screenshots deleted after verification; both leftover local test servers killed; production untouched.
 - 2026-07-17T18:45Z Decisions addendum: ZwiftPower access is an unofficial community endpoint via the wrapper with Austin's own Zwift credentials, the same accepted-risk class as the unofficial Garmin library already in production. Surfaced to Austin explicitly in the session report; his creds-in-.env step is also his acceptance gate, since the feature stays dormant without them.
 
+### Deploy verification round (2026-07-17, commit dcb31bd live)
+- DEPLOYED on Austin's "deploy": WAL-safe backup cadence-pre-zwiftpower-20260717T185530.db (VACUUM INTO via bun on box), clean git-archive rsync without --delete, first-ever on-box bun install for the new wrapper (12 packages, 0 native modules confirmed on the instance), systemctl restart, service active.
+- Live-verified: fit.austinfiala.com/health 200, suretas.com/health 200, austinfiala.com 200, new app.js bytes carry Races/training-load markers, /api/metrics/training-load and /api/zwiftpower/results both 401 unauthenticated, zwiftpower_results table + avg_power/norm_power columns present in prod DB, activities count unchanged (1) so no data was touched.
+- Live Interceptor render through Austin's real session: Races tab not-connected panel with env guidance, Trends computing real values from his data (Fitness 0.3, Fatigue 1.7, week load 12.2). Render-only, no data-creating clicks. Cosmetic follow-up noted in deploy/NOTES.md: sparse-data load chart draws a wide block.
+- deploy/NOTES.md bootstrapped this session (Deploy skill Invariant 6: notes were missing; method, secrets names, smoke set, and gotchas now documented in-repo).
+
 ### Roadmap verification round (2026-07-17)
 - ISC-150: Read + rg count, exactly 10 `## N` feature sections in ROADMAP.md, each with rationale and S/M/L effort tag.
 - ISC-151: cross-read against ISA exclusions, no multi-user, no native app (item 6 is a web manifest, explicitly not native), no public health exposure; item 10 restates the nutrition deferral rather than violating it.
