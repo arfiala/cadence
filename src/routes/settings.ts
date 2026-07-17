@@ -30,7 +30,24 @@ export async function patchSettingsRoute(req: Request): Promise<Response> {
     updates.push(["target_hours", String(v)]);
   }
 
-  if (updates.length === 0) {
+  // FTP / LTHR thresholds (ISC-134). A positive number sets the threshold;
+  // an explicit null clears it (the row is deleted, so getSettings reports
+  // null and the load engine degrades to a lower tier, ISC-144).
+  const clears: string[] = [];
+  for (const key of ["ftp_watts", "lthr_bpm"] as const) {
+    if (key in body) {
+      const v = body[key];
+      if (v === null) {
+        clears.push(key);
+      } else if (typeof v !== "number" || !Number.isInteger(v) || v <= 0) {
+        return jsonError(`${key} must be a positive integer or null`, 400);
+      } else {
+        updates.push([key, String(v)]);
+      }
+    }
+  }
+
+  if (updates.length === 0 && clears.length === 0) {
     return jsonError("No editable settings provided", 400);
   }
 
@@ -39,6 +56,10 @@ export async function patchSettingsRoute(req: Request): Promise<Response> {
   );
   for (const [key, value] of updates) {
     stmt.run(key, value);
+  }
+  const del = db.query("DELETE FROM settings WHERE key = ?");
+  for (const key of clears) {
+    del.run(key);
   }
 
   return Response.json(getSettings());

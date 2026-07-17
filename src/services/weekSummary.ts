@@ -35,7 +35,23 @@ export type WeekSummary = {
   days: DaySummary[]; // 7 entries, Monday..Sunday
 };
 
-export function getSettings(): { target_sessions: number; target_hours: number } {
+export type Settings = {
+  target_sessions: number;
+  target_hours: number;
+  // Training-load thresholds (ISC-134), null until the user sets them. Stored
+  // as ordinary settings rows; absence means "unset" and the load engine
+  // degrades to lower tiers (ISC-144).
+  ftp_watts: number | null;
+  lthr_bpm: number | null;
+};
+
+function numberOrNull(value: string | undefined): number | null {
+  if (value === undefined) return null;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
+}
+
+export function getSettings(): Settings {
   const rows = db.query("SELECT key, value FROM settings").all() as {
     key: string;
     value: string;
@@ -44,7 +60,15 @@ export function getSettings(): { target_sessions: number; target_hours: number }
   return {
     target_sessions: Number(map.get("target_sessions") ?? "5"),
     target_hours: Number(map.get("target_hours") ?? "8"),
+    ftp_watts: numberOrNull(map.get("ftp_watts")),
+    lthr_bpm: numberOrNull(map.get("lthr_bpm")),
   };
+}
+
+// The thresholds shape the training-load engine consumes (ISC-134, ISC-144).
+export function getThresholds(): { ftpWatts: number | null; lthrBpm: number | null } {
+  const s = getSettings();
+  return { ftpWatts: s.ftp_watts, lthrBpm: s.lthr_bpm };
 }
 
 function round1(value: number): number {
