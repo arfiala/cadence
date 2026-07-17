@@ -55,6 +55,13 @@ export type ActivityRow = {
   distance_m: number | null;
   calories: number | null;
   avg_hr: number | null;
+  // Power metrics (ISC-135), nullable. Populated by Garmin sync only when the
+  // activity summary carries power (power-meter or smart-trainer rides); every
+  // other row leaves them null. The training-load engine reads these when
+  // present to compute a power-based load, otherwise falls back to HR or
+  // duration. Never user-editable.
+  avg_power: number | null;
+  norm_power: number | null;
   title: string | null;
   notes: string | null;
   // Field-level edit flags (ISC-27): once a user edits one of these fields on
@@ -101,6 +108,55 @@ export type ApiTokenRow = {
   created_at: string;
   revoked_at: string | null;
 };
+
+// One row per ZwiftPower race result for the rider (ISC-121). Keyed on the
+// ZwiftPower event id (`event_id`, UNIQUE) so re-syncing the same result is
+// idempotent (ISC-122). Power metrics are nullable because not every result
+// carries them, and a rider category is only stored when ZwiftPower supplies
+// one (ISC-123). This table is entirely separate from `activities`, since race
+// results are not training activities (ISC-128).
+export type ZwiftPowerResultRow = {
+  id: number;
+  event_id: string;
+  event_date: string | null; // UTC ISO-8601
+  title: string | null;
+  category: string | null; // A/B/C/D/E when provided, else null
+  position: number | null;
+  avg_power: number | null; // watts
+  norm_power: number | null; // watts
+  time_s: number | null; // race time in seconds
+  created_at: string;
+  updated_at: string;
+};
+
+// One row per ZwiftPower sync attempt, including failures (ISC-124), mirroring
+// sync_runs but kept separate so the Garmin sync history stays clean.
+export type ZwiftPowerSyncRunRow = {
+  id: number;
+  started_at: string;
+  finished_at: string | null;
+  status: "running" | "success" | "error";
+  results_seen: number;
+  results_new: number;
+  error: string | null;
+};
+
+// Guarded ALTER: add a column only if it is not already present. SQLite has
+// no "ADD COLUMN IF NOT EXISTS", so we probe pragma_table_info first, the
+// same idempotent-migration discipline as the CREATE TABLE IF NOT EXISTS
+// statements (ISC-10, ISC-135). Safe to run on every boot.
+function addColumnIfMissing(
+  database: Database,
+  table: string,
+  column: string,
+  definition: string,
+): void {
+  const cols = database
+    .query(`PRAGMA table_info(${table})`)
+    .all() as { name: string }[];
+  if (cols.some((c) => c.name === column)) return;
+  database.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition};`);
+}
 
 export function runMigrations(database: Database): void {
   database.exec(`
@@ -178,7 +234,43 @@ export function runMigrations(database: Database): void {
       created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
       revoked_at TEXT
     );
+
+    -- ZwiftPower race results (ISC-121). event_id (the ZwiftPower event/result
+    -- id) is UNIQUE so re-sync is idempotent (ISC-122). Never holds Zwift
+    -- credentials, which live only in the box .env (ISC-120).
+    CREATE TABLE IF NOT EXISTS zwiftpower_results (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      event_id TEXT UNIQUE NOT NULL,
+      event_date TEXT,
+      title TEXT,
+      category TEXT,
+      position INTEGER,
+      avg_power INTEGER,
+      norm_power INTEGER,
+      time_s INTEGER,
+      created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+      updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_zp_results_date ON zwiftpower_results(event_date);
+
+    -- One row per ZwiftPower sync attempt, including failed ones (ISC-124),
+    -- kept separate from Garmin's sync_runs so each history stays clean.
+    CREATE TABLE IF NOT EXISTS zwiftpower_sync_runs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      started_at TEXT NOT NULL,
+      finished_at TEXT,
+      status TEXT NOT NULL CHECK (status IN ('running','success','error')),
+      results_seen INTEGER NOT NULL DEFAULT 0,
+      results_new INTEGER NOT NULL DEFAULT 0,
+      error TEXT
+    );
   `);
+
+  // Power columns on activities (ISC-135), added via the guarded ALTER so an
+  // existing production DB gains them without a rebuild and a fresh DB is
+  // unaffected by the double run (ISC-10).
+  addColumnIfMissing(database, "activities", "avg_power", "INTEGER");
+  addColumnIfMissing(database, "activities", "norm_power", "INTEGER");
 
   // Seed default G1 targets exactly once (INSERT OR IGNORE so re-running
   // migrations, or a settings row a user already edited, is never clobbered).

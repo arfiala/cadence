@@ -13,6 +13,8 @@ export function resetDb(): void {
   db.exec("DELETE FROM api_tokens;");
   db.exec("DELETE FROM activities;");
   db.exec("DELETE FROM sync_runs;");
+  db.exec("DELETE FROM zwiftpower_results;");
+  db.exec("DELETE FROM zwiftpower_sync_runs;");
   db.exec("DELETE FROM users;");
   db.exec("DELETE FROM settings;");
   db.exec("INSERT OR IGNORE INTO settings (key, value) VALUES ('target_sessions','5');");
