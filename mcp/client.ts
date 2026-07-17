@@ -129,4 +129,12 @@ export class CadenceClient {
   getSyncStatus(): Promise<unknown> {
     return this.request("GET", "/api/sync/status");
   }
+
+  getRaceResults(): Promise<unknown> {
+    return this.request("GET", "/api/zwiftpower/results");
+  }
+
+  getTrainingLoad(): Promise<unknown> {
+    return this.request("GET", "/api/metrics/training-load");
+  }
 }

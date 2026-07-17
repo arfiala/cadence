@@ -15,8 +15,13 @@ import { getTrends } from "./routes/trends";
 import { getSettingsRoute, patchSettingsRoute } from "./routes/settings";
 import { postSync, getSyncStatus } from "./routes/sync";
 import { importCsv } from "./routes/csv";
+import { postZwiftPowerSync, getZwiftPowerResults, getZwiftPowerStatus } from "./routes/zwiftpower";
+import { getTrainingLoad } from "./routes/metrics";
 import { createRealGarminClient } from "./garmin/client";
 import { startScheduler } from "./garmin/sync";
+import { createRealZwiftPowerClient } from "./zwiftpower/client";
+import { isZwiftPowerConfigured } from "./zwiftpower/config";
+import { startZpScheduler } from "./zwiftpower/sync";
 
 const PORT = Number(process.env.PORT ?? 4100);
 const PUBLIC_DIR = join(import.meta.dir, "..", "public");
@@ -69,6 +74,12 @@ async function handleApi(req: Request, url: URL): Promise<Response> {
 
   if (path === "/api/sync" && method === "POST") return postSync();
   if (path === "/api/sync/status" && method === "GET") return getSyncStatus();
+
+  if (path === "/api/zwiftpower/sync" && method === "POST") return postZwiftPowerSync();
+  if (path === "/api/zwiftpower/results" && method === "GET") return getZwiftPowerResults();
+  if (path === "/api/zwiftpower/status" && method === "GET") return getZwiftPowerStatus();
+
+  if (path === "/api/metrics/training-load" && method === "GET") return getTrainingLoad(url);
 
   if (path === "/api/import/csv" && method === "POST") return importCsv(req);
 
@@ -136,6 +147,11 @@ export function startServer() {
   // never trigger a real scheduler.
   if (process.env.CADENCE_DISABLE_SCHEDULER !== "1") {
     startScheduler(createRealGarminClient);
+    // ZwiftPower stays fully dormant unless credentials are configured
+    // (ISC-131): no scheduler entry, no background work, no errors.
+    if (isZwiftPowerConfigured()) {
+      startZpScheduler(createRealZwiftPowerClient);
+    }
   }
 
   return server;

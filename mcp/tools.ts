@@ -223,6 +223,42 @@ export const TOOLS: ToolDefinition[] = [
       return pretty(result);
     },
   },
+  {
+    name: "get_race_results",
+    description:
+      "Get Austin's stored ZwiftPower race results (date, event, category, finishing position, and power numbers). Reports whether ZwiftPower is configured yet.",
+    inputSchema: {
+      type: "object",
+      properties: {},
+      additionalProperties: false,
+    },
+    handler: async (client) => {
+      const result = await client.getRaceResults();
+      return pretty(result);
+    },
+  },
+  {
+    name: "get_training_load",
+    description:
+      "Get Austin's current training-load standing: Fitness (long-term load), Fatigue (short-term load), Form (freshness), and this week's total load. Higher Form means fresher; strongly negative means fatigued.",
+    inputSchema: {
+      type: "object",
+      properties: {},
+      additionalProperties: false,
+    },
+    handler: async (client) => {
+      const result = (await client.getTrainingLoad()) as Record<string, unknown>;
+      const current = result.current as Record<string, unknown> | undefined;
+      const summary = {
+        fitness: current?.fitness,
+        fatigue: current?.fatigue,
+        form: current?.form,
+        week_load: result.week_load,
+        thresholds_set: result.thresholds_set,
+      };
+      return pretty(summary);
+    },
+  },
 ];
 
 // Invoke a tool by name, turning any API/validation failure into a
