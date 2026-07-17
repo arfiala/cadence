@@ -2,11 +2,11 @@
 task: Cadence — Austin's personal fitness app (Garmin-synced, MCP-editable)
 project: cadence
 effort: E4
-phase: build
-progress: 112/152
+phase: complete
+progress: 143/152
 mode: standard
 started: 2026-07-16T19:50:29Z
-updated: 2026-07-17T18:10:00Z
+updated: 2026-07-17T18:45:00Z
 ---
 
 ## Problem
@@ -296,6 +296,17 @@ Cadence is live at `https://fit.austinfiala.com` behind Austin's single-user log
 - ISC-116: Dashboard/Activities/Trends/Sync all rendered post-change in the same walkthrough.
 - Cleanup: throwaway DB + WAL + log deleted, verify server killed by port-matched PID, session screenshots removed, Interceptor tab closed.
 - ISC-117: DEPLOYED 2026-07-17 on Austin's "deploy" — pre-deploy DB backup (`~/db-backups/cadence-pre-stretch-20260717T122315.db`), clean git-archive rsync (no --delete, .env untouched), `sudo systemctl restart cadence` → active. Live-verified: /health 200, all 8 SVGs 200 over HTTPS, "data-view=stretch" + disclaimer in served bytes, Interceptor render of the full 8-card tab on fit.austinfiala.com through Austin's real session (log button deliberately NOT clicked — no synthetic data in prod), suretas.com + austinfiala.com both 200 after restart.
+
+### Primary-agent independent verification round (2026-07-17, ZwiftPower + training-load)
+- Suite and types re-run by primary, not builder-reported: 126 pass / 0 fail (298 expects), bunx tsc --noEmit clean.
+- ISC-119: find node_modules -name '*.node' returned zero results.
+- ISC-142 anti: grep of all public/ bytes for TSS, CTL, ATL, TSB word-bounded returned zero matches.
+- ISC-126/131/144 UI: Interceptor walkthrough on a throwaway instance (port 4199, temp DB, real Chrome, real clicks): Races tab rendered the not-connected panel naming the three env vars; Trends rendered the Fitness/Fatigue/Form stat row, chart with Load/Fitness/Fatigue/Form legend, honest empty state, and the set-thresholds prompt. Screenshots reviewed by primary.
+- ISC-134 end to end: typed 250/165 into the threshold form, clicked Save, DB read-back showed ftp_watts=250 and lthr_bpm=165.
+- Advisor final audit cross-checked in code: Coggan golden vector test (1h at FTP scores exactly 100, plus IF 0.7 case scoring 49), hand-computed 3-day EWMA series including a zero-load rest day, and a sync-same-result-twice idempotency test all confirmed present in test files by grep.
+- Builder stall recovered: the Engineer stopped after the backend; resumed via message with a precise gap list (UI layer, docs, ISA marks, commits, and a missing dedicated metrics test file caught by primary grep before resume). All gaps closed in the resumed pass.
+- Throwaway instance, temp DB, and screenshots deleted after verification; both leftover local test servers killed; production untouched.
+- 2026-07-17T18:45Z Decisions addendum: ZwiftPower access is an unofficial community endpoint via the wrapper with Austin's own Zwift credentials, the same accepted-risk class as the unofficial Garmin library already in production. Surfaced to Austin explicitly in the session report; his creds-in-.env step is also his acceptance gate, since the feature stays dormant without them.
 
 ### Roadmap verification round (2026-07-17)
 - ISC-150: Read + rg count, exactly 10 `## N` feature sections in ROADMAP.md, each with rationale and S/M/L effort tag.
