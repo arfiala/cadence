@@ -19,6 +19,7 @@
     "typescript": "^5"
   },
   "dependencies": {
+    "@codingwithspike/zwift-api-wrapper": "0.0.9",
     "@modelcontextprotocol/sdk": "1.29.0",
     "garmin-connect-sdk": "1.0.0-alpha.4"
   }
