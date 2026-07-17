@@ -3,7 +3,7 @@ task: Cadence — Austin's personal fitness app (Garmin-synced, MCP-editable)
 project: cadence
 effort: E4
 phase: complete
-progress: 144/152
+progress: 146/152
 mode: standard
 started: 2026-07-16T19:50:29Z
 updated: 2026-07-17T18:45:00Z
@@ -77,11 +77,11 @@ Cadence is live at `https://fit.austinfiala.com` behind Austin's single-user log
 - [x] ISC-26: Upsert is idempotent: same activity twice → one row, updated_at bumped only on change — probe: bun test
 - [x] ISC-27: Manual edits to a Garmin-sourced activity's `sport`/`notes`/`title` survive re-sync (edit wins; duration/distance from Garmin win) — field-level merge policy tested — probe: bun test
 - [x] ISC-28: Sync failure (bad creds, network, rate limit) records an errored sync_run and never crashes the server — probe: bun test with failing mock
-- [DEFERRED-VERIFY] ISC-29: Garmin session tokens persisted to disk (mode 600) so MFA is not re-prompted every sync — probe: stat + re-sync without re-auth in mock
+- [x] ISC-29: Garmin session tokens persisted to disk (mode 600) so MFA is not re-prompted every sync — probe: stat + re-sync without re-auth in mock (closed live 2026-07-17: /opt/cadence/garmin-tokens drwx------, post-restart sync succeeded with no MFA code in env)
 - [x] ISC-30: Scheduled sync every 6h in-process; "Sync now" button and MCP tool trigger the same code path — probe: bun test single implementation
 - [x] ISC-31: Concurrent sync attempts collapse (second request returns 'already running') — probe: bun test parallel trigger
 - [x] ISC-32: Sync maps Garmin activity types → sport vocabulary incl. virtual_ride→virtual_cycling, lap_swimming/open_water→swimming — probe: bun test mapping table
-- [DEFERRED-VERIFY] ISC-33: DEFERRED-VERIFY: live pull of Austin's real Garmin activities once he sets credentials — follow-up: FOLLOWUP-cadence-live-garmin — probe: sync_runs row with real counts
+- [x] ISC-33: live pull of Austin's real Garmin activities once he sets credentials — probe: sync_runs row with real counts (closed 2026-07-17: 50 seen / 50 new, then 50 seen / 0 new on token-reuse re-sync; FOLLOWUP-cadence-live-garmin resolved)
 - [x] ISC-34: Anti: sync never deletes rows; Garmin-deleted activities remain (source of truth for history is Cadence once ingested) — probe: bun test
 - [x] ISC-35: A setup doc section explains linking Zwift→Garmin (Settings→Connections) so Zwift rides flow in — probe: README grep
 
@@ -313,6 +313,12 @@ Cadence is live at `https://fit.austinfiala.com` behind Austin's single-user log
 - Live-verified: fit.austinfiala.com/health 200, suretas.com/health 200, austinfiala.com 200, new app.js bytes carry Races/training-load markers, /api/metrics/training-load and /api/zwiftpower/results both 401 unauthenticated, zwiftpower_results table + avg_power/norm_power columns present in prod DB, activities count unchanged (1) so no data was touched.
 - Live Interceptor render through Austin's real session: Races tab not-connected panel with env guidance, Trends computing real values from his data (Fitness 0.3, Fatigue 1.7, week load 12.2). Render-only, no data-creating clicks. Cosmetic follow-up noted in deploy/NOTES.md: sparse-data load chart draws a wide block.
 - deploy/NOTES.md bootstrapped this session (Deploy skill Invariant 6: notes were missing; method, secrets names, smoke set, and gotchas now documented in-repo).
+
+### Garmin live sync round (2026-07-17, ISC-29 + ISC-33 closed, FOLLOWUP-cadence-live-garmin resolved)
+- MFA dance per the documented two-login procedure: trigger login sent a fresh code (prior 17:21Z scheduler attempt's code was stale; rate-limit window confirmed clear after ~1h53m quiet), Austin supplied the code in-session, GARMIN_MFA_CODE set, restart, session-establishing sync: 50 activities seen / 50 new. Code then scrubbed from .env (grep 0), restart, and a no-code re-sync succeeded: 50 seen / 0 new, proving token reuse AND live idempotency in one probe.
+- Token persistence: /opt/cadence/garmin-tokens exists drwx------ ubuntu (ISC-29).
+- Data audit: 51 activities total (50 Garmin + 1 manual), spanning a full year; 23 virtual_cycling (Zwift→Garmin link already active, nothing for Austin to do), 10 running, 3 cycling, 1 strength, 14 other. The 14 "other" are all raw_type walking, correctly mapped; zero swims exist in his Garmin year, so no G1 mapping bug. 35 activities carry real power data.
+- Live render: dashboard week now shows 4 sessions / 3.9 h with the honest G1 gap line; Trends draws real daily load bars with Fitness 16.5 / Fatigue 25.8 / Form -5.7 / week 213.8. The sparse-data wide-block chart cosmetic from the deploy round is resolved by real data; no code change was needed.
 
 ### ZwiftPower live verification round (2026-07-17, ISC-133 closed)
 - Austin provided Zwift credentials in-session; appended to /opt/cadence/.env via ssh stdin (never written locally, never in git), perms re-confirmed 600 ubuntu.
