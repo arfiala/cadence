@@ -93,6 +93,7 @@
     if (name === "dashboard") loadDashboard();
     if (name === "activities") loadActivities();
     if (name === "trends") loadTrends();
+    if (name === "races") loadRaces();
     if (name === "stretch") loadStretch();
     if (name === "sync") loadSyncStatus();
   }
@@ -275,7 +276,185 @@
       return;
     }
     renderTrendChart(data.weeks);
+    loadTrainingLoad();
   }
+
+  // --- Training load (fitness / fatigue / form) ------------------------
+
+  async function loadTrainingLoad() {
+    let data;
+    try {
+      data = await api("/api/metrics/training-load");
+    } catch {
+      return;
+    }
+    // Populate the threshold form with current values.
+    document.getElementById("ftp-input").value = data.ftp_watts != null ? data.ftp_watts : "";
+    document.getElementById("lthr-input").value = data.lthr_bpm != null ? data.lthr_bpm : "";
+    document.getElementById("load-prompt").hidden = data.thresholds_set;
+
+    const c = data.current || { fitness: 0, fatigue: 0, form: 0 };
+    document.getElementById("load-current").innerHTML = [
+      ["Fitness", c.fitness],
+      ["Fatigue", c.fatigue],
+      ["Form", c.form],
+      ["This week", data.week_load],
+    ]
+      .map(
+        (m) =>
+          `<div class="load-metric"><div class="load-metric-label">${m[0]}</div><div class="load-metric-value">${escapeHtml(String(m[1]))}</div></div>`,
+      )
+      .join("");
+
+    renderLoadChart(data.series || []);
+  }
+
+  function renderLoadChart(series) {
+    const svg = document.getElementById("load-svg");
+    const empty = document.getElementById("load-empty");
+    if (!series.length) {
+      svg.innerHTML = "";
+      empty.hidden = false;
+      return;
+    }
+    empty.hidden = true;
+
+    const width = 640;
+    const height = 220;
+    const padding = { top: 12, right: 10, bottom: 24, left: 10 };
+    const chartW = width - padding.left - padding.right;
+    const chartH = height - padding.top - padding.bottom;
+    const n = series.length;
+
+    const maxVal = Math.max(
+      1,
+      ...series.map((p) => p.load),
+      ...series.map((p) => p.fitness),
+      ...series.map((p) => p.fatigue),
+    );
+    const x = (i) => (n === 1 ? padding.left + chartW / 2 : padding.left + (i / (n - 1)) * chartW);
+    const y = (v) => padding.top + chartH - (Math.max(0, v) / maxVal) * chartH;
+
+    // Faint daily-load bars behind the lines.
+    const barW = Math.max(1, (chartW / n) * 0.5);
+    let bars = "";
+    series.forEach((p, i) => {
+      const h = (p.load / maxVal) * chartH;
+      bars += `<rect x="${(x(i) - barW / 2).toFixed(1)}" y="${(padding.top + chartH - h).toFixed(1)}" width="${barW.toFixed(1)}" height="${h.toFixed(1)}" fill="rgba(11,61,46,0.18)" rx="1"></rect>`;
+    });
+
+    const line = (key, color) => {
+      const pts = series.map((p, i) => `${x(i).toFixed(1)},${y(p[key]).toFixed(1)}`).join(" ");
+      return `<polyline points="${pts}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"></polyline>`;
+    };
+
+    svg.innerHTML =
+      bars +
+      line("fitness", "#0B3D2E") +
+      line("fatigue", "#2BB673") +
+      line("form", "#B8863B");
+  }
+
+  document.getElementById("threshold-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const submitBtn = document.getElementById("threshold-submit");
+    const statusEl = document.getElementById("threshold-status");
+    submitBtn.disabled = true;
+    statusEl.textContent = "";
+    try {
+      const ftpVal = document.getElementById("ftp-input").value;
+      const lthrVal = document.getElementById("lthr-input").value;
+      const body = {
+        ftp_watts: ftpVal ? Number(ftpVal) : null,
+        lthr_bpm: lthrVal ? Number(lthrVal) : null,
+      };
+      await api("/api/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      statusEl.textContent = "Saved.";
+      loadTrainingLoad();
+    } catch (err) {
+      statusEl.textContent = err.message;
+    } finally {
+      submitBtn.disabled = false;
+    }
+  });
+
+  // --- Races (ZwiftPower) ---------------------------------------------
+
+  async function loadRaces() {
+    let data;
+    try {
+      data = await api("/api/zwiftpower/results");
+    } catch {
+      return;
+    }
+    document.getElementById("races-not-configured").hidden = data.configured;
+    document.getElementById("races-configured").hidden = !data.configured;
+
+    const results = data.results || [];
+    document.getElementById("races-empty").hidden = !(data.configured && results.length === 0);
+
+    const list = document.getElementById("races-list");
+    list.innerHTML = results
+      .map((r) => {
+        const title = r.title ? escapeHtml(r.title) : "Race";
+        const date = r.event_date ? formatDate(r.event_date) : "Date unknown";
+        const cat = r.category ? `Cat ${escapeHtml(r.category)}` : "";
+        const pos = r.position != null ? `P${escapeHtml(String(r.position))}` : "";
+        const meta = [date, cat, pos].filter((s) => s).join(" · ");
+        return `
+        <li class="activity-item">
+          <div class="activity-icon">\u{1F3C1}</div>
+          <div class="activity-main">
+            <div class="activity-title">${title}</div>
+            <div class="activity-meta">${meta}</div>
+          </div>
+          ${r.category ? `<span class="badge">${escapeHtml(r.category)}</span>` : ""}
+        </li>`;
+      })
+      .join("");
+
+    if (data.configured) loadZpStatus();
+  }
+
+  async function loadZpStatus() {
+    let data;
+    try {
+      data = await api("/api/zwiftpower/status");
+    } catch {
+      return;
+    }
+    const runs = data.runs || [];
+    const statusEl = document.getElementById("zp-status");
+    if (runs.length === 0) {
+      statusEl.textContent = "No syncs yet.";
+    } else {
+      const last = runs[0];
+      statusEl.textContent = `Last sync: ${last.status} at ${new Date(last.started_at).toLocaleString()} (${last.results_new} new / ${last.results_seen} seen)`;
+    }
+  }
+
+  let zpSyncInFlight = false;
+  document.getElementById("zp-sync-btn").addEventListener("click", async () => {
+    if (zpSyncInFlight) return;
+    const btn = document.getElementById("zp-sync-btn");
+    zpSyncInFlight = true;
+    btn.disabled = true;
+    btn.textContent = "Syncing...";
+    try {
+      await api("/api/zwiftpower/sync", { method: "POST" });
+      await loadRaces();
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      zpSyncInFlight = false;
+      btn.disabled = false;
+      btn.textContent = "Sync ZwiftPower";
+    }
+  });
 
   function renderTrendChart(weeks) {
     const svg = document.getElementById("trend-svg");

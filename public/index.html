@@ -35,6 +35,7 @@
         <button class="nav-tab active" data-view="dashboard">Dashboard</button>
         <button class="nav-tab" data-view="activities">Activities</button>
         <button class="nav-tab" data-view="trends">Trends</button>
+        <button class="nav-tab" data-view="races">Races</button>
         <button class="nav-tab" data-view="stretch">Stretch</button>
         <button class="nav-tab" data-view="sync">Sync</button>
       </nav>
@@ -115,6 +116,57 @@
           <div><span class="legend-swatch" style="background:#0B3D2E"></span>Sessions</div>
         </div>
       </div>
+
+      <h2 class="section-title">Fitness, fatigue &amp; form</h2>
+      <div class="card">
+        <div class="load-current" id="load-current"></div>
+        <p class="muted" id="load-prompt" hidden>Set your power and heart-rate thresholds below for a sharper load estimate. Until then, load is estimated from duration alone.</p>
+        <svg id="load-svg" class="trend-chart" viewBox="0 0 640 220" preserveAspectRatio="xMidYMid meet"></svg>
+        <div class="trend-legend">
+          <div><span class="legend-swatch" style="background:rgba(11,61,46,0.18)"></span>Load</div>
+          <div><span class="legend-swatch" style="background:#0B3D2E"></span>Fitness</div>
+          <div><span class="legend-swatch" style="background:#2BB673"></span>Fatigue</div>
+          <div><span class="legend-swatch" style="background:#B8863B"></span>Form</div>
+        </div>
+        <p class="muted" id="load-empty" hidden>No activities yet. Load builds as you log or sync training.</p>
+      </div>
+
+      <h2 class="section-title">Thresholds</h2>
+      <div class="card">
+        <p class="muted">Used to estimate training load. Leave blank to fall back to a duration-based estimate.</p>
+        <form id="threshold-form">
+          <div class="form-grid">
+            <div class="field">
+              <label for="ftp-input">Functional threshold power (watts)</label>
+              <input type="number" id="ftp-input" min="1" step="1" placeholder="e.g. 250">
+            </div>
+            <div class="field">
+              <label for="lthr-input">Lactate threshold heart rate (bpm)</label>
+              <input type="number" id="lthr-input" min="1" step="1" placeholder="e.g. 165">
+            </div>
+          </div>
+          <div class="form-actions">
+            <button type="submit" class="btn" id="threshold-submit">Save thresholds</button>
+            <span class="sync-status" id="threshold-status"></span>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <section id="view-races" class="section" hidden>
+      <h2 class="section-title">ZwiftPower races</h2>
+      <div class="card" id="races-not-configured" hidden>
+        <p>ZwiftPower is not connected yet.</p>
+        <p class="muted">Set <code>ZWIFT_USERNAME</code>, <code>ZWIFT_PASSWORD</code>, and <code>ZWIFT_PROFILE_ID</code> in the box .env to pull your race results. See the README for the one-time ZwiftPower profile activation step.</p>
+      </div>
+      <div class="card" id="races-configured" hidden>
+        <div class="sync-row">
+          <button class="btn" id="zp-sync-btn">Sync ZwiftPower</button>
+          <span class="sync-status" id="zp-status">Checking last sync...</span>
+        </div>
+      </div>
+      <ul class="activity-list" id="races-list"></ul>
+      <p class="muted" id="races-empty" hidden>No race results stored yet. Run a sync to pull them in.</p>
     </section>
 
     <section id="view-stretch" class="section" hidden>

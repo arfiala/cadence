@@ -215,8 +215,12 @@ a{color:var(--link);}
 
 /* --- Trends --- */
 .trend-chart{width:100%;height:auto;}
-.trend-legend{display:flex;gap:16px;font-size:0.82rem;color:#4a544f;margin-top:8px;}
+.trend-legend{display:flex;gap:16px;flex-wrap:wrap;font-size:0.82rem;color:#4a544f;margin-top:8px;}
 .legend-swatch{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;}
+.load-current{display:flex;gap:20px;flex-wrap:wrap;margin-bottom:12px;}
+.load-metric{min-width:88px;}
+.load-metric .load-metric-label{font-family:var(--font-head);font-weight:500;font-size:0.72rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--link);}
+.load-metric .load-metric-value{font-family:var(--font-head);font-weight:700;font-size:1.5rem;color:var(--evergreen);}
 
 /* --- Sync --- */
 .sync-row{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:16px;}
