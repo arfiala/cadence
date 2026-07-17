@@ -3,7 +3,7 @@ task: Cadence — Austin's personal fitness app (Garmin-synced, MCP-editable)
 project: cadence
 effort: E4
 phase: complete
-progress: 143/152
+progress: 144/152
 mode: standard
 started: 2026-07-16T19:50:29Z
 updated: 2026-07-17T18:45:00Z
@@ -199,7 +199,7 @@ Cadence is live at `https://fit.austinfiala.com` behind Austin's single-user log
 - [x] ISC-130: ZwiftPower session cookies persisted to disk mode 600 so re-auth is not per-sync, probe: implementation read + stat in test
 - [x] ISC-131: With `ZWIFT_*` env absent the feature is dormant: no scheduler entry, no errors, UI panel says not configured, probe: bun test with env unset
 - [x] ISC-132: `.env.example` and README document the Zwift vars and the one-time ZwiftPower profile-activation requirement, probe: Read
-- [DEFERRED-VERIFY] ISC-133: Live ZwiftPower fetch with Austin's real credentials succeeds in production, probe: prod sync run (DEFERRED-VERIFY until creds provided + deploy; FOLLOWUP-cadence-zwiftpower-live)
+- [x] ISC-133: Live ZwiftPower fetch with Austin's real credentials succeeds in production, probe: prod sync run (closed 2026-07-17, FOLLOWUP-cadence-zwiftpower-live resolved)
 
 ### Training-load engine, TrainingPeaks-equivalent (added 2026-07-17, Austin: "training peaks")
 - [x] ISC-134: Settings gain nullable `ftp_watts` and `lthr_bpm`, readable/writable via the settings API, probe: SELECT + curl
@@ -313,6 +313,12 @@ Cadence is live at `https://fit.austinfiala.com` behind Austin's single-user log
 - Live-verified: fit.austinfiala.com/health 200, suretas.com/health 200, austinfiala.com 200, new app.js bytes carry Races/training-load markers, /api/metrics/training-load and /api/zwiftpower/results both 401 unauthenticated, zwiftpower_results table + avg_power/norm_power columns present in prod DB, activities count unchanged (1) so no data was touched.
 - Live Interceptor render through Austin's real session: Races tab not-connected panel with env guidance, Trends computing real values from his data (Fitness 0.3, Fatigue 1.7, week load 12.2). Render-only, no data-creating clicks. Cosmetic follow-up noted in deploy/NOTES.md: sparse-data load chart draws a wide block.
 - deploy/NOTES.md bootstrapped this session (Deploy skill Invariant 6: notes were missing; method, secrets names, smoke set, and gotchas now documented in-repo).
+
+### ZwiftPower live verification round (2026-07-17, ISC-133 closed)
+- Austin provided Zwift credentials in-session; appended to /opt/cadence/.env via ssh stdin (never written locally, never in git), perms re-confirmed 600 ubuntu.
+- Profile ID discovered for him: one-shot on-box script via the wrapper's ZwiftAPI.getProfile("me") returned status 200, id 8342103, name Austin Fiala. Single login only (Garmin rate-limit lesson respected); ZWIFT_PROFILE_ID=8342103 set, service restarted, health 200.
+- ISC-133: POST /api/zwiftpower/sync (bearer token) returned success with results_seen 7, results_new 7 in 2.9s; GET /results returned all 7 real races (Tour Fever stages, Level Up Racing series, categories A/D/E with positions and power); sync_runs row recorded. His ZwiftPower profile was already activated, so no manual activation step was needed.
+- Live Interceptor render: Races tab shows the sync status line (success, 7 new / 7 seen) and all 7 result rows with category badges. Screenshot reviewed, then deleted.
 
 ### Roadmap verification round (2026-07-17)
 - ISC-150: Read + rg count, exactly 10 `## N` feature sections in ROADMAP.md, each with rationale and S/M/L effort tag.
