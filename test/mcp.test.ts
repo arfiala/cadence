@@ -52,19 +52,24 @@ describe("readConfig (ISC-68)", () => {
 });
 
 describe("tool surface (ISC-60, ISC-61..67)", () => {
-  test("exactly the 10 specified tools are registered", () => {
+  test("exactly the 15 specified tools are registered", () => {
     const names = TOOLS.map((t) => t.name).sort();
     expect(names).toEqual(
       [
         "delete_activity",
+        "delete_nutrition",
         "edit_activity",
+        "edit_nutrition",
         "get_goal_progress",
+        "get_nutrition_day",
         "get_race_results",
         "get_sync_status",
         "get_training_load",
+        "get_week_digest",
         "get_week_summary",
         "list_activities",
         "log_activity",
+        "log_nutrition",
         "trigger_sync",
       ].sort(),
     );
@@ -179,7 +184,7 @@ describe("full stdio MCP handshake (ISC-60)", () => {
 
     const tools = await mcpClient.listTools();
     expect(tools.tools.map((t) => t.name).sort()).toContain("get_week_summary");
-    expect(tools.tools.length).toBe(10);
+    expect(tools.tools.length).toBe(15);
 
     await callTool(client(), "log_activity", { sport: "cycling", date: "2026-07-14T06:00:00Z", duration_minutes: 60 });
     const result = await mcpClient.callTool({ name: "get_goal_progress", arguments: {} });
@@ -195,5 +200,70 @@ describe("no business logic / SQL in mcp/ (ISC-71)", () => {
   test("CadenceApiError is the only error type the client raises for API failures", () => {
     // Structural: the client module exports CadenceApiError and no db import.
     expect(CadenceApiError).toBeDefined();
+  });
+});
+
+describe("nutrition tools round-trip (ISC-206, ISC-207, ISC-208)", () => {
+  // log_nutrition drives the estimate path, which calls the Anthropic API via
+  // the global fetch and the ANTHROPIC_API_KEY env. We stub ONLY the Anthropic
+  // host (delegating every other fetch, including the MCP client's calls to the
+  // test server, to the real fetch) and set a test key, so the round-trip runs
+  // with zero real network calls.
+  const realFetch = globalThis.fetch;
+  const priorKey = process.env.ANTHROPIC_API_KEY;
+
+  beforeAll(() => {
+    process.env.ANTHROPIC_API_KEY = "test-key";
+    globalThis.fetch = ((input: unknown, init?: unknown) => {
+      const urlStr = typeof input === "string" ? input : String((input as { url?: string })?.url ?? "");
+      if (urlStr.includes("api.anthropic.com")) {
+        const text = JSON.stringify([
+          { food: "banana", quantity: "1 medium", kcal: 100, protein_g: 1, carbs_g: 27, fat_g: 0.3 },
+        ]);
+        return Promise.resolve(
+          new Response(JSON.stringify({ content: [{ type: "text", text }] }), { status: 200 }),
+        );
+      }
+      return realFetch(input as Parameters<typeof fetch>[0], init as Parameters<typeof fetch>[1]);
+    }) as typeof fetch;
+  });
+
+  afterAll(() => {
+    globalThis.fetch = realFetch;
+    if (priorKey === undefined) delete process.env.ANTHROPIC_API_KEY;
+    else process.env.ANTHROPIC_API_KEY = priorKey;
+  });
+
+  test("log -> get -> edit -> delete, and delete refuses without confirm", async () => {
+    const logged = await callTool(client(), "log_nutrition", { description: "a banana", date: "2026-07-15" });
+    expect(logged.isError).toBe(false);
+
+    const day = await callTool(client(), "get_nutrition_day", { date: "2026-07-15" });
+    expect(day.isError).toBe(false);
+    expect(day.text).toContain("banana");
+
+    const id = (db.query("SELECT id FROM nutrition_entries LIMIT 1").get() as { id: number }).id;
+
+    const edited = await callTool(client(), "edit_nutrition", { id, fields: { notes: "post workout" } });
+    expect(edited.isError).toBe(false);
+    const row = db.query("SELECT source FROM nutrition_entries WHERE id=?").get(id) as { source: string };
+    expect(row.source).toBe("edited");
+
+    const refused = await callTool(client(), "delete_nutrition", { id, confirm: false });
+    expect(refused.isError).toBe(true);
+    expect((db.query("SELECT COUNT(*) as n FROM nutrition_entries").get() as { n: number }).n).toBe(1);
+
+    const ok = await callTool(client(), "delete_nutrition", { id, confirm: true });
+    expect(ok.isError).toBe(false);
+    expect((db.query("SELECT COUNT(*) as n FROM nutrition_entries").get() as { n: number }).n).toBe(0);
+  });
+
+  test("destructive nutrition tools name Austin's REAL nutrition log (ISC-72 parity)", () => {
+    const log = TOOLS.find((t) => t.name === "log_nutrition")!;
+    const del = TOOLS.find((t) => t.name === "delete_nutrition")!;
+    const edit = TOOLS.find((t) => t.name === "edit_nutrition")!;
+    expect(log.description).toContain("REAL nutrition log");
+    expect(del.description).toContain("REAL nutrition log");
+    expect(edit.description).toContain("REAL nutrition log");
   });
 });

@@ -129,6 +129,43 @@ export type ZwiftPowerResultRow = {
   updated_at: string;
 };
 
+// One row per logged meal/snack (ISC-189). Nutrition is deliberately its own
+// spine, entirely separate from `activities`: it never feeds the G1 training
+// metric (ISC-214). `kcal`/macros are the computed sum of the entry's items,
+// recomputed on every save/edit so the header numbers can never drift from the
+// itemized rows. `source` records provenance: 'estimated' (LLM), 'manual'
+// (hand-entered), or 'edited' (an estimate a human corrected). `logged_date` is
+// the America/New_York calendar day (YYYY-MM-DD) the meal belongs to, so the
+// day rollup groups on a plain string with no timezone math at query time.
+export type NutritionEntryRow = {
+  id: number;
+  logged_date: string; // YYYY-MM-DD (America/New_York calendar day)
+  logged_at: string; // UTC ISO-8601 instant the entry was logged
+  description: string | null;
+  source: "estimated" | "manual" | "edited";
+  kcal: number;
+  protein_g: number;
+  carbs_g: number;
+  fat_g: number;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+// One row per food item inside an entry (ISC-190). Deleting the parent entry
+// cascades these away (ON DELETE CASCADE, foreign_keys is ON in this
+// connection). The per-item numbers are what the entry totals are summed from.
+export type NutritionItemRow = {
+  id: number;
+  entry_id: number;
+  food: string;
+  quantity: string | null;
+  kcal: number;
+  protein_g: number;
+  carbs_g: number;
+  fat_g: number;
+};
+
 // One row per ZwiftPower sync attempt, including failures (ISC-124), mirroring
 // sync_runs but kept separate so the Garmin sync history stays clean.
 export type ZwiftPowerSyncRunRow = {
@@ -264,6 +301,44 @@ export function runMigrations(database: Database): void {
       results_new INTEGER NOT NULL DEFAULT 0,
       error TEXT
     );
+
+    -- Nutrition entries (ISC-189). One row per logged meal/snack. kcal and the
+    -- macro columns are the computed sum of the entry items, written on every
+    -- save/edit. source records provenance ('estimated' from the LLM, 'manual'
+    -- hand-entered, 'edited' an estimate a human corrected). This spine is
+    -- entirely separate from the activities table and never feeds the G1 metric
+    -- (ISC-214). logged_date is the America/New_York calendar day so the daily
+    -- rollup groups on a plain string.
+    CREATE TABLE IF NOT EXISTS nutrition_entries (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      logged_date TEXT NOT NULL,
+      logged_at TEXT NOT NULL,
+      description TEXT,
+      source TEXT NOT NULL CHECK (source IN ('estimated','manual','edited')),
+      kcal INTEGER NOT NULL DEFAULT 0,
+      protein_g REAL NOT NULL DEFAULT 0,
+      carbs_g REAL NOT NULL DEFAULT 0,
+      fat_g REAL NOT NULL DEFAULT 0,
+      notes TEXT,
+      created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+      updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_nutrition_entries_logged_date ON nutrition_entries(logged_date);
+
+    -- Itemized foods inside an entry (ISC-190). Deleting the parent entry
+    -- cascades these away (foreign_keys is ON in this connection). The entry's
+    -- header totals are the sum of these rows.
+    CREATE TABLE IF NOT EXISTS nutrition_items (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      entry_id INTEGER NOT NULL REFERENCES nutrition_entries(id) ON DELETE CASCADE,
+      food TEXT NOT NULL,
+      quantity TEXT,
+      kcal INTEGER NOT NULL DEFAULT 0,
+      protein_g REAL NOT NULL DEFAULT 0,
+      carbs_g REAL NOT NULL DEFAULT 0,
+      fat_g REAL NOT NULL DEFAULT 0
+    );
+    CREATE INDEX IF NOT EXISTS idx_nutrition_items_entry ON nutrition_items(entry_id);
   `);
 
   // Power columns on activities (ISC-135), added via the guarded ALTER so an
@@ -277,6 +352,13 @@ export function runMigrations(database: Database): void {
   database.exec(`
     INSERT OR IGNORE INTO settings (key, value) VALUES ('target_sessions', '5');
     INSERT OR IGNORE INTO settings (key, value) VALUES ('target_hours', '8');
+  `);
+
+  // Seed default nutrition targets exactly once (ISC-191), same INSERT OR
+  // IGNORE discipline so a target Austin already edited is never clobbered.
+  database.exec(`
+    INSERT OR IGNORE INTO settings (key, value) VALUES ('nutrition_target_kcal', '2200');
+    INSERT OR IGNORE INTO settings (key, value) VALUES ('nutrition_target_protein_g', '150');
   `);
 }
 

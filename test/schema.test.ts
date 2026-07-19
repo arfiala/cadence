@@ -123,7 +123,8 @@ describe("idempotent migrations (ISC-10)", () => {
     runMigrations(mem);
     expect(() => runMigrations(mem)).not.toThrow();
     const count = mem.query("SELECT COUNT(*) as n FROM settings").get() as { n: number };
-    expect(count.n).toBe(2); // still just the two seeded rows
+    // The two G1 targets plus the two nutrition targets, never duplicated.
+    expect(count.n).toBe(4);
   });
 });
 

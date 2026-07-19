@@ -137,6 +137,23 @@ export function weekWindow(instant: Date): { start: Date; end: Date } {
   return { start, end: endOfWeek(start) };
 }
 
+// A Monday-anchored week start offset by `n` weeks (n may be negative),
+// DST-safe. Re-anchors via startOfWeek from a noon anchor that never sits near
+// a midnight boundary a DST shift could move, so week enumeration (heatmap,
+// records streaks) never drifts by an hour across a transition. This is the
+// single shared week-stepping helper every new feature uses.
+export function addWeeks(weekStart: Date, n: number): Date {
+  const noonAnchor = weekStart.getTime() + 12 * 60 * 60 * 1000;
+  return startOfWeek(new Date(noonAnchor + n * 7 * 24 * 60 * 60 * 1000));
+}
+
+// The most recent COMPLETED week relative to `now`: the week immediately
+// before the in-progress week that contains `now`. The records streak and the
+// Monday digest both key off this so "last week" means the same thing in both.
+export function lastCompletedWeekStart(now: Date): Date {
+  return addWeeks(startOfWeek(now), -1);
+}
+
 // Which 0-6 (Mon=0) NY calendar day a given instant falls on, relative to a
 // week's start. Used for the per-day breakdown in /api/week.
 export function dayIndexInWeek(instant: Date, weekStart: Date): number {

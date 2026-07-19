@@ -15,10 +15,14 @@ export function resetDb(): void {
   db.exec("DELETE FROM sync_runs;");
   db.exec("DELETE FROM zwiftpower_results;");
   db.exec("DELETE FROM zwiftpower_sync_runs;");
+  db.exec("DELETE FROM nutrition_items;");
+  db.exec("DELETE FROM nutrition_entries;");
   db.exec("DELETE FROM users;");
   db.exec("DELETE FROM settings;");
   db.exec("INSERT OR IGNORE INTO settings (key, value) VALUES ('target_sessions','5');");
   db.exec("INSERT OR IGNORE INTO settings (key, value) VALUES ('target_hours','8');");
+  db.exec("INSERT OR IGNORE INTO settings (key, value) VALUES ('nutrition_target_kcal','2200');");
+  db.exec("INSERT OR IGNORE INTO settings (key, value) VALUES ('nutrition_target_protein_g','150');");
 }
 
 export const TEST_EMAIL = "austin@example.com";

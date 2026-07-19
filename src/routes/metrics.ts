@@ -8,6 +8,9 @@
 import { jsonError } from "../lib/http";
 import { getThresholds } from "../services/weekSummary";
 import { computeDailySeries, currentWeekLoad } from "../metrics/series";
+import { computeConsistency } from "../metrics/consistency";
+import { computeRecords } from "../metrics/records";
+import { computeDigest } from "../metrics/digest";
 
 const DEFAULT_DAYS = 90;
 const MAX_DAYS = 365;
@@ -38,4 +41,22 @@ export function getTrainingLoad(url: URL): Response {
     week_load: currentWeekLoad(thresholds),
     series,
   });
+}
+
+// GET /api/metrics/consistency (ISC-165): the 52-week heatmap grid, auth-gated
+// by living under /api/. Pure read, recomputed fresh each call.
+export function getConsistency(): Response {
+  return Response.json(computeConsistency(new Date()));
+}
+
+// GET /api/metrics/records (ISC-172): the personal-records board plus G1
+// streaks and the in-progress week, reported separately.
+export function getRecords(): Response {
+  return Response.json(computeRecords(new Date()));
+}
+
+// GET /api/metrics/digest (ISC-181): the last completed week's digest. Backs
+// the get_week_digest MCP tool so the tool stays a thin API call (ISC-71).
+export function getDigest(): Response {
+  return Response.json(computeDigest(new Date()));
 }

@@ -137,4 +137,27 @@ export class CadenceClient {
   getTrainingLoad(): Promise<unknown> {
     return this.request("GET", "/api/metrics/training-load");
   }
+
+  getWeekDigest(): Promise<unknown> {
+    return this.request("GET", "/api/metrics/digest");
+  }
+
+  // Nutrition (ISC-207): the same HTTP API the web UI uses, so UI and MCP stay
+  // peers over one API.
+  logNutrition(body: unknown): Promise<unknown> {
+    return this.request("POST", "/api/nutrition", body);
+  }
+
+  getNutritionDay(date?: string): Promise<unknown> {
+    const qs = date !== undefined ? `?date=${encodeURIComponent(date)}` : "";
+    return this.request("GET", `/api/nutrition${qs}`);
+  }
+
+  editNutrition(id: number, fields: unknown): Promise<unknown> {
+    return this.request("PATCH", `/api/nutrition/${id}`, fields);
+  }
+
+  deleteNutrition(id: number): Promise<unknown> {
+    return this.request("DELETE", `/api/nutrition/${id}`);
+  }
 }

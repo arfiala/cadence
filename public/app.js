@@ -42,6 +42,15 @@
 
   const STRETCH_LOG_TITLE = "ATG Daily Stretch";
 
+  // One-tap quick-log presets (ISC-156, ISC-157). The stretch preset uses
+  // sport=strength, which is NOT G1-qualifying, so a quick stretch never
+  // inflates the week's session count (ISC-164).
+  const PRESETS = {
+    ride: { sport: "virtual_cycling", minutes: 30, title: "Trainer ride", notes: "Quick log" },
+    swim: { sport: "swimming", minutes: 45, title: "Swim", notes: "Quick log" },
+    stretch: { sport: "strength", minutes: 15, title: STRETCH_LOG_TITLE, notes: "Knees Over Toes daily plan" },
+  };
+
   // Escapes user-controlled text before it is ever interpolated into
   // innerHTML (ISC-54). Every render function below routes activity
   // title/notes through this.
@@ -92,6 +101,7 @@
     });
     if (name === "dashboard") loadDashboard();
     if (name === "activities") loadActivities();
+    if (name === "nutrition") loadNutrition();
     if (name === "trends") loadTrends();
     if (name === "races") loadRaces();
     if (name === "stretch") loadStretch();
@@ -160,6 +170,177 @@
       })
       .join("");
     document.getElementById("day-dots").innerHTML = dotsHtml;
+    loadRecords();
+  }
+
+  // --- Quick log presets + toast --------------------------------------
+
+  document.querySelectorAll(".preset-btn").forEach((btn) => {
+    btn.addEventListener("click", () => quickLog(btn));
+  });
+
+  // A preset tap logs immediately, disables the button in-flight (ISC-158),
+  // then shows a toast whose Undo deletes THIS activity by its returned id
+  // (ISC-159) — never "most recent", so a fast second tap can't clobber it.
+  async function quickLog(btn) {
+    if (btn.disabled) return;
+    const preset = PRESETS[btn.dataset.preset];
+    if (!preset) return;
+    btn.disabled = true;
+    try {
+      const res = await api("/api/activities", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sport: preset.sport,
+          start_time: new Date().toISOString(),
+          duration_s: preset.minutes * 60,
+          title: preset.title,
+          notes: preset.notes,
+        }),
+      });
+      const activity = res.activity;
+      showToast(`Logged ${preset.title}.`, activity ? activity.id : null);
+      loadDashboard(); // refresh week numbers + records without a full reload (ISC-160)
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  function showToast(message, activityId) {
+    const container = document.getElementById("toast-container");
+    const toast = document.createElement("div");
+    toast.className = "toast";
+    const msg = document.createElement("span");
+    msg.textContent = message;
+    toast.appendChild(msg);
+
+    let removed = false;
+    const remove = () => {
+      if (removed) return;
+      removed = true;
+      toast.remove();
+    };
+
+    if (activityId != null) {
+      const undo = document.createElement("button");
+      undo.className = "toast-undo";
+      undo.type = "button";
+      undo.textContent = "Undo";
+      undo.addEventListener("click", async () => {
+        undo.disabled = true;
+        try {
+          // Delete the exact activity created for this toast (ISC-159).
+          await api(`/api/activities/${activityId}`, { method: "DELETE" });
+          loadDashboard();
+        } catch (err) {
+          alert(err.message);
+        } finally {
+          remove();
+        }
+      });
+      toast.appendChild(undo);
+    }
+
+    container.appendChild(toast);
+    setTimeout(remove, 6000);
+  }
+
+  // --- Personal records board ------------------------------------------
+
+  function fmtDur(seconds) {
+    const h = Math.floor(seconds / 3600);
+    const m = Math.round((seconds % 3600) / 60);
+    return h > 0 ? `${h}h ${m}m` : `${m}m`;
+  }
+
+  // Honest empty state: a null record renders "none yet", never a fabricated
+  // number (ISC-174).
+  function prItem(label, rec, valueFn, metaKey) {
+    if (!rec) {
+      return `<div class="pr-item"><div class="pr-label">${escapeHtml(label)}</div><div class="pr-value pr-empty">none yet</div></div>`;
+    }
+    const meta = metaKey && rec[metaKey] ? `<div class="pr-meta">${escapeHtml(String(rec[metaKey]))}</div>` : "";
+    return `<div class="pr-item"><div class="pr-label">${escapeHtml(label)}</div><div class="pr-value">${escapeHtml(valueFn(rec))}</div>${meta}</div>`;
+  }
+
+  async function loadRecords() {
+    let data;
+    try {
+      data = await api("/api/metrics/records");
+    } catch {
+      return;
+    }
+    const r = data.records;
+    document.getElementById("pr-board").innerHTML = [
+      prItem("Longest ride", r.longest_ride, (x) => fmtDur(x.value_s), "date"),
+      prItem("Longest distance", r.longest_distance_ride, (x) => `${(x.distance_m / 1000).toFixed(1)} km`, "date"),
+      prItem("Fastest ride", r.fastest_ride, (x) => `${x.speed_kmh.toFixed(1)} km/h`, "date"),
+      prItem("Longest swim", r.longest_swim, (x) => fmtDur(x.value_s), "date"),
+      prItem("Biggest week", r.biggest_week, (x) => `${x.hours.toFixed(1)} h`, "week_start"),
+    ].join("");
+
+    const s = data.streak;
+    const ip = s.in_progress;
+    document.getElementById("streak-row").innerHTML =
+      `<div class="streak-item"><span class="streak-num">${escapeHtml(String(s.current_weeks))}</span> week current G1 streak</div>` +
+      `<div class="streak-item"><span class="streak-num">${escapeHtml(String(s.longest_weeks))}</span> week best streak</div>` +
+      `<div class="streak-item streak-progress">This week so far: ${escapeHtml(String(ip.sessions))}/${escapeHtml(String(ip.target_sessions))} sessions, ${escapeHtml(String(ip.hours_g1))} h${ip.met ? " (met, still in progress)" : ""}</div>`;
+  }
+
+  // --- Consistency heatmap ---------------------------------------------
+
+  async function loadHeatmap() {
+    let data;
+    try {
+      data = await api("/api/metrics/consistency");
+    } catch {
+      return;
+    }
+    renderHeatmap(data);
+  }
+
+  function renderHeatmap(data) {
+    const svg = document.getElementById("heatmap-svg");
+    const weeks = data.weeks || [];
+    const cols = weeks.length;
+    const cell = 12;
+    const gap = 2;
+    const pad = 4;
+    const w = pad * 2 + cols * (cell + gap);
+    const h = pad * 2 + 7 * (cell + gap);
+    svg.setAttribute("viewBox", `0 0 ${w} ${h}`);
+    svg.setAttribute("width", String(w));
+    svg.setAttribute("height", String(h));
+
+    let maxMin = 1;
+    weeks.forEach((wk) => wk.days.forEach((d) => { if (d.minutes > maxMin) maxMin = d.minutes; }));
+
+    let out = "";
+    weeks.forEach((wk, ci) => {
+      wk.days.forEach((d, ri) => {
+        const x = pad + ci * (cell + gap);
+        const y = pad + ri * (cell + gap);
+        let fill;
+        if (d.minutes <= 0) {
+          fill = "rgba(11,61,46,0.08)"; // rest day, visibly distinct (ISC-167)
+        } else {
+          const t = Math.min(1, d.minutes / maxMin);
+          fill = `rgba(43,182,115,${(0.28 + 0.72 * t).toFixed(2)})`;
+        }
+        out += `<rect x="${x}" y="${y}" width="${cell}" height="${cell}" rx="2" fill="${fill}"><title>${escapeHtml(`${d.date}, ${d.minutes} min`)}</title></rect>`;
+      });
+      if (wk.g1_met) {
+        const x = pad + ci * (cell + gap) - 1;
+        const y = pad - 1;
+        const bw = cell + 2;
+        const bh = 7 * (cell + gap) - gap + 2;
+        out += `<rect x="${x}" y="${y}" width="${bw}" height="${bh}" rx="3" fill="none" stroke="#B8863B" stroke-width="1.5"></rect>`;
+      }
+    });
+    svg.innerHTML = out;
   }
 
   // --- Activities ------------------------------------------------------
@@ -266,6 +447,249 @@
     }
   });
 
+  // --- Nutrition -------------------------------------------------------
+  //
+  // Describe a meal -> POST /api/nutrition/estimate -> editable itemized rows
+  // -> Save. If the user edited the numbers the entry saves as source='manual'
+  // (a corrected estimate); an untouched estimate saves as source='estimated'.
+  // "Add manually" opens the same editor with one blank row. If the estimate
+  // endpoint reports unavailable (no API key on the box during dev), a friendly
+  // note tells the user to add macros manually, and the editor opens blank so
+  // they still can.
+
+  const nutriState = { rows: [], edited: false, estimated: false };
+
+  function numOrZero(v) {
+    const n = Number(v);
+    return Number.isFinite(n) && n >= 0 ? n : 0;
+  }
+
+  function blankRow() {
+    return { food: "", quantity: "", kcal: 0, protein_g: 0, carbs_g: 0, fat_g: 0 };
+  }
+
+  function renderNutriEditor() {
+    const wrap = document.getElementById("nutri-items");
+    wrap.innerHTML = nutriState.rows
+      .map(
+        (r, i) => `
+      <div class="nutri-item-row" data-i="${i}">
+        <input class="nutri-in nutri-col-food" data-i="${i}" data-k="food" type="text" value="${escapeHtml(r.food)}" placeholder="Food">
+        <input class="nutri-in nutri-col-qty" data-i="${i}" data-k="quantity" type="text" value="${escapeHtml(r.quantity == null ? "" : r.quantity)}" placeholder="Qty">
+        <input class="nutri-in nutri-col-num" data-i="${i}" data-k="kcal" type="number" min="0" step="1" value="${escapeHtml(String(r.kcal))}">
+        <input class="nutri-in nutri-col-num" data-i="${i}" data-k="protein_g" type="number" min="0" step="0.1" value="${escapeHtml(String(r.protein_g))}">
+        <input class="nutri-in nutri-col-num" data-i="${i}" data-k="carbs_g" type="number" min="0" step="0.1" value="${escapeHtml(String(r.carbs_g))}">
+        <input class="nutri-in nutri-col-num" data-i="${i}" data-k="fat_g" type="number" min="0" step="0.1" value="${escapeHtml(String(r.fat_g))}">
+        <button type="button" class="icon-btn nutri-col-x" data-action="nutri-remove" data-i="${i}">&times;</button>
+      </div>`,
+      )
+      .join("");
+
+    wrap.querySelectorAll(".nutri-in").forEach((input) => {
+      input.addEventListener("input", () => {
+        const i = Number(input.dataset.i);
+        const k = input.dataset.k;
+        if (!nutriState.rows[i]) return;
+        nutriState.rows[i][k] = k === "food" || k === "quantity" ? input.value : numOrZero(input.value);
+        // Any manual keystroke means the saved entry is a human-authored/edited
+        // one, not a pristine estimate.
+        nutriState.edited = true;
+      });
+    });
+    wrap.querySelectorAll('[data-action="nutri-remove"]').forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const i = Number(btn.dataset.i);
+        nutriState.rows.splice(i, 1);
+        nutriState.edited = true;
+        if (nutriState.rows.length === 0) nutriState.rows.push(blankRow());
+        renderNutriEditor();
+      });
+    });
+    document.getElementById("nutri-editor").hidden = false;
+  }
+
+  function openNutriEditor(rows, estimated) {
+    nutriState.rows = rows.length > 0 ? rows : [blankRow()];
+    nutriState.estimated = estimated;
+    nutriState.edited = false;
+    document.getElementById("nutri-save-status").textContent = "";
+    renderNutriEditor();
+  }
+
+  document.getElementById("nutri-estimate-btn").addEventListener("click", async () => {
+    const btn = document.getElementById("nutri-estimate-btn");
+    const statusEl = document.getElementById("nutri-estimate-status");
+    const description = document.getElementById("nutri-desc").value.trim();
+    if (!description) {
+      statusEl.textContent = "Describe what you ate first.";
+      return;
+    }
+    btn.disabled = true;
+    statusEl.textContent = "Estimating...";
+    try {
+      const res = await api("/api/nutrition/estimate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ description }),
+      });
+      if (res.unavailable) {
+        statusEl.textContent =
+          "Auto-estimate needs the API key set on the server. Add macros manually below.";
+        openNutriEditor([], false);
+      } else {
+        statusEl.textContent = "";
+        openNutriEditor(res.items || [], true);
+      }
+    } catch (err) {
+      statusEl.textContent = err.message;
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  document.getElementById("nutri-manual-btn").addEventListener("click", () => {
+    document.getElementById("nutri-estimate-status").textContent = "";
+    openNutriEditor([], false);
+  });
+
+  document.getElementById("nutri-add-row-btn").addEventListener("click", () => {
+    nutriState.rows.push(blankRow());
+    nutriState.edited = true;
+    renderNutriEditor();
+  });
+
+  let nutriSaveInFlight = false; // double-submit guard, same pattern as add-activity
+  document.getElementById("nutri-save-btn").addEventListener("click", async () => {
+    if (nutriSaveInFlight) return;
+    const btn = document.getElementById("nutri-save-btn");
+    const statusEl = document.getElementById("nutri-save-status");
+    const rows = nutriState.rows
+      .map((r) => ({
+        food: (r.food || "").trim(),
+        quantity: (r.quantity || "").trim(),
+        kcal: numOrZero(r.kcal),
+        protein_g: numOrZero(r.protein_g),
+        carbs_g: numOrZero(r.carbs_g),
+        fat_g: numOrZero(r.fat_g),
+      }))
+      .filter((r) => r.food.length > 0);
+    if (rows.length === 0) {
+      statusEl.textContent = "Add at least one food item.";
+      return;
+    }
+    nutriSaveInFlight = true;
+    btn.disabled = true;
+    try {
+      const description = document.getElementById("nutri-desc").value.trim();
+      // A pristine, untouched estimate re-runs the server estimate so the entry
+      // is stored as source='estimated'. Anything the user typed or corrected
+      // saves the explicit rows as source='manual'.
+      const payload =
+        nutriState.estimated && !nutriState.edited
+          ? { description: description || null, estimate: true }
+          : { description: description || null, items: rows, source: "manual" };
+      await api("/api/nutrition", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      document.getElementById("nutri-desc").value = "";
+      document.getElementById("nutri-editor").hidden = true;
+      document.getElementById("nutri-estimate-status").textContent = "";
+      nutriState.rows = [];
+      await loadNutritionDay();
+    } catch (err) {
+      statusEl.textContent = err.message;
+    } finally {
+      nutriSaveInFlight = false;
+      btn.disabled = false;
+    }
+  });
+
+  function renderNutriRing(consumed, target) {
+    const svg = document.getElementById("nutri-ring");
+    const cx = 60;
+    const cy = 60;
+    const rad = 48;
+    const circ = 2 * Math.PI * rad;
+    const pct = target > 0 ? Math.min(1, consumed / target) : 0;
+    const over = target > 0 && consumed > target;
+    const dash = circ * pct;
+    const color = over ? "#B8863B" : "#2BB673";
+    svg.innerHTML =
+      `<circle cx="${cx}" cy="${cy}" r="${rad}" fill="none" stroke="rgba(11,61,46,0.10)" stroke-width="10"></circle>` +
+      `<circle cx="${cx}" cy="${cy}" r="${rad}" fill="none" stroke="${color}" stroke-width="10" stroke-linecap="round" stroke-dasharray="${dash.toFixed(1)} ${(circ - dash).toFixed(1)}" transform="rotate(-90 ${cx} ${cy})"></circle>` +
+      `<text x="${cx}" y="${cy - 2}" text-anchor="middle" font-size="20" font-weight="700" fill="#0B3D2E">${escapeHtml(String(Math.round(consumed)))}</text>` +
+      `<text x="${cx}" y="${cy + 16}" text-anchor="middle" font-size="10" fill="#4a544f">of ${escapeHtml(String(Math.round(target)))} kcal</text>`;
+  }
+
+  async function loadNutritionDay() {
+    let data;
+    try {
+      data = await api("/api/nutrition");
+    } catch {
+      return;
+    }
+    const totals = data.totals || { kcal: 0, protein_g: 0, carbs_g: 0, fat_g: 0 };
+    renderNutriRing(totals.kcal, data.target_kcal || 0);
+
+    document.getElementById("nutri-macros").innerHTML = [
+      ["Protein", `${totals.protein_g} g`, `of ${data.target_protein_g} g`],
+      ["Carbs", `${totals.carbs_g} g`, ""],
+      ["Fat", `${totals.fat_g} g`, ""],
+    ]
+      .map(
+        (m) =>
+          `<div class="load-metric"><div class="load-metric-label">${escapeHtml(m[0])}</div><div class="load-metric-value">${escapeHtml(m[1])}</div><div class="stat-target">${escapeHtml(m[2])}</div></div>`,
+      )
+      .join("");
+
+    const entries = data.entries || [];
+    document.getElementById("nutri-empty").hidden = entries.length > 0;
+    const list = document.getElementById("nutri-entries");
+    list.innerHTML = entries
+      .map((e) => {
+        const title = e.description ? escapeHtml(e.description) : "Meal";
+        const badge = e.source === "estimated" ? '<span class="badge">estimated</span>' : "";
+        const itemLine = (e.items || [])
+          .map((it) => escapeHtml(it.quantity ? `${it.food} (${it.quantity})` : it.food))
+          .join(", ");
+        return `
+        <li class="activity-item" data-id="${e.id}">
+          <div class="activity-icon">\u{1F37D}</div>
+          <div class="activity-main">
+            <div class="activity-title">${title}</div>
+            <div class="activity-meta">${escapeHtml(String(e.kcal))} kcal &middot; P ${escapeHtml(String(e.protein_g))} / C ${escapeHtml(String(e.carbs_g))} / F ${escapeHtml(String(e.fat_g))}${itemLine ? ` &middot; ${itemLine}` : ""}</div>
+          </div>
+          ${badge}
+          <div class="activity-actions">
+            <button class="icon-btn" data-action="nutri-delete" data-id="${e.id}">Delete</button>
+          </div>
+        </li>`;
+      })
+      .join("");
+
+    list.querySelectorAll('[data-action="nutri-delete"]').forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        if (!window.confirm("Delete this entry?")) return;
+        btn.disabled = true;
+        try {
+          await api(`/api/nutrition/${btn.dataset.id}`, { method: "DELETE" });
+          loadNutritionDay();
+        } catch (err) {
+          alert(err.message);
+          btn.disabled = false;
+        }
+      });
+    });
+  }
+
+  async function loadNutrition() {
+    document.getElementById("nutri-editor").hidden = true;
+    document.getElementById("nutri-estimate-status").textContent = "";
+    await loadNutritionDay();
+  }
+
   // --- Trends ------------------------------------------------------
 
   async function loadTrends() {
@@ -276,6 +700,7 @@
       return;
     }
     renderTrendChart(data.weeks);
+    loadHeatmap();
     loadTrainingLoad();
   }
 
@@ -643,6 +1068,12 @@
   });
 
   // --- Boot ------------------------------------------------------
+
+  // Register the no-op service worker purely for Chromium installability
+  // (ISC-162). It caches nothing; failure to register is non-fatal.
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("/sw.js").catch(() => {});
+  }
 
   async function boot() {
     try {

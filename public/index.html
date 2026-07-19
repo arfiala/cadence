@@ -4,9 +4,15 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Cadence</title>
+<meta name="theme-color" content="#0B3D2E">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png">
 <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
+
+<div id="toast-container" class="toast-container" aria-live="polite"></div>
 
 <div id="login-view" class="login-shell" hidden>
   <div class="login-card">
@@ -34,6 +40,7 @@
       <nav class="nav-tabs">
         <button class="nav-tab active" data-view="dashboard">Dashboard</button>
         <button class="nav-tab" data-view="activities">Activities</button>
+        <button class="nav-tab" data-view="nutrition">Nutrition</button>
         <button class="nav-tab" data-view="trends">Trends</button>
         <button class="nav-tab" data-view="races">Races</button>
         <button class="nav-tab" data-view="stretch">Stretch</button>
@@ -46,6 +53,14 @@
   <main class="wrap">
 
     <section id="view-dashboard" class="section">
+      <h2 class="section-title">Quick log</h2>
+      <p class="muted quick-log-hint">One tap logs it with the current time. Undo is in the toast if you fat-thumb.</p>
+      <div class="preset-row" id="preset-row">
+        <button type="button" class="preset-btn" data-preset="ride"><span class="preset-emoji">&#127918;</span>30 min trainer ride</button>
+        <button type="button" class="preset-btn" data-preset="swim"><span class="preset-emoji">&#127754;</span>45 min swim</button>
+        <button type="button" class="preset-btn" data-preset="stretch"><span class="preset-emoji">&#129496;</span>15 min stretch</button>
+      </div>
+
       <h2 class="section-title">This week</h2>
       <div class="stat-row">
         <div class="stat-card">
@@ -62,6 +77,10 @@
       <div class="gap-line" id="gap-line">Loading...</div>
       <div class="day-dots" id="day-dots"></div>
       <hr class="rule">
+
+      <h2 class="section-title">Personal records</h2>
+      <div class="pr-board" id="pr-board"></div>
+      <div class="streak-row" id="streak-row"></div>
     </section>
 
     <section id="view-activities" class="section" hidden>
@@ -107,7 +126,62 @@
       <ul class="activity-list" id="activity-list"></ul>
     </section>
 
+    <section id="view-nutrition" class="section" hidden>
+      <h2 class="section-title">Log a meal</h2>
+      <div class="card">
+        <div class="field">
+          <label for="nutri-desc">What did you eat?</label>
+          <textarea id="nutri-desc" rows="2" placeholder="e.g. two eggs, toast with butter, black coffee"></textarea>
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn" id="nutri-estimate-btn">Estimate</button>
+          <button type="button" class="btn btn-secondary" id="nutri-manual-btn">Add manually</button>
+          <span class="sync-status" id="nutri-estimate-status"></span>
+        </div>
+        <div id="nutri-editor" hidden>
+          <p class="muted" id="nutri-editor-hint">Review and adjust each item, then save. Numbers are editable.</p>
+          <div class="nutri-item-head">
+            <span class="nutri-col-food">Food</span>
+            <span class="nutri-col-qty">Qty</span>
+            <span class="nutri-col-num">Kcal</span>
+            <span class="nutri-col-num">P</span>
+            <span class="nutri-col-num">C</span>
+            <span class="nutri-col-num">F</span>
+            <span class="nutri-col-x"></span>
+          </div>
+          <div id="nutri-items"></div>
+          <div class="form-actions">
+            <button type="button" class="btn btn-secondary" id="nutri-add-row-btn">Add item</button>
+            <button type="button" class="btn" id="nutri-save-btn">Save entry</button>
+            <span class="sync-status" id="nutri-save-status"></span>
+          </div>
+        </div>
+      </div>
+
+      <h2 class="section-title">Today</h2>
+      <div class="card">
+        <div class="nutri-day-head">
+          <div class="nutri-ring-wrap">
+            <svg id="nutri-ring" class="nutri-ring" viewBox="0 0 120 120" preserveAspectRatio="xMidYMid meet"></svg>
+          </div>
+          <div class="nutri-macros" id="nutri-macros"></div>
+        </div>
+      </div>
+      <ul class="activity-list" id="nutri-entries"></ul>
+      <p class="muted" id="nutri-empty" hidden>No entries logged today. Describe a meal above to get started.</p>
+    </section>
+
     <section id="view-trends" class="section" hidden>
+      <h2 class="section-title">Consistency (52 weeks)</h2>
+      <div class="card">
+        <div class="heatmap-wrap"><svg id="heatmap-svg" class="heatmap" preserveAspectRatio="xMinYMin meet"></svg></div>
+        <div class="trend-legend">
+          <div><span class="legend-swatch" style="background:rgba(11,61,46,0.08)"></span>Rest day</div>
+          <div><span class="legend-swatch" style="background:#2BB673"></span>More minutes</div>
+          <div><span class="legend-swatch heat-outline"></span>G1 week met</div>
+        </div>
+      </div>
+
       <h2 class="section-title">Last 8 weeks</h2>
       <div class="card">
         <svg id="trend-svg" class="trend-chart" viewBox="0 0 640 220" preserveAspectRatio="xMidYMid meet"></svg>

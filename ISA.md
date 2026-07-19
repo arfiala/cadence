@@ -2,8 +2,8 @@
 task: Cadence — Austin's personal fitness app (Garmin-synced, MCP-editable)
 project: cadence
 effort: E4
-phase: complete
-progress: 146/152
+phase: build
+progress: 146/188
 mode: standard
 started: 2026-07-16T19:50:29Z
 updated: 2026-07-17T18:45:00Z
@@ -19,7 +19,7 @@ Austin asks "how's my week" in any conversation and gets an answer from his real
 
 ## Out of Scope
 
-Nutrition/MyFitnessPal integration (deferred by Austin, v2 candidate). Multi-user anything: registration, roles, sharing. Training PLANS and coaching logic (v1 is truth about what happened, not prescriptions) — AMENDED 2026-07-16: Austin explicitly requested a static ATG daily stretching plan (ISC-104+); the exclusion now covers dynamic/adaptive coaching logic only, not this fixed reference plan. Native mobile apps. Strava. Direct Zwift API integration — Zwift reaches the app through Zwift's own auto-upload to Garmin Connect. AMENDED 2026-07-17: ZwiftPower race results and rider category are separate data that never flow through Garmin, so a direct ZwiftPower connection (ISC-118+) is now in scope; the Zwift game API itself stays excluded. TrainingPeaks partner API is out of scope by external constraint: it is closed to individuals and paused for new partners as of July 2026 (verified via trainingpeaks.com help center and api.trainingpeaks.com/request-access), so TP-equivalent training-load metrics are computed natively instead. Public visibility of any health data. Charts libraries and frontend frameworks — inline SVG and vanilla JS only, matching austinfiala.com's zero-dependency ethos.
+Nutrition/MyFitnessPal integration ~~(deferred by Austin, v2 candidate)~~ — AMENDED 2026-07-18: Austin brought nutrition into scope as an LLM-estimated calorie/macro counter (ISC-189..220, see Decisions); what stays out is any external nutrition-database dependency (USDA/Nutritionix/MyFitnessPal API) and any branded/barcode lookup, both deferred behind the LLM-estimation MVP. Multi-user anything: registration, roles, sharing. Training PLANS and coaching logic (v1 is truth about what happened, not prescriptions) — AMENDED 2026-07-16: Austin explicitly requested a static ATG daily stretching plan (ISC-104+); the exclusion now covers dynamic/adaptive coaching logic only, not this fixed reference plan. Native mobile apps. Strava. Direct Zwift API integration — Zwift reaches the app through Zwift's own auto-upload to Garmin Connect. AMENDED 2026-07-17: ZwiftPower race results and rider category are separate data that never flow through Garmin, so a direct ZwiftPower connection (ISC-118+) is now in scope; the Zwift game API itself stays excluded. TrainingPeaks partner API is out of scope by external constraint: it is closed to individuals and paused for new partners as of July 2026 (verified via trainingpeaks.com help center and api.trainingpeaks.com/request-access), so TP-equivalent training-load metrics are computed natively instead. Public visibility of any health data. Charts libraries and frontend frameworks — inline SVG and vanilla JS only, matching austinfiala.com's zero-dependency ethos.
 
 ## Principles
 
@@ -224,6 +224,98 @@ Cadence is live at `https://fit.austinfiala.com` behind Austin's single-user log
 - [x] ISC-151: No roadmap item duplicates shipped work or violates standing exclusions (multi-user, native apps, public health data), probe: cross-read against ISA
 - [x] ISC-152: Anti: roadmap contains zero em dashes (writing rule, 2026-07-17), probe: grep
 
+### Quick win 1: one-tap quick log + home-screen install (added 2026-07-17, roadmap item 6)
+- [ ] ISC-153: /manifest.webmanifest served 200 with name, short_name, standalone display, start_url /, theme/background colors, icons, probe: curl + JSON shape
+- [ ] ISC-154: HTML links manifest, theme-color meta, and apple-touch-icon (iOS ignores manifest icons), probe: grep served HTML
+- [ ] ISC-155: Icon PNGs (192, 512, 512-maskable with safe-zone padding, apple-touch 180) generated deterministically by a repo script using Bun with node:zlib deflate (zero deps, no image-gen), each validated to decode (magic bytes + IHDR + inflatable data), served 200, probe: script run + decode test + curl
+- [ ] ISC-156: Quick log presets render at the TOP of Dashboard (nap-window rule: install tap to logged in under 10 seconds), probe: Interceptor + DOM order
+- [ ] ISC-157: Each preset one-tap creates the right manual activity via the existing activities API (30 min trainer ride, 45 min swim, 15 min ATG stretch), probe: click + API read-back
+- [ ] ISC-158: Preset buttons disable during the request (double-submit guard, standing lesson), probe: code + double-click test
+- [ ] ISC-159: After logging, a toast with Undo appears; Undo deletes the just-created activity (fat-thumb recovery), probe: Interceptor click undo + API read-back shows row gone
+- [ ] ISC-160: Week numbers on the dashboard refresh immediately after a quick log without full reload, probe: Interceptor
+- [ ] ISC-161: Installed standalone app with an expired session lands on the login page cleanly (no crash loop, no blank screen), probe: cleared-cookie load of / with manifest display context
+- [ ] ISC-162: A minimal no-op passthrough service worker exists SOLELY for Chromium installability (Advisor, 2026-07-17); Anti: zero caching, zero offline logic, zero push, under 15 lines, probe: file read + line count + grep for caches API absence
+- [ ] ISC-163: Quick log section single-column usable at 375px, probe: CSS structural check
+- [ ] ISC-164: Anti: quick log never counts a stretch preset toward G1 (sport=strength path preserved), probe: bun test
+
+### Quick win 2: consistency heatmap (roadmap item 3)
+- [ ] ISC-165: GET /api/metrics/consistency returns per-day training minutes for the trailing 52 weeks plus per-week G1-met flags, auth-gated, single aggregate query, probe: curl 401 + authed shape + code read
+- [ ] ISC-166: Heatmap renders on Trends as an inline SVG 52x7 grid, Monday-anchored columns, America/New_York day bucketing consistent with week.ts, probe: Interceptor + bun test DST edge
+- [ ] ISC-167: Cell shading scales with minutes; zero-minute days visibly distinct from shaded days, probe: render + code
+- [ ] ISC-168: G1-met weeks outlined visually, probe: render with seeded met week
+- [ ] ISC-169: Each cell carries a title tooltip with date and minutes, probe: DOM read
+- [ ] ISC-170: Renders correctly with Austin's real sparse year (no crash, no visual garbage), probe: Interceptor with real-shape seed
+- [ ] ISC-171: Anti: no schema changes for heatmap (pure query), probe: db.ts diff
+
+### Quick win 3: personal records board (roadmap item 2)
+- [ ] ISC-172: GET /api/metrics/records returns longest ride, longest-distance ride, fastest avg speed ride (distance floor 10 km), biggest week hours, longest swim, current and longest G1 streak, auth-gated, probe: curl + shape
+- [ ] ISC-173: Every record carries its date (motivation needs context), probe: response shape + render
+- [ ] ISC-174: Records with no qualifying data return honest empty (his zero swims render as "none yet", never fabricated), probe: live response + render
+- [ ] ISC-175: G1 streak counts completed weeks only; the in-progress week never breaks the streak and is shown separately, probe: bun test with mid-week fixture
+- [ ] ISC-176: Streak and week logic reuse the existing G1/week helpers, not reimplementations, probe: code read
+- [ ] ISC-177: Fastest-speed record excludes zero/absent distance and sub-floor rides, probe: bun test
+- [ ] ISC-178: PR board renders on Dashboard below quick log, compact, probe: Interceptor
+- [ ] ISC-179: Records update after a new qualifying activity, probe: bun test log-then-read
+- [ ] ISC-180: Anti: no schema changes for records (pure query), probe: db.ts diff
+
+### Quick win 4: Monday digest MCP tool (roadmap item 8)
+- [ ] ISC-181: MCP tool get_week_digest returns the last COMPLETED Monday-anchored week: sessions/hours vs target, G1 verdict, fitness/fatigue/form now, new PRs that week, races that week, probe: stdio round-trip
+- [ ] ISC-182: Digest with a zero-data week returns honest empty, never invents, probe: stdio synthetic
+- [ ] ISC-183: Tool appears in MCP tools/list alongside the existing tools, probe: stdio list
+- [ ] ISC-184: Anti: digest is read-only, zero writes anywhere, probe: code read
+- [ ] ISC-185: WeeklyReview PAI workflow references querying cadence get_week_digest, probe: grep the workflow file
+- [ ] ISC-186: Full suite green and bunx tsc --noEmit clean after all four features, probe: Bash
+- [ ] ISC-187: Anti: zero new runtime dependencies across all four features, probe: package.json diff
+- [ ] ISC-188: Anti: existing views, G1 logic, syncs, and MCP tools behave unchanged, probe: regression suite + spot renders
+
+### Nutrition / Calorie MVP — 2026-07-18 (ISC-189..) — v2 nutrition feature, LLM estimation
+
+**Data model**
+- [x] ISC-189: `nutrition_entries` table exists (id, logged_date YYYY-MM-DD, logged_at, description, source CHECK IN ('estimated','manual','edited'), kcal, protein_g, carbs_g, fat_g, notes, created_at, updated_at), probe: PRAGMA table_info
+- [x] ISC-190: `nutrition_items` table exists (id, entry_id FK, food, quantity, kcal, protein_g, carbs_g, fat_g), probe: PRAGMA table_info
+- [x] ISC-191: `nutrition_target_kcal` (and optional protein target) stored in the existing settings table, seeded with a sane default, editable via PATCH /api/settings, probe: settings read-back
+- [x] ISC-192: Migration is idempotent (runMigrations twice on a throwaway DB does not throw or duplicate), probe: bun test
+- [x] ISC-193: idx on nutrition_entries(logged_date) and nutrition_items(entry_id) exist, probe: PRAGMA index_list
+
+**Estimation service (server-side LLM)**
+- [x] ISC-194: `src/services/nutritionEstimate.ts` turns a free-text meal into itemized {food, quantity, kcal, protein_g, carbs_g, fat_g} via a single fetch to the Anthropic API, key from ANTHROPIC_API_KEY in the box .env, probe: unit test with mocked fetch
+- [x] ISC-195: response is hard-parsed and validated (all numeric fields finite and in sane ranges; malformed model output rejected, never partially trusted), probe: unit test feeding malformed JSON
+- [x] ISC-196: no key OR estimation failure returns a typed "estimate unavailable" result so the caller falls back to manual entry, NEVER fabricated numbers, probe: unit test with key unset
+- [x] ISC-197: Anti: the estimation call uses ANTHROPIC_API_KEY via direct HTTPS fetch, never spawns the `claude` CLI and never uses OAuth billing, probe: grep service for `claude`/spawn/exec
+- [x] ISC-198: Anti: zero new runtime npm dependency (fetch only, no @anthropic-ai/sdk), probe: package.json/bun.lock diff empty
+
+**API routes (`src/routes/nutrition.ts`, all behind the existing auth, mirrors activities.ts)**
+- [x] ISC-199: POST /api/nutrition/estimate — free text in, itemized estimate out, NOT persisted, probe: curl 200 + DB unchanged
+- [x] ISC-200: POST /api/nutrition — save an entry (from an estimate or fully manual) with its items, source set correctly, probe: curl 201 + DB rows
+- [x] ISC-201: GET /api/nutrition?date=YYYY-MM-DD — that day's entries + day totals vs target, probe: curl 200 + math
+- [x] ISC-202: PATCH /api/nutrition/:id — edit any entry field/number, sets source='edited', updated_at bumped, probe: curl + read-back
+- [x] ISC-203: DELETE /api/nutrition/:id — removes entry and its items, probe: curl + DB absence
+- [x] ISC-204: all /api/nutrition* routes 401 without a session/bearer, probe: curl -i noauth
+- [x] ISC-205: input validation mirrors activities.ts (bad date/negative kcal/oversized text rejected 400), probe: unit tests
+
+**MCP tools (mcp/tools.ts + client.ts, matching log_/get_/edit_/delete_ convention)**
+- [x] ISC-206: `log_nutrition` (description text → estimate → save), `get_nutrition_day`, `edit_nutrition`, `delete_nutrition` (confirm=true) tools registered, probe: MCP tool list
+- [x] ISC-207: MCP client methods hit the same HTTP API the UI uses (peers over one API), probe: round-trip test log→get→edit→delete
+- [x] ISC-208: delete_nutrition requires confirm=true, mirroring delete_activity, probe: MCP call without confirm refused
+
+**Web UI (new Nutrition tab, inline SVG + vanilla JS, no framework)**
+- [x] ISC-209: index.html has a `data-view="nutrition"` nav tab and a `view-nutrition` section, probe: grep + Interceptor
+- [DEFERRED-VERIFY] ISC-210: the section has a "what did you eat?" text box → estimate → editable itemized rows → save flow, probe: Interceptor
+- [DEFERRED-VERIFY] ISC-211: day view shows entries, a calories-vs-target ring (inline SVG) and macro totals, probe: Interceptor
+- [DEFERRED-VERIFY] ISC-212: estimated entries carry an "estimated" badge; manual add is always available, probe: Interceptor
+- [DEFERRED-VERIFY] ISC-213: matches the existing dashboard visual language (styles.css classes, dark theme), probe: Interceptor
+
+**Separation + safety**
+- [x] ISC-214: Anti: nutrition data is structurally separate from `activities` and NEVER feeds the G1 training metric (5 sessions / 8h), probe: grep weekSummary/metrics for nutrition — zero hits
+- [x] ISC-215: Anti: nutrition routes inherit the same auth + private-by-construction discipline; no nutrition on any public/unauthenticated surface, probe: route audit
+- [x] ISC-216: estimates are always editable and flagged as estimates, so a wrong LLM number is correctable not authoritative, probe: PATCH test + UI badge
+
+**Quality gates**
+- [x] ISC-217: new tests cover estimate parse/validation (mocked LLM), the five routes, MCP round-trip, migration idempotency, and day-rollup math, probe: bun test count
+- [x] ISC-218: full suite green, bunx tsc --noEmit clean, probe: bun test && bunx tsc --noEmit
+- [x] ISC-219: Anti: existing views, G1 logic, syncs, and existing MCP tools behave unchanged, probe: regression suite + spot renders
+- [DEFERRED-VERIFY] ISC-220: live LLM estimation against the real Anthropic API confirmed once ANTHROPIC_API_KEY is set on the box (build/tests use a mock) — FOLLOWUP-cadence-nutrition-live-estimate
+
 ## Test Strategy
 
 | isc | type | check | threshold | tool |
@@ -255,14 +347,20 @@ Cadence is live at `https://fit.austinfiala.com` behind Austin's single-user log
 | zwiftpower-sync | ZwiftPower race results + category sync via pinned wrapper, isolated module, dormant without creds | ISC-118..133 | api, web-ui | true |
 | training-load | Native TSS-tier load engine + Fitness/Fatigue/Form series, endpoint, chart, MCP tool | ISC-134..149 | garmin-sync, web-ui | true |
 | roadmap | 10-feature ROADMAP.md from BeCreative ideation | ISC-150..152 | none | true |
+| quick-log-install | Web manifest + generated PNG icons + one-tap presets with undo | ISC-153..164 | web-ui, api | true |
+| consistency-heatmap | 52-week Monday-anchored SVG heatmap with G1 outlines | ISC-165..171 | api, web-ui | true |
+| pr-board | Records endpoint + dashboard board with dates and streaks | ISC-172..180 | api, web-ui | true |
+| week-digest | get_week_digest MCP tool + WeeklyReview wiring | ISC-181..188 | mcp | true |
 
 ## Decisions
 
+- 2026-07-18 — **Nutrition / calorie MVP (ISC-189..220) — moves nutrition from Out-of-Scope v2 candidate into scope, on Austin's request "add a calorie counter... I give food I ate and the app finds estimated nutrients and calories and inputs them in."** After a plan presented three estimation mechanisms (server-side LLM / nutrition database API / DA-only-via-MCP), Austin chose **LLM estimation**. Rationale for the recommendation he took: LLM estimation is the exact "give free text, get nutrients" UX and it survives how people actually describe food (compound, homemade, restaurant) far better than USDA/Nutritionix food-name matching, which is where DB-lookup nutrition trackers get frustrating; Cadence is single-user (Austin's own use) so an ANTHROPIC_API_KEY on the box is appropriate and per-entry cost is negligible. Load-bearing calls: (1) estimation is a direct HTTPS `fetch` to the Anthropic API keyed by `ANTHROPIC_API_KEY` in the box .env — NEVER the `claude` CLI and never OAuth billing (single-user app-side API call, ISC-197), and NO new npm dep (fetch, not @anthropic-ai/sdk, preserving Cadence's zero-dep-beyond-Garmin/MCP constraint, ISC-198). (2) Every estimate is itemized (`nutrition_items`) and fully editable, flagged `estimated`, so a wrong LLM number is correctable not authoritative (ISC-216) — the "truth over decoration" principle applied to estimates. (3) No key or a bad model response falls back to manual entry and NEVER fabricates numbers (ISC-196), mirroring the Garmin-outage CSV survival path. (4) Nutrition is structurally separate from `activities` and never feeds the G1 5-sessions/8h training metric (ISC-214), the same isolation discipline that kept comments out of scoring in Suretas. Web UI and MCP are peers over one API (log_nutrition/get_nutrition_day/edit/delete). Builder: Sonnet Engineer agent (codex absent → Forge-slot fallback), then primary independent verification. Live LLM estimation is DEFERRED-VERIFY (ISC-220) until the key is on the box; build + tests use a mocked fetch. NOT deployed — gated on Austin's go AND setting ANTHROPIC_API_KEY on the box.
 - 2026-07-16T19:50Z — Scope set by Austin via AskUserQuestion: hosted "in my personal website... with a login" → fit.austinfiala.com subdomain on the existing box, linked from the site nav (a path under the static site would force base-path handling and a mixed Caddy block; a subdomain keeps both sites clean — flagged to Austin in the summary). Nutrition/MFP: skipped for v1, his call. Garmin auth: "decide for me" → MFA-capable library with token persistence, credentials in box .env only. Python: not approved; TypeScript only, blockers come back to him.
 - 2026-07-16T19:50Z — Zwift integration is DELIBERATELY indirect: Zwift auto-uploads completed rides to Garmin Connect when linked (verified via Zwift/Garmin support + community docs 2026-07-16), so one Garmin integration covers Zwift + outdoor rides + swims. Direct Zwift API is unofficial, unstable, and adds nothing once linking is on.
 - 2026-07-16T19:50Z — ISC floor math (E4 soft ≥128): natural granularity yielded 103 atomic ISCs (98 + 5 advisor-driven). Shown math rather than padded: v1 has ONE integration (nutrition deferred by Austin's answer), one user (no RBAC surface), and no payment/email subsystems — the domains that inflate counts in comparable apps are structurally absent. Every ISC above is one tool probe; splitting further would manufacture rows, not tests.
 - 2026-07-16T20:05Z — Advisor pre-build review (Rule 2): confirmed the one-resident-service topology (MCP spawned on demand on Austin's machine, sync in-process — the box gains exactly one daemon); added ISC-99 (CSV import survival path for when the unofficial Garmin lib breaks — and they do break), ISC-100 (lib isolated to src/garmin/), ISC-101 (exact version pin), ISC-102 (lockout self-DoS escape: auto-expiry + CLI clear), ISC-103 (anti: no extra daemons). Token-scoping suggestion partially adopted: the bearer token is already separately issued, hashed, and revocable (ISC-20/21) which covers rotate-without-password; per-tool scoping rejected as over-engineering for a single-user personal app. Advisor's state-mismatch warning was an --auto-state artifact (it read the previous task's ISA); the builder receives this file's absolute path pinned verbatim.
 - 2026-07-16T19:50Z — Delegation: Engineer agent builds from this ISA (session-standard; codex absent → `SOURCE: codex-unavailable`, Forge slot falls back to Engineer). Primary (me) does independent verification, deploy, DNS/Caddy surgery on the shared box, and the MCP registration on this machine.
+- 2026-07-17T19:55Z: Quick wins build (Austin: "build the quick wins from the roadmap", items 6/3/2/8). IterativeDepth 2-lens pass added undo-toast, programmatic PNG icons, standalone-expired-session, streak in-progress-week, presets-on-top, and PR-date criteria. Advisor (Rule 2) reversed the no-service-worker call: Chromium installability wants one, so a sub-15-line no-op passthrough SW ships with caching/offline still banned (ISC-162 amended); also forced maskable 512 icon, one shared timezone/week bucketing helper across all four features, undo by returned activity id never most-recent, and node:zlib for the PNG deflate with decode validation. Streak rule pinned: consecutive COMPLETED Monday-anchored weeks meeting both G1 targets; zero-activity completed weeks break it; in-progress week displayed separately, never counted either way. codex re-probed absent, Engineer covers the Forge slot; single write-agent (shared Dashboard/server surfaces).
 - 2026-07-17T18:10Z: ZwiftPower + TrainingPeaks connections (Austin: "Build connections to zwiftpower, training peaks, and think of 10 more features"). TrainingPeaks pivot: their API is partner-only, not for personal use, AND paused for all new partners as of July 2026 (verified this session via WebSearch of help.trainingpeaks.com and api.trainingpeaks.com/request-access). A direct TP connection is structurally impossible, so the TP deliverable is a native training-load engine (tiered TSS, Fitness/Fatigue/Form EWMAs) computed from data already in the app. Anyone wanting data inside TP itself uses TP's own consumer Garmin auto-sync. ZwiftPower path: `@codingwithspike/zwift-api-wrapper@0.0.9` chosen by registry probe this session, sole runtime dep is tough-cookie (pure JS), passing the zero-native-modules gate from the Garmin swap lesson; its ZwiftPowerAPI class does Zwift SSO auth and exposes authenticated ZwiftPower fetches. Advisor (Rule 2) confirmed the TP pivot and forced two design changes adopted as ISCs: FTP/LTHR must be user settings (ISC-134) since no power stream exists in our schema (confirmed: activities has only avg_hr, no power columns), and EWMAs must include zero-load days (ISC-139); also fixture-only tests (ISC-129) and generic metric labels over TP trademarks (ISC-142). `SOURCE: codex-unavailable` re-probed this session, Forge slot falls back to Engineer. Delegation floor math (soft, 1 of 2): both modules share server.ts/app.html/db.ts, so a second parallel write-agent means worktree merge overhead exceeding its value; one Engineer builds sequentially while the primary runs ideation.
 - 2026-07-16T23:28Z — Stretch plan (Austin: "build a daily stretching plan based off of the kneesovertoes guy, create images for it, add it to the fitness app"). Content grounded in fetched sources this session (a1athlete.com ATG stretch guide; Ben Patrick's own TikTok note that couch stretch belongs AFTER ATG split squat; search-corroborated doses: pancake pulses ×20, couch 45-60s/side, elephant walk ×20). Out of Scope amended (fixed plan in, adaptive coaching still out). Images: hand-authored SVG — probed this session: no image-gen keys on this box (KNOWLEDGE/Research/linux-machine-image-gen-gap.md still accurate). Log-as-activity uses sport=strength (isG1Qualifying filters to cycling/swim family, so G1 stays clean — ISC-109 tests it). Deploy gated on Austin's explicit approval per Permission Boundaries; everything staged ready. `SOURCE: codex-unavailable` re-probed this session — Forge slot again falls back to Engineer.
 - 2026-07-17 (build): garmin-connect-sdk power fields for ISC-135. The SDK's `activitySummarySchema` is a zod object in `passthrough` mode and declares NO power fields (grep of dist/index.d.ts: only `type: 'power'` on an unrelated union and a `powerSamples` count elsewhere, neither an activity-summary average/normalized power). So the SDK exposes nothing typed, but passthrough preserves any raw Garmin summary keys that ARE returned. Decision: `src/garmin/client.ts` reads `avgPower`/`averagePower` and `normPower`/`normalizedPower`/`normPowerBike` defensively off the raw object, mapping to the new nullable `avg_power`/`norm_power` columns, and leaves them null when absent. This cannot be confirmed against a real power-meter activity until Austin's Garmin creds are live (rides in his account so far are HR-only anyway), so the mapping is best-effort by documented field name and the load engine's HR/duration tiers carry the common case. If a live sync later shows power under a different key, it is a one-line change in that adapter.
@@ -271,7 +369,16 @@ Cadence is live at `https://fit.austinfiala.com` behind Austin's single-user log
 
 ## Verification
 
-(populated at VERIFY)
+### Nutrition MVP (ISC-189..220) — 2026-07-18
+
+- Full suite **194 pass / 0 fail**, `bunx tsc --noEmit` clean, `git diff package.json bun.lock` empty (no new dep). Nutrition-specific tests: 34 pass (estimate parse/validation with mocked fetch incl. no-key/malformed/out-of-range, the five routes incl. 401-noauth and estimate-not-persisted, MCP round-trip, migration idempotency, day-rollup math, edit recomputes-totals-sets-source=edited).
+- Live boot probe (throwaway DB, port 4199): server boots clean with nutrition mounted; `GET /api/nutrition` and `POST /api/nutrition/estimate` → 401 without auth (ISC-204); existing `GET /api/week` still 401 (no regression); `data-view="nutrition"` present in served index.html (ISC-209); both nutrition tables created and `nutrition_target_kcal`=2200 / `nutrition_target_protein_g`=150 seeded.
+- ISC-197/198 (billing/dep isolation): estimation service imports nothing, uses `fetch` only, no `claude` CLI / spawn / exec / OAuth / `@anthropic-ai/sdk`; key strictly from `ANTHROPIC_API_KEY`. ISC-214 (G1 separation): grep confirms zero nutrition references in weekSummary.ts / metrics.ts / week.ts.
+- ISC-216/totals: entry totals recomputed from items inside a single `db.transaction` on save and edit; edit sets source='edited'; test asserts it. logged_date uses `nyDateString` (America/New_York), matching the app's DST-safe week spine, so a late-evening entry lands on the correct local day.
+- Advisor pass (Rule 2) run before completion. Its three catches: (a) day-boundary TZ — already correct (`nyDateString`); (c) totals-drift — already recomputed-in-transaction with a test; (b) the one real gap, no fetch timeout — **fixed**: added `AbortSignal.timeout(15000)` on the estimation fetch (single attempt, no retry storm; a hung call fails to `llm_error` → manual fallback). Input already capped at 2000 chars (`DESCRIPTION_MAX`).
+- ISC-210/211/212/213 UI-render and ISC-220 live-LLM are DEFERRED-VERIFY: FOLLOWUP-cadence-nutrition-browser-walkthrough (authed Interceptor pass) and FOLLOWUP-cadence-nutrition-live-estimate (real Anthropic call once ANTHROPIC_API_KEY is on the box).
+
+**NOT committed (deliberate).** The nutrition work is complete and verified in the working tree, but the Cadence tree already held a pile of UNCOMMITTED prior-session work (modified `src/routes/metrics.ts` + `src/week.ts`, and untracked `src/metrics/consistency.ts`/`digest.ts`/`records.ts`, a PWA: `public/sw.js`/`manifest.webmanifest`/icons + `bin/generate-icons.ts` + `src/lib/png.ts`, and their tests) intermixed with nutrition in shared files (`server.ts`, `db.ts`, test fixtures). A clean nutrition-only commit is not possible without either bundling that unverified prior work under a nutrition message or fragilely splitting hunks, so the commit decision is deferred to Austin. Deploy is separately gated on his go AND setting `ANTHROPIC_API_KEY` on the box.
 
 ### Primary-agent verification round (2026-07-16, post-build)
 - ISC-73..85: pushed nothing (local repo, no remote yet); /opt/cadence created, clean git-archive rsync, `bun install --production` (237 pkgs), .env mode 600 with generated SESSION_SECRET, systemd unit enabled+active, DNS A record live on authoritative NS, Caddy block appended after timestamped backup + validate + RELOAD, all three sites healthy after (suretas /health 200, austinfiala 200, fit /health 200 over valid TLS), Fitness footer link live on austinfiala.com, no secrets in git history (new repo, .env gitignored from first commit), box has 125MB available with all services active.

@@ -180,11 +180,25 @@ describe("GET /api/trends (ISC-41)", () => {
 describe("GET/PATCH /api/settings (ISC-42)", () => {
   test("reads defaults and updates targets", async () => {
     const get1 = await apiRequest("GET", "/api/settings", { token });
-    expect(await get1.json()).toEqual({ target_sessions: 5, target_hours: 8, ftp_watts: null, lthr_bpm: null });
+    expect(await get1.json()).toEqual({
+      target_sessions: 5,
+      target_hours: 8,
+      ftp_watts: null,
+      lthr_bpm: null,
+      nutrition_target_kcal: 2200,
+      nutrition_target_protein_g: 150,
+    });
 
     const patch = await apiRequest("PATCH", "/api/settings", { token, body: { target_sessions: 6, target_hours: 10 } });
     expect(patch.status).toBe(200);
-    expect(await patch.json()).toEqual({ target_sessions: 6, target_hours: 10, ftp_watts: null, lthr_bpm: null });
+    expect(await patch.json()).toEqual({
+      target_sessions: 6,
+      target_hours: 10,
+      ftp_watts: null,
+      lthr_bpm: null,
+      nutrition_target_kcal: 2200,
+      nutrition_target_protein_g: 150,
+    });
 
     const bad = await apiRequest("PATCH", "/api/settings", { token, body: { target_sessions: -1 } });
     expect(bad.status).toBe(400);

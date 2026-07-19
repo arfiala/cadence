@@ -259,6 +259,125 @@ export const TOOLS: ToolDefinition[] = [
       return pretty(summary);
     },
   },
+  {
+    name: "get_week_digest",
+    description:
+      "Get the Monday digest for the LAST COMPLETED week: G1 sessions and hours vs target with a verdict, current Fitness/Fatigue/Form, any personal records set that week, and any ZwiftPower races that week. Read-only, for the weekly review.",
+    inputSchema: {
+      type: "object",
+      properties: {},
+      additionalProperties: false,
+    },
+    handler: async (client) => {
+      const digest = await client.getWeekDigest();
+      return pretty(digest);
+    },
+  },
+  {
+    name: "log_nutrition",
+    description:
+      "Log a meal in Austin's REAL nutrition log by describing it in plain language (e.g. 'two eggs, toast with butter, black coffee'). The server estimates itemized calories and macros and saves an editable entry. Optional 'date' (YYYY-MM-DD) sets the day; omit for today. If auto-estimation is unavailable (the API key is not set on the server, or the estimator fails), this returns an error asking you to add the entry manually with explicit macros instead.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        description: {
+          type: "string",
+          description: "Plain-language description of what was eaten.",
+        },
+        date: {
+          type: "string",
+          description: "Optional day as YYYY-MM-DD (America/New_York). Omit for today.",
+        },
+      },
+      required: ["description"],
+      additionalProperties: false,
+    },
+    handler: async (client, args) => {
+      const description = args.description;
+      if (typeof description !== "string" || description.trim().length === 0) {
+        throw new Error("description is required");
+      }
+      const body: Record<string, unknown> = { description, estimate: true };
+      if (typeof args.date === "string") body.logged_date = args.date;
+      const result = await client.logNutrition(body);
+      return `Logged nutrition entry.\n\n${pretty(result)}`;
+    },
+  },
+  {
+    name: "get_nutrition_day",
+    description:
+      "Get a day's nutrition: every logged entry with its itemized foods, the day's calorie and macro totals, and the calorie/protein targets. Optional 'date' (YYYY-MM-DD); omit for today.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        date: {
+          type: "string",
+          description: "Optional day as YYYY-MM-DD (America/New_York). Omit for today.",
+        },
+      },
+      additionalProperties: false,
+    },
+    handler: async (client, args) => {
+      const date = typeof args.date === "string" ? args.date : undefined;
+      const day = await client.getNutritionDay(date);
+      return pretty(day);
+    },
+  },
+  {
+    name: "edit_nutrition",
+    description:
+      "Edit an existing entry in Austin's REAL nutrition log. Provide the entry id and a 'fields' object with any of: description, notes, logged_date (YYYY-MM-DD), or items (an array of {food, quantity, kcal, protein_g, carbs_g, fat_g} that fully replaces the entry's items). Editing marks the entry as human-corrected and recomputes its totals.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        id: { type: "number", description: "The nutrition entry id to edit." },
+        fields: {
+          type: "object",
+          description: "Partial fields to update.",
+          additionalProperties: true,
+        },
+      },
+      required: ["id", "fields"],
+      additionalProperties: false,
+    },
+    handler: async (client, args) => {
+      const id = args.id;
+      if (typeof id !== "number" || !Number.isInteger(id)) {
+        throw new Error("id must be an integer");
+      }
+      const fields = args.fields;
+      if (typeof fields !== "object" || fields === null) {
+        throw new Error("fields must be an object");
+      }
+      const result = await client.editNutrition(id, fields);
+      return `Updated nutrition entry ${id}.\n\n${pretty(result)}`;
+    },
+  },
+  {
+    name: "delete_nutrition",
+    description:
+      "Permanently DELETE an entry from Austin's REAL nutrition log. Requires confirm=true. The entry's itemized foods are removed with it.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        id: { type: "number", description: "The nutrition entry id to delete." },
+        confirm: { type: "boolean", description: "Must be true to actually delete." },
+      },
+      required: ["id", "confirm"],
+      additionalProperties: false,
+    },
+    handler: async (client, args) => {
+      const id = args.id;
+      if (typeof id !== "number" || !Number.isInteger(id)) {
+        throw new Error("id must be an integer");
+      }
+      if (args.confirm !== true) {
+        throw new Error("Refusing to delete: pass confirm=true to permanently delete this nutrition entry.");
+      }
+      const result = await client.deleteNutrition(id);
+      return `Deleted nutrition entry ${id}.\n\n${pretty(result)}`;
+    },
+  },
 ];
 
 // Invoke a tool by name, turning any API/validation failure into a

@@ -16,7 +16,14 @@ import { getSettingsRoute, patchSettingsRoute } from "./routes/settings";
 import { postSync, getSyncStatus } from "./routes/sync";
 import { importCsv } from "./routes/csv";
 import { postZwiftPowerSync, getZwiftPowerResults, getZwiftPowerStatus } from "./routes/zwiftpower";
-import { getTrainingLoad } from "./routes/metrics";
+import { getTrainingLoad, getConsistency, getRecords, getDigest } from "./routes/metrics";
+import {
+  estimateNutritionRoute,
+  createNutrition,
+  listNutrition,
+  updateNutrition,
+  deleteNutrition,
+} from "./routes/nutrition";
 import { createRealGarminClient } from "./garmin/client";
 import { startScheduler } from "./garmin/sync";
 import { createRealZwiftPowerClient } from "./zwiftpower/client";
@@ -33,6 +40,8 @@ const MIME_TYPES: Record<string, string> = {
   ".woff2": "font/woff2",
   ".svg": "image/svg+xml",
   ".json": "application/json; charset=utf-8",
+  ".png": "image/png",
+  ".webmanifest": "application/manifest+json",
 };
 
 // Serves a file from public/ by relative path. Path is always a fixed,
@@ -80,8 +89,23 @@ async function handleApi(req: Request, url: URL): Promise<Response> {
   if (path === "/api/zwiftpower/status" && method === "GET") return getZwiftPowerStatus();
 
   if (path === "/api/metrics/training-load" && method === "GET") return getTrainingLoad(url);
+  if (path === "/api/metrics/consistency" && method === "GET") return getConsistency();
+  if (path === "/api/metrics/records" && method === "GET") return getRecords();
+  if (path === "/api/metrics/digest" && method === "GET") return getDigest();
 
   if (path === "/api/import/csv" && method === "POST") return importCsv(req);
+
+  // Nutrition (ISC-199..205). All behind the same /api/* auth gate above.
+  if (path === "/api/nutrition/estimate" && method === "POST") return estimateNutritionRoute(req);
+  if (path === "/api/nutrition" && method === "GET") return listNutrition(url);
+  if (path === "/api/nutrition" && method === "POST") return createNutrition(req);
+
+  const nutritionMatch = /^\/api\/nutrition\/(\d+)$/.exec(path);
+  if (nutritionMatch !== null) {
+    const id = nutritionMatch[1] as string;
+    if (method === "PATCH") return updateNutrition(req, id);
+    if (method === "DELETE") return deleteNutrition(url, id);
+  }
 
   return jsonError("Not found", 404);
 }
@@ -95,6 +119,15 @@ const STATIC_ROUTES: Record<string, string> = {
   "/fonts/inter-400.woff2": "fonts/inter-400.woff2",
   "/fonts/inter-500.woff2": "fonts/inter-500.woff2",
   "/fonts/inter-700.woff2": "fonts/inter-700.woff2",
+  // PWA install assets (ISC-153..155, ISC-162). Each is its own explicit
+  // allowlist entry, matching the flat static-route discipline: the served
+  // path is always a fixed server-chosen string, never the raw request path.
+  "/manifest.webmanifest": "manifest.webmanifest",
+  "/sw.js": "sw.js",
+  "/icon-192.png": "icon-192.png",
+  "/icon-512.png": "icon-512.png",
+  "/icon-512-maskable.png": "icon-512-maskable.png",
+  "/apple-touch-icon.png": "apple-touch-icon.png",
 };
 
 type IpProvider = { requestIP(req: Request): { address: string } | null };

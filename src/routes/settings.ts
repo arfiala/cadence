@@ -5,8 +5,33 @@ import { db } from "../db";
 import { jsonError, readJsonBody } from "../lib/http";
 import { getSettings } from "../services/weekSummary";
 
+// Nutrition targets live in the same settings table but are read directly here
+// (not via getSettings, which stays in weekSummary.ts and must carry zero
+// nutrition references, ISC-214). Defaults mirror the migration seed (ISC-191).
+const DEFAULT_NUTRITION_TARGET_KCAL = 2200;
+const DEFAULT_NUTRITION_TARGET_PROTEIN_G = 150;
+
+function nutritionTargets(): { nutrition_target_kcal: number; nutrition_target_protein_g: number } {
+  const rows = db
+    .query(
+      "SELECT key, value FROM settings WHERE key IN ('nutrition_target_kcal','nutrition_target_protein_g')",
+    )
+    .all() as { key: string; value: string }[];
+  const map = new Map(rows.map((r) => [r.key, r.value]));
+  const kcal = Number(map.get("nutrition_target_kcal") ?? String(DEFAULT_NUTRITION_TARGET_KCAL));
+  const protein = Number(
+    map.get("nutrition_target_protein_g") ?? String(DEFAULT_NUTRITION_TARGET_PROTEIN_G),
+  );
+  return {
+    nutrition_target_kcal: Number.isFinite(kcal) ? kcal : DEFAULT_NUTRITION_TARGET_KCAL,
+    nutrition_target_protein_g: Number.isFinite(protein)
+      ? protein
+      : DEFAULT_NUTRITION_TARGET_PROTEIN_G,
+  };
+}
+
 export function getSettingsRoute(): Response {
-  return Response.json(getSettings());
+  return Response.json({ ...getSettings(), ...nutritionTargets() });
 }
 
 export async function patchSettingsRoute(req: Request): Promise<Response> {
@@ -47,6 +72,23 @@ export async function patchSettingsRoute(req: Request): Promise<Response> {
     }
   }
 
+  // Nutrition targets (ISC-191): kcal a positive integer, protein a positive
+  // number of grams. Editable here without a redeploy, same as the G1 targets.
+  if ("nutrition_target_kcal" in body) {
+    const v = body.nutrition_target_kcal;
+    if (typeof v !== "number" || !Number.isInteger(v) || v <= 0) {
+      return jsonError("nutrition_target_kcal must be a positive integer", 400);
+    }
+    updates.push(["nutrition_target_kcal", String(v)]);
+  }
+  if ("nutrition_target_protein_g" in body) {
+    const v = body.nutrition_target_protein_g;
+    if (typeof v !== "number" || !Number.isFinite(v) || v <= 0) {
+      return jsonError("nutrition_target_protein_g must be a positive number", 400);
+    }
+    updates.push(["nutrition_target_protein_g", String(v)]);
+  }
+
   if (updates.length === 0 && clears.length === 0) {
     return jsonError("No editable settings provided", 400);
   }
@@ -62,5 +104,5 @@ export async function patchSettingsRoute(req: Request): Promise<Response> {
     del.run(key);
   }
 
-  return Response.json(getSettings());
+  return Response.json({ ...getSettings(), ...nutritionTargets() });
 }
