@@ -36,11 +36,63 @@ function tokenDir(): string {
   return configured.endsWith(".json") ? dirname(configured) : configured;
 }
 
+// garmin-connect-sdk@1.0.0-alpha.4 has a real bug in its sleep schema: it
+// declares sleepStartTimestampLocal / sleepEndTimestampLocal as z.string(),
+// but live Garmin returns them as numbers (epoch milliseconds), so
+// sleep.getDailySleep() throws "Garmin response validation failed" on EVERY
+// real night (confirmed against Austin's prod account, 2026-07-20 — the exact
+// DEFERRED-VERIFY that ISC-252 flagged). The SDK constructor accepts a custom
+// `fetch`, so we intercept ONLY the dailySleepData response and coerce those
+// timestamp fields to strings before the SDK's zod validation sees them. Every
+// other endpoint (and all auth/refresh/retry traffic) passes through
+// untouched. Downstream, parseGarminInstant already treats an all-digits
+// string as epoch ms, so nothing else changes. This is the one-file blast
+// radius the src/garmin/ isolation was designed for.
+const SLEEP_TIMESTAMP_FIELDS = [
+  "sleepStartTimestampLocal",
+  "sleepEndTimestampLocal",
+  "sleepStartTimestampGMT",
+  "sleepEndTimestampGMT",
+];
+
+const sleepCoercingFetch = async (
+  input: string | URL | Request,
+  init?: RequestInit,
+): Promise<Response> => {
+  const res = await fetch(input, init);
+  const url = input instanceof Request ? input.url : String(input);
+  if (!url.includes("/wellness/dailySleepData/")) return res;
+  try {
+    const json = (await res.clone().json()) as { dailySleepDTO?: Record<string, unknown> };
+    const dto = json?.dailySleepDTO;
+    if (dto) {
+      for (const field of SLEEP_TIMESTAMP_FIELDS) {
+        if (typeof dto[field] === "number") dto[field] = String(dto[field]);
+      }
+    }
+    return new Response(JSON.stringify(json), {
+      status: res.status,
+      statusText: res.statusText,
+      headers: { "content-type": "application/json" },
+    });
+  } catch {
+    // If anything about the body is unexpected, hand back the original
+    // response untouched rather than break the request.
+    return res;
+  }
+};
+
 async function authenticate(): Promise<GarminConnectSDK> {
   const dir = tokenDir();
   if (!existsSync(dir)) mkdirSync(dir, { recursive: true, mode: 0o700 });
 
-  const garmin = new GarminConnectSDK({ storage: new FileTokenStorage(dir) });
+  const garmin = new GarminConnectSDK({
+    storage: new FileTokenStorage(dir),
+    // Cast: our wrapper matches the call signature the SDK uses; Bun's
+    // `typeof fetch` additionally carries a `preconnect` static the SDK never
+    // calls, so the structural mismatch is safe to assert past.
+    fetch: sleepCoercingFetch as unknown as typeof fetch,
+  });
 
   // Preferred path: a previously persisted session, refreshed by the SDK.
   // No password, no MFA, no fresh login (ISC-29).
