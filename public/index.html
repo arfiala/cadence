@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Cadence</title>
-<meta name="theme-color" content="#0B3D2E">
+<meta name="theme-color" content="#F6EEDC">
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png">
@@ -12,12 +12,36 @@
 </head>
 <body>
 
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="cadence-mascot">
+      <path d="M4 26 h12 M2 36 h10 M6 46 h12" stroke="#26221B" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+      <circle cx="42" cy="60" r="13" fill="none" stroke="#26221B" stroke-width="3.5"/>
+      <circle cx="96" cy="60" r="13" fill="none" stroke="#26221B" stroke-width="3.5"/>
+      <circle cx="42" cy="60" r="2.4" fill="#26221B"/>
+      <circle cx="96" cy="60" r="2.4" fill="#26221B"/>
+      <path d="M42 60 L60 42 L84 42 L96 60 M60 42 L66 60 L42 60 M84 42 L82 34 M58 42 L56 35" fill="none" stroke="#26221B" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M78 34 L88 33" stroke="#26221B" stroke-width="3" stroke-linecap="round"/>
+      <path d="M52 34 L60 35" stroke="#26221B" stroke-width="3" stroke-linecap="round"/>
+      <path d="M58 36 L64 48 L58 56" fill="none" stroke="#3E6FC4" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M56 34 Q64 18 80 20" fill="none" stroke="#1F8A70" stroke-width="9" stroke-linecap="round"/>
+      <path d="M76 22 L84 32" stroke="#1F8A70" stroke-width="5" stroke-linecap="round"/>
+      <circle cx="86" cy="14" r="8.5" fill="#F2C7A9"/>
+      <path d="M93 12 L110 15 L93 18 Z" fill="#F2C7A9"/>
+      <circle cx="88" cy="12" r="1.5" fill="#26221B"/>
+      <path d="M77.5 13 A8.5 8.5 0 0 1 94.5 13 Z" fill="#E85F41"/>
+      <path d="M94 12 L102 12" stroke="#E85F41" stroke-width="3" stroke-linecap="round"/>
+    </g>
+  </defs>
+</svg>
+
 <div id="toast-container" class="toast-container" aria-live="polite"></div>
 
 <div id="login-view" class="login-shell" hidden>
   <div class="login-card">
+    <svg class="mascot mascot-login" viewBox="0 0 120 78" role="img" aria-label="Cadence rider mascot"><use href="#cadence-mascot"/></svg>
     <h1>Cadence</h1>
-    <p class="login-sub">Austin's training log.</p>
+    <p class="login-sub">Austin's training log. Ride, swim, repeat.</p>
     <p id="login-error" class="error-msg"></p>
     <form id="login-form">
       <div class="field">
@@ -36,7 +60,7 @@
 <div id="app-view" hidden>
   <header class="topbar">
     <div class="topbar-inner wrap">
-      <div><span class="brand">Cadence</span><span class="brand-tag">G1 tracker</span></div>
+      <div><span class="brand"><svg class="mascot mascot-topbar" viewBox="0 0 120 78" aria-hidden="true"><use href="#cadence-mascot"/></svg>Cadence</span><span class="brand-tag">G1 tracker</span></div>
       <nav class="nav-tabs">
         <button class="nav-tab active" data-view="dashboard">Dashboard</button>
         <button class="nav-tab" data-view="activities">Activities</button>
@@ -176,8 +200,8 @@
       <div class="card">
         <div class="heatmap-wrap"><svg id="heatmap-svg" class="heatmap" preserveAspectRatio="xMinYMin meet"></svg></div>
         <div class="trend-legend">
-          <div><span class="legend-swatch" style="background:rgba(11,61,46,0.08)"></span>Rest day</div>
-          <div><span class="legend-swatch" style="background:#2BB673"></span>More minutes</div>
+          <div><span class="legend-swatch" style="background:rgba(38,34,27,0.08)"></span>Rest day</div>
+          <div><span class="legend-swatch" style="background:#1F8A70"></span>More minutes</div>
           <div><span class="legend-swatch heat-outline"></span>G1 week met</div>
         </div>
       </div>
@@ -186,8 +210,8 @@
       <div class="card">
         <svg id="trend-svg" class="trend-chart" viewBox="0 0 640 220" preserveAspectRatio="xMidYMid meet"></svg>
         <div class="trend-legend">
-          <div><span class="legend-swatch" style="background:#2BB673"></span>G1 hours</div>
-          <div><span class="legend-swatch" style="background:#0B3D2E"></span>Sessions</div>
+          <div><span class="legend-swatch" style="background:#1F8A70"></span>G1 hours</div>
+          <div><span class="legend-swatch" style="background:#26221B"></span>Sessions</div>
         </div>
       </div>
 
@@ -197,10 +221,10 @@
         <p class="muted" id="load-prompt" hidden>Set your power and heart-rate thresholds below for a sharper load estimate. Until then, load is estimated from duration alone.</p>
         <svg id="load-svg" class="trend-chart" viewBox="0 0 640 220" preserveAspectRatio="xMidYMid meet"></svg>
         <div class="trend-legend">
-          <div><span class="legend-swatch" style="background:rgba(11,61,46,0.18)"></span>Load</div>
-          <div><span class="legend-swatch" style="background:#0B3D2E"></span>Fitness</div>
-          <div><span class="legend-swatch" style="background:#2BB673"></span>Fatigue</div>
-          <div><span class="legend-swatch" style="background:#B8863B"></span>Form</div>
+          <div><span class="legend-swatch" style="background:rgba(38,34,27,0.18)"></span>Load</div>
+          <div><span class="legend-swatch" style="background:#3E6FC4"></span>Fitness</div>
+          <div><span class="legend-swatch" style="background:#E85F41"></span>Fatigue</div>
+          <div><span class="legend-swatch" style="background:#EFA928"></span>Form</div>
         </div>
         <p class="muted" id="load-empty" hidden>No activities yet. Load builds as you log or sync training.</p>
       </div>
@@ -246,14 +270,14 @@
     <section id="view-stretch" class="section" hidden>
       <h2 class="section-title">Daily stretch</h2>
       <div class="stretch-head">
-        <p class="stretch-intro">Daily mobility — Knees Over Toes (ATG) style. ~15 minutes. Hold long, breathe slow.</p>
+        <p class="stretch-intro">Daily mobility, Knees Over Toes (ATG) style. ~15 minutes. Hold long, breathe slow.</p>
         <div class="form-actions">
           <button type="button" class="btn" id="stretch-log-btn">Log stretch session</button>
           <span class="stretch-done" id="stretch-done" hidden>&#10003; Logged today</span>
         </div>
       </div>
       <div class="stretch-list" id="stretch-list"></div>
-      <p class="muted stretch-footnote">Based on Ben Patrick's ATG standards. Longer holds (up to 2 min) are better; once a day is enough to progress. Not medical advice &mdash; ease into range and stop anything that hurts.</p>
+      <p class="muted stretch-footnote">Based on Ben Patrick's ATG standards. Longer holds (up to 2 min) are better; once a day is enough to progress. Not medical advice. Ease into range and stop anything that hurts.</p>
     </section>
 
     <section id="view-sync" class="section" hidden>

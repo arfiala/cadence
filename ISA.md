@@ -3,7 +3,7 @@ task: Cadence — Austin's personal fitness app (Garmin-synced, MCP-editable)
 project: cadence
 effort: E4
 phase: build
-progress: 146/188
+progress: 167/210
 mode: standard
 started: 2026-07-16T19:50:29Z
 updated: 2026-07-17T18:45:00Z
@@ -316,6 +316,30 @@ Cadence is live at `https://fit.austinfiala.com` behind Austin's single-user log
 - [x] ISC-219: Anti: existing views, G1 logic, syncs, and existing MCP tools behave unchanged, probe: regression suite + spot renders
 - [DEFERRED-VERIFY] ISC-220: live LLM estimation against the real Anthropic API confirmed once ANTHROPIC_API_KEY is set on the box (build/tests use a mock) — FOLLOWUP-cadence-nutrition-live-estimate
 
+### Whimsical rebrand, Mikkeller x Erstwhile (added 2026-07-19, Austin: "more whimsical and take inspiration from mikkeller beer and erstwhile brand")
+- [x] ISC-221: styles.css defines a warm cream canvas variable and body background uses it, probe: grep cream var in styles.css
+- [x] ISC-222: at least 4 flat accent color variables (coral, mustard, teal, cobalt) defined in :root, probe: grep :root block
+- [x] ISC-223: old corporate evergreen palette fully gone from styles.css (#0B3D2E, #2BB673, #1E7A50 all zero hits), probe: grep count 0
+- [x] ISC-224: cards and buttons carry the flat-label look, 2px ink borders plus hard offset shadow, probe: grep box-shadow offset pattern
+- [x] ISC-225: nav tabs take per-view flat accent colors when active, probe: grep nav-tab data-view rules
+- [x] ISC-226: hand-authored flat-style mascot SVG (long-nosed character in motion) present in index.html topbar, probe: grep mascot svg
+- [x] ISC-227: login card carries the mascot and playful sub-copy, probe: grep index.html login block
+- [x] ISC-228: chart, heatmap, and ring colors in app.js moved to the new palette with zero old-palette hexes, probe: grep count 0 in app.js
+- [x] ISC-229: legend swatches in index.html match the new chart colors, probe: grep legend swatch hexes
+- [x] ISC-230: manifest background_color and theme_color updated to the new palette, probe: Read manifest
+- [x] ISC-231: meta theme-color in index.html matches manifest theme_color, probe: grep meta theme-color
+- [ ] ISC-232: [DROPPED, see Decisions 2026-07-19: sw.js is a deliberate no-op passthrough with zero Cache storage, so no cache version exists to bump and no staleness risk exists]
+- [x] ISC-233: 375px media query preserved and still covers the restyled elements, probe: grep @media in styles.css
+- [x] ISC-234: full test suite green after restyle, probe: bun test
+- [x] ISC-235: bunx tsc --noEmit clean, probe: Bash
+- [x] ISC-236: local throwaway-instance browser render shows the new theme on login and dashboard, probe: Interceptor screenshots
+- [x] ISC-237: Anti: app.js diff touches only color and style string values, zero behavioral changes, probe: git diff inspection
+- [x] ISC-238: Anti: no new dependencies, no new font files, no external asset requests introduced, probe: git diff package.json plus grep for external URLs
+- [x] ISC-239: Anti: chart and data legibility preserved, dark ink text on light grounds throughout, probe: screenshot inspection
+- [x] ISC-240: Antecedent: whimsy carried by at least three concrete devices (mascot character, flat label-style cards with offset shadows, per-view color coding), probe: grep each device
+- [x] ISC-241: all text-on-fill color pairs meet WCAG AA 4.5:1 (advisor-prompted), probe: computed luminance script, failing teal and sage tab fills darkened to 5.86 and 5.79
+- [x] ISC-242: PWA PNG icons regenerated in the new brand via bin/generate-icons.ts (advisor-prompted), probe: md5 change plus visual read of icon-192
+
 ## Test Strategy
 
 | isc | type | check | threshold | tool |
@@ -330,6 +354,7 @@ Cadence is live at `https://fit.austinfiala.com` behind Austin's single-user log
 | 86-93 | quality | bun test, tsc, greps | 0 fail / 0 errors | Bash |
 | 94-98 | live | prod walkthrough + MCP round-trip + cleanup | complete | Interceptor/MCP |
 | 104-117 | feature | data/SVG probes, bun test, Interceptor walkthrough, deploy check | green + flows complete | Bash/Interceptor |
+| 221-240 | design/ui | palette greps, bun test, tsc, Interceptor screenshots | 0 old-palette hexes, suite green, renders legible | Bash/Interceptor |
 
 ## Features
 
@@ -351,9 +376,14 @@ Cadence is live at `https://fit.austinfiala.com` behind Austin's single-user log
 | consistency-heatmap | 52-week Monday-anchored SVG heatmap with G1 outlines | ISC-165..171 | api, web-ui | true |
 | pr-board | Records endpoint + dashboard board with dates and streaks | ISC-172..180 | api, web-ui | true |
 | week-digest | get_week_digest MCP tool + WeeklyReview wiring | ISC-181..188 | mcp | true |
+| whimsy-rebrand | Mikkeller x Erstwhile visual identity: cream canvas, flat accents, mascot SVG, label-style cards | ISC-221..240 | web-ui | false |
 
 ## Decisions
 
+- 2026-07-19 — **Whimsical rebrand (ISC-221..240), brand interpretation.** Austin asked for "more whimsical... inspiration from mikkeller beer and erstwhile brand." Mikkeller grounding is source-verified this session: Keith Shore's flat, bold, retina-tingling label art with long-nosed characters (mikkeller.com/art, itsnicethat.com). "Erstwhile" is ambiguous; the best craft-beverage match is Erstwhile Mezcal, whose site (fetched this session) shows warm cream grounds, earthy charcoal, and understated artisanal type. Synthesis chosen: Erstwhile supplies the warm cream canvas and restraint, Mikkeller supplies flat punchy accents, a hand-drawn mascot, and label-poster card styling. The Erstwhile assumption is flagged to Austin in the summary; if he meant a different Erstwhile, the accent layer stays valid and only the ground tone would shift. Styling only: zero behavioral JS changes, zero new deps, PWA cache version bumped so installed clients pick up the restyle.
+- 2026-07-19 — **Advisor round outcomes (whimsy rebrand).** Advisor raised five points: (1) Erstwhile could also read as Erstwhile Jewelry (vintage/handmade), not just Erstwhile Mezcal; work proceeds on the beverage reading with the question surfaced to Austin, and the cream/artisanal ground is compatible with both. (2) PWA icons still evergreen: FIXED, generate-icons.ts constants rebranded and all four PNGs regenerated (ISC-242). (3) Verification depth: three tabs plus one live interaction were exercised; full per-view sweep and phone-width check remain in the standing FOLLOWUP-cadence-ui-pass. (4) Contrast: FIXED via measured WCAG script, two tab fills darkened (ISC-241). (5) Advisor's "wrong ISA" warning was its own --auto-state reading a stale work.json from another session; this run's edits target the Cadence project ISA directly.
+- 2026-07-19 — **ISC-232 dropped (sw.js cache bump).** Conjectured during OBSERVE that the service worker would serve stale CSS after deploy. Reading sw.js refuted it: the worker is a deliberate no-op passthrough (ISC-162 design) with zero Cache storage, so there is no cache to version and no staleness risk. Tombstoned per ID-stability.
+- 2026-07-19 — **Delegation floor relaxed at E2 (show-your-math).** The un-selected delegation (an Engineer agent restyling the same three files) would have required a taste-level brief longer than the diff itself, and taste iteration through an agent doubles latency. Single-author pass by primary; verification still runs the full suite plus Interceptor render.
 - 2026-07-18 — **Nutrition / calorie MVP (ISC-189..220) — moves nutrition from Out-of-Scope v2 candidate into scope, on Austin's request "add a calorie counter... I give food I ate and the app finds estimated nutrients and calories and inputs them in."** After a plan presented three estimation mechanisms (server-side LLM / nutrition database API / DA-only-via-MCP), Austin chose **LLM estimation**. Rationale for the recommendation he took: LLM estimation is the exact "give free text, get nutrients" UX and it survives how people actually describe food (compound, homemade, restaurant) far better than USDA/Nutritionix food-name matching, which is where DB-lookup nutrition trackers get frustrating; Cadence is single-user (Austin's own use) so an ANTHROPIC_API_KEY on the box is appropriate and per-entry cost is negligible. Load-bearing calls: (1) estimation is a direct HTTPS `fetch` to the Anthropic API keyed by `ANTHROPIC_API_KEY` in the box .env — NEVER the `claude` CLI and never OAuth billing (single-user app-side API call, ISC-197), and NO new npm dep (fetch, not @anthropic-ai/sdk, preserving Cadence's zero-dep-beyond-Garmin/MCP constraint, ISC-198). (2) Every estimate is itemized (`nutrition_items`) and fully editable, flagged `estimated`, so a wrong LLM number is correctable not authoritative (ISC-216) — the "truth over decoration" principle applied to estimates. (3) No key or a bad model response falls back to manual entry and NEVER fabricates numbers (ISC-196), mirroring the Garmin-outage CSV survival path. (4) Nutrition is structurally separate from `activities` and never feeds the G1 5-sessions/8h training metric (ISC-214), the same isolation discipline that kept comments out of scoring in Suretas. Web UI and MCP are peers over one API (log_nutrition/get_nutrition_day/edit/delete). Builder: Sonnet Engineer agent (codex absent → Forge-slot fallback), then primary independent verification. Live LLM estimation is DEFERRED-VERIFY (ISC-220) until the key is on the box; build + tests use a mocked fetch. NOT deployed — gated on Austin's go AND setting ANTHROPIC_API_KEY on the box.
 - 2026-07-16T19:50Z — Scope set by Austin via AskUserQuestion: hosted "in my personal website... with a login" → fit.austinfiala.com subdomain on the existing box, linked from the site nav (a path under the static site would force base-path handling and a mixed Caddy block; a subdomain keeps both sites clean — flagged to Austin in the summary). Nutrition/MFP: skipped for v1, his call. Garmin auth: "decide for me" → MFA-capable library with token persistence, credentials in box .env only. Python: not approved; TypeScript only, blockers come back to him.
 - 2026-07-16T19:50Z — Zwift integration is DELIBERATELY indirect: Zwift auto-uploads completed rides to Garmin Connect when linked (verified via Zwift/Garmin support + community docs 2026-07-16), so one Garmin integration covers Zwift + outdoor rides + swims. Direct Zwift API is unofficial, unstable, and adds nothing once linking is on.
@@ -368,6 +398,18 @@ Cadence is live at `https://fit.austinfiala.com` behind Austin's single-user log
 - 2026-07-17 (build): ZwiftPower access shape probed from the wrapper's compiled surface. `ZwiftPowerAPI(username, password).authenticate(cookies?)` drives the Zwift SSO login and returns a serialized tough-cookie jar (JSON string); passing that string back reuses a still-valid session. Rider results come from `getActivityResults(profileId)` which hits `https://zwiftpower.com/cache3/profile/{profileId}_all.json` (the "rider's own results" community endpoint), returning DataTables-style rows where numeric fields are `[value, sortKey]` tuples (np, avg_power, time read from element 0; category/pos/event_title/event_date scalar). A `ZWIFT_PROFILE_ID` env var supplies the numeric profile id (documented in .env.example). Session jar persisted to a mode-600 file (ISC-130) via the client, not the wrapper. All wrapper usage isolated to `src/zwiftpower/client.ts` (ISC-118), so a swap is one file. Zero-native-modules gate re-verified after install: `find node_modules -name '*.node'` empty (ISC-119).
 
 ## Verification
+
+### Whimsy rebrand verification round (2026-07-19, ISC-221..242)
+
+- ISC-221..225, 228..231, 233: grep probes all green in one sweep: zero old-palette hexes across styles.css/app.js/index.html/manifest (CLEAN), 45 new-palette var references, 23 offset-shadow rules, 7 per-view tab rules, F6EEDC in manifest and meta theme-color, @media 480px intact.
+- ISC-226/227: `cadence-mascot` appears 3x in index.html (defs + topbar use + login use); mascot visually confirmed in login and topbar screenshots.
+- ISC-232: DROPPED. Read of sw.js refuted the caching premise (no-op passthrough, no Cache API); C/R/L entry in Changelog.
+- ISC-234/235: 194 pass / 0 fail (three runs during the session), tsc --noEmit exit 0.
+- ISC-236/239/240: Interceptor screenshots on a throwaway instance (port 4199, scratch DB): login (coral field, cream card, mascot), dashboard (label cards, mustard day dot after live preset click, ink toast with mustard Undo, PR recorded), Stretch (blush shadows, dash-free copy, single-line buttons), Trends (new chart legend palette, cobalt active tab), Activities (deep-teal active tab, form, mustard MANUAL badge). One real interaction exercised end to end (preset log 202 + UI update). Screenshots deleted after review; evidence recorded here.
+- ISC-237/238: git diff shows app.js changed only in 16 color/copy string pairs plus one dose string; package.json/bun.lock diff empty; fonts dir unchanged at 6 files; no external URLs beyond xmlns.
+- ISC-241: WCAG luminance script (scratchpad) measured every text-on-fill pair; failures teal 4.16 and sage 3.61 fixed to #15705A (5.86) and #556B33 (5.79); all others 4.63..13.70.
+- ISC-242: icons regenerated (all four PNGs, md5 mismatch vs before), icon-192 visually read: coral rounded square, cream C.
+- Dash rule sweep: index.html + styles.css dash-free; generated gap_message and stretch dose de-dashed (weekSummary.ts, app.js); pre-existing code comments left as is.
 
 ### Nutrition MVP (ISC-189..220) — 2026-07-18
 
@@ -473,6 +515,10 @@ Cadence is live at `https://fit.austinfiala.com` behind Austin's single-user log
 - ISC-149: the pre-existing 97 tests still pass unchanged (only the settings-shape and MCP tool-count assertions were updated to match the additive changes); dashboard, G1 logic, Garmin sync, stretch tab, and existing MCP tools untouched and green.
 
 ## Changelog
+
+- conjectured: the PWA service worker would serve stale CSS after the whimsy restyle deployed, so ISC-232 required a cache version bump (OBSERVE premortem, 2026-07-19). refuted by: reading sw.js — it is a deliberate no-op passthrough registered solely to satisfy Chromium installability (ISC-162), with no Cache storage and every request falling through to network. learned: premortems built on how a mechanism usually works must be probed against how this project actually built it before they become criteria; Cadence's sw.js is intentionally cache-free, so asset staleness is a browser-HTTP-cache concern, not a service-worker one. criterion now: ISC-232 tombstoned; no cache-bump step exists in the deploy path.
+
+- conjectured: inline SVG data URIs in CSS url() with raw angle brackets would render decorative patterns, since the pattern is common in shipped sites (whimsy build, 2026-07-19). refuted by: live render in real Chrome — computed style carried the background-image but the image failed to load (Image onerror), with or without %3C encoding, while the same visual intent expressed as radial-gradient and text-decoration wavy rendered instantly. learned: for decorative CSS effects prefer primitives the CSS engine draws natively (gradients, text-decoration) over embedded-document parsing (SVG data URIs), which fail silently and cost debugging rounds; also, synthetic Ctrl+Shift+R does not hard-reload Chrome, so CSS verification needs an explicit cache-bust of the stylesheet link. criterion now: ISC-240's whimsy devices are implemented as wavy text-decoration underlines and radial-gradient dot fields, both confirmed in screenshots.
 
 - conjectured: garmin-connect-client was the right library because it alone documented an MFA resume flow (ISC-24 decision at build time). refuted by: first real sync in production — its native dependency node-libcurl-ja3 binds raw V8 C++ APIs (undefined symbol v8::Object::DefineOwnProperty) that Bun does not implement; the module can never load under Bun, and every sync crashed the service (systemd auto-restart absorbed it). learned: for a Bun deployment, "zero native modules" is a HARD library-selection criterion that outranks feature checklists — a dependency's install scripts being blocked by default (bun pm untrusted) is the early warning, and MFA-capability claims must be probed on the deploy runtime, not on paper. criterion now: ISC-92 effectively extends to "no native .node modules in the production tree" (verified: find -name '*.node' → 0 after the swap), and ISC-24's choice is superseded by garmin-connect-sdk@1.0.0-alpha.4 (pure TS, typed MFA errors, FileTokenStorage restore) — exact-pinned per ISC-101, isolated per ISC-100, which made the swap a one-file change exactly as designed.
 

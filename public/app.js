@@ -30,7 +30,7 @@
   // input — but every field is still routed through escapeHtml on render,
   // per the app-wide innerHTML rule.
   const STRETCH_PLAN = [
-    { slug: "backward-walk", name: "Backward Walk (warm-up)", dose: "2–3 min easy", target: "Knees, ankles", cue: "Small smooth steps; toes push the floor behind you." },
+    { slug: "backward-walk", name: "Backward Walk (warm-up)", dose: "2-3 min easy", target: "Knees, ankles", cue: "Small smooth steps; toes push the floor behind you." },
     { slug: "split-squat", name: "ATG Split Squat", dose: "8 slow reps / side", target: "Knees, hip flexors, quads", cue: "Front knee travels over the toes as far as comfortable; back leg long; 3s down." },
     { slug: "couch-stretch", name: "Couch Stretch", dose: "60s / side", target: "Hip flexors, quads", cue: "Rear shin vertical against the wall, glute squeezed, torso tall. Do it right after split squats." },
     { slug: "elephant-walk", name: "Elephant Walk", dose: "20 alternating reps", target: "Hamstrings", cue: "Hands stay down; straighten one knee at a time." },
@@ -325,10 +325,10 @@
         const y = pad + ri * (cell + gap);
         let fill;
         if (d.minutes <= 0) {
-          fill = "rgba(11,61,46,0.08)"; // rest day, visibly distinct (ISC-167)
+          fill = "rgba(38,34,27,0.08)"; // rest day, visibly distinct (ISC-167)
         } else {
           const t = Math.min(1, d.minutes / maxMin);
-          fill = `rgba(43,182,115,${(0.28 + 0.72 * t).toFixed(2)})`;
+          fill = `rgba(31,138,112,${(0.28 + 0.72 * t).toFixed(2)})`;
         }
         out += `<rect x="${x}" y="${y}" width="${cell}" height="${cell}" rx="2" fill="${fill}"><title>${escapeHtml(`${d.date}, ${d.minutes} min`)}</title></rect>`;
       });
@@ -337,7 +337,7 @@
         const y = pad - 1;
         const bw = cell + 2;
         const bh = 7 * (cell + gap) - gap + 2;
-        out += `<rect x="${x}" y="${y}" width="${bw}" height="${bh}" rx="3" fill="none" stroke="#B8863B" stroke-width="1.5"></rect>`;
+        out += `<rect x="${x}" y="${y}" width="${bw}" height="${bh}" rx="3" fill="none" stroke="#E85F41" stroke-width="1.5"></rect>`;
       }
     });
     svg.innerHTML = out;
@@ -615,12 +615,12 @@
     const pct = target > 0 ? Math.min(1, consumed / target) : 0;
     const over = target > 0 && consumed > target;
     const dash = circ * pct;
-    const color = over ? "#B8863B" : "#2BB673";
+    const color = over ? "#E85F41" : "#1F8A70";
     svg.innerHTML =
-      `<circle cx="${cx}" cy="${cy}" r="${rad}" fill="none" stroke="rgba(11,61,46,0.10)" stroke-width="10"></circle>` +
+      `<circle cx="${cx}" cy="${cy}" r="${rad}" fill="none" stroke="rgba(38,34,27,0.10)" stroke-width="10"></circle>` +
       `<circle cx="${cx}" cy="${cy}" r="${rad}" fill="none" stroke="${color}" stroke-width="10" stroke-linecap="round" stroke-dasharray="${dash.toFixed(1)} ${(circ - dash).toFixed(1)}" transform="rotate(-90 ${cx} ${cy})"></circle>` +
-      `<text x="${cx}" y="${cy - 2}" text-anchor="middle" font-size="20" font-weight="700" fill="#0B3D2E">${escapeHtml(String(Math.round(consumed)))}</text>` +
-      `<text x="${cx}" y="${cy + 16}" text-anchor="middle" font-size="10" fill="#4a544f">of ${escapeHtml(String(Math.round(target)))} kcal</text>`;
+      `<text x="${cx}" y="${cy - 2}" text-anchor="middle" font-size="20" font-weight="700" fill="#26221B">${escapeHtml(String(Math.round(consumed)))}</text>` +
+      `<text x="${cx}" y="${cy + 16}" text-anchor="middle" font-size="10" fill="#6E6657">of ${escapeHtml(String(Math.round(target)))} kcal</text>`;
   }
 
   async function loadNutritionDay() {
@@ -765,7 +765,7 @@
     let bars = "";
     series.forEach((p, i) => {
       const h = (p.load / maxVal) * chartH;
-      bars += `<rect x="${(x(i) - barW / 2).toFixed(1)}" y="${(padding.top + chartH - h).toFixed(1)}" width="${barW.toFixed(1)}" height="${h.toFixed(1)}" fill="rgba(11,61,46,0.18)" rx="1"></rect>`;
+      bars += `<rect x="${(x(i) - barW / 2).toFixed(1)}" y="${(padding.top + chartH - h).toFixed(1)}" width="${barW.toFixed(1)}" height="${h.toFixed(1)}" fill="rgba(38,34,27,0.18)" rx="1"></rect>`;
     });
 
     const line = (key, color) => {
@@ -775,9 +775,9 @@
 
     svg.innerHTML =
       bars +
-      line("fitness", "#0B3D2E") +
-      line("fatigue", "#2BB673") +
-      line("form", "#B8863B");
+      line("fitness", "#3E6FC4") +
+      line("fatigue", "#E85F41") +
+      line("form", "#EFA928");
   }
 
   document.getElementById("threshold-form").addEventListener("submit", async (e) => {
@@ -901,13 +901,13 @@
       const hoursH = (w.hours_g1 / maxHours) * chartH;
       const sessionsH = (w.sessions / maxSessions) * chartH;
 
-      bars += `<rect x="${groupX + barGroupW * 0.15}" y="${padding.top + chartH - hoursH}" width="${barW}" height="${hoursH}" fill="#2BB673" rx="2"></rect>`;
-      bars += `<rect x="${groupX + barGroupW * 0.53}" y="${padding.top + chartH - sessionsH}" width="${barW}" height="${sessionsH}" fill="#0B3D2E" rx="2"></rect>`;
-      bars += `<text x="${groupX + barGroupW / 2}" y="${height - 8}" font-size="10" text-anchor="middle" fill="#4a544f">${escapeHtml(w.week_start.slice(5))}</text>`;
+      bars += `<rect x="${groupX + barGroupW * 0.15}" y="${padding.top + chartH - hoursH}" width="${barW}" height="${hoursH}" fill="#1F8A70" rx="2"></rect>`;
+      bars += `<rect x="${groupX + barGroupW * 0.53}" y="${padding.top + chartH - sessionsH}" width="${barW}" height="${sessionsH}" fill="#26221B" rx="2"></rect>`;
+      bars += `<text x="${groupX + barGroupW / 2}" y="${height - 8}" font-size="10" text-anchor="middle" fill="#6E6657">${escapeHtml(w.week_start.slice(5))}</text>`;
     });
 
     const targetHoursY = padding.top + chartH - (weeks[0].target_hours / maxHours) * chartH;
-    const targetLine = `<line x1="${padding.left}" y1="${targetHoursY}" x2="${width - padding.right}" y2="${targetHoursY}" stroke="#1E7A50" stroke-width="1" stroke-dasharray="4 3"></line>`;
+    const targetLine = `<line x1="${padding.left}" y1="${targetHoursY}" x2="${width - padding.right}" y2="${targetHoursY}" stroke="#E85F41" stroke-width="1" stroke-dasharray="4 3"></line>`;
 
     svg.innerHTML = targetLine + bars;
   }

@@ -1,8 +1,8 @@
 #!/usr/bin/env bun
 // Deterministic icon generator (ISC-155). Draws Cadence's app icon entirely in
 // code (no image-gen, no binary assets checked in that we cannot reproduce): a
-// solid evergreen rounded square with an emerald "C" glyph, encoded to PNG via
-// src/lib/png.ts (node:zlib deflate, hand-rolled CRC). Re-run with:
+// solid coral rounded square with a cream "C" glyph (whimsy rebrand, ISC-221..240),
+// encoded to PNG via src/lib/png.ts (node:zlib deflate, hand-rolled CRC). Re-run with:
 //   bun bin/generate-icons.ts
 // then commit the generated public/*.png. Output is byte-deterministic.
 
@@ -10,8 +10,8 @@ import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { encodePng } from "../src/lib/png";
 
-const EVERGREEN: [number, number, number] = [11, 61, 46]; // #0B3D2E
-const EMERALD: [number, number, number] = [43, 182, 115]; // #2BB673
+const EVERGREEN: [number, number, number] = [232, 95, 65]; // coral #E85F41 (bg)
+const EMERALD: [number, number, number] = [246, 238, 220]; // cream #F6EEDC (glyph)
 
 type IconSpec = {
   file: string;

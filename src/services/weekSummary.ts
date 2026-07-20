@@ -31,7 +31,7 @@ export type WeekSummary = {
   hours_g1: number; // G1-qualifying hours only
   gap_sessions: number; // max(0, target_sessions - sessions)
   gap_hours: number; // max(0, target_hours - hours_g1)
-  gap_message: string; // plain-language, e.g. "2 sessions, 3.2 h — need 3 more sessions, 4.8 h by Sunday"
+  gap_message: string; // plain-language, e.g. "2 sessions, 3.2 h, still need 3 more sessions, 4.8 h by Sunday"
   days: DaySummary[]; // 7 entries, Monday..Sunday
 };
 
@@ -85,11 +85,11 @@ function buildGapMessage(
   const gapHours = Math.max(0, targetHours - hoursG1);
 
   if (gapSessions === 0 && gapHours === 0) {
-    return `${sessions} sessions, ${round1(hoursG1)} h — G1 target met for this week.`;
+    return `${sessions} sessions, ${round1(hoursG1)} h. G1 target met for this week.`;
   }
 
   const sessionWord = gapSessions === 1 ? "session" : "sessions";
-  return `${sessions} sessions, ${round1(hoursG1)} h — need ${gapSessions} more ${sessionWord}, ${round1(gapHours)} h by Sunday.`;
+  return `${sessions} sessions, ${round1(hoursG1)} h, still need ${gapSessions} more ${sessionWord}, ${round1(gapHours)} h by Sunday.`;
 }
 
 // Compute the week summary for the week containing `instant`, using

@@ -28,8 +28,8 @@ describe("web manifest (ISC-153)", () => {
     expect(m.short_name).toBe("Cadence");
     expect(m.display).toBe("standalone");
     expect(m.start_url).toBe("/");
-    expect(m.theme_color).toBe("#0B3D2E");
-    expect(m.background_color).toBe("#0B3D2E");
+    expect(m.theme_color).toBe("#F6EEDC");
+    expect(m.background_color).toBe("#F6EEDC");
     expect(Array.isArray(m.icons)).toBe(true);
     expect(m.icons.length).toBe(3);
     expect(m.icons.some((i: { purpose: string }) => i.purpose === "maskable")).toBe(true);
