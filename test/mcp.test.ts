@@ -52,7 +52,7 @@ describe("readConfig (ISC-68)", () => {
 });
 
 describe("tool surface (ISC-60, ISC-61..67)", () => {
-  test("exactly the 15 specified tools are registered", () => {
+  test("exactly the 16 specified tools are registered", () => {
     const names = TOOLS.map((t) => t.name).sort();
     expect(names).toEqual(
       [
@@ -63,6 +63,7 @@ describe("tool surface (ISC-60, ISC-61..67)", () => {
         "get_goal_progress",
         "get_nutrition_day",
         "get_race_results",
+        "get_sleep",
         "get_sync_status",
         "get_training_load",
         "get_week_digest",
@@ -184,7 +185,7 @@ describe("full stdio MCP handshake (ISC-60)", () => {
 
     const tools = await mcpClient.listTools();
     expect(tools.tools.map((t) => t.name).sort()).toContain("get_week_summary");
-    expect(tools.tools.length).toBe(15);
+    expect(tools.tools.length).toBe(16);
 
     await callTool(client(), "log_activity", { sport: "cycling", date: "2026-07-14T06:00:00Z", duration_minutes: 60 });
     const result = await mcpClient.callTool({ name: "get_goal_progress", arguments: {} });

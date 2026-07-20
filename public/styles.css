@@ -414,6 +414,20 @@ input.nutri-col-num{text-align:right;}
 .nutri-ring{width:120px;height:120px;}
 .nutri-macros{display:flex;gap:24px;flex-wrap:wrap;}
 
+/* --- Sleep view --- */
+.sleep-last-head{display:flex;align-items:baseline;gap:18px;flex-wrap:wrap;margin-bottom:14px;}
+.sleep-total{font-family:var(--font-head);font-size:2.4rem;font-weight:700;color:var(--ink);line-height:1;}
+.sleep-last-meta{display:flex;flex-direction:column;gap:2px;}
+.sleep-date{font-weight:600;}
+.sleep-score{display:inline-block;margin-top:2px;font-size:0.8rem;font-weight:600;color:var(--ink);background:rgba(62,111,196,0.16);padding:1px 8px;border-radius:10px;width:fit-content;}
+.sleep-bar{display:flex;height:12px;border-radius:6px;overflow:hidden;margin:8px 0;background:rgba(38,34,27,0.06);}
+.sleep-seg{display:block;height:100%;}
+.sleep-stats{display:flex;gap:20px;flex-wrap:wrap;margin-top:12px;}
+.sleep-stat{display:flex;flex-direction:column;gap:1px;}
+.sleep-stat-label{font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.03em;}
+.sleep-stat-val{font-size:1.05rem;font-weight:600;color:var(--ink);}
+.sleep-last .sleep-bar{height:16px;}
+
 /* --- Responsive: 375px phone target (ISC-56) --- */
 @media (max-width:480px){
   body{font-size:16px;}

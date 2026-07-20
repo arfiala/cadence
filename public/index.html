@@ -68,6 +68,7 @@
         <button class="nav-tab" data-view="trends">Trends</button>
         <button class="nav-tab" data-view="races">Races</button>
         <button class="nav-tab" data-view="stretch">Stretch</button>
+        <button class="nav-tab" data-view="sleep">Sleep</button>
         <button class="nav-tab" data-view="sync">Sync</button>
       </nav>
       <button class="logout-btn" id="logout-btn">Log out</button>
@@ -278,6 +279,26 @@
       </div>
       <div class="stretch-list" id="stretch-list"></div>
       <p class="muted stretch-footnote">Based on Ben Patrick's ATG standards. Longer holds (up to 2 min) are better; once a day is enough to progress. Not medical advice. Ease into range and stop anything that hurts.</p>
+    </section>
+
+    <section id="view-sleep" class="section" hidden>
+      <h2 class="section-title">Last night</h2>
+      <div class="card sleep-last" id="sleep-last"></div>
+
+      <h2 class="section-title">Last 7 nights</h2>
+      <div class="card">
+        <svg id="sleep-trend" class="trend-chart" viewBox="0 0 640 200" preserveAspectRatio="xMidYMid meet"></svg>
+        <div class="trend-legend">
+          <div><span class="legend-swatch" style="background:#3E6FC4"></span>Deep</div>
+          <div><span class="legend-swatch" style="background:#5B8DEF"></span>Light</div>
+          <div><span class="legend-swatch" style="background:#9B6FE0"></span>REM</div>
+          <div><span class="legend-swatch" style="background:rgba(38,34,27,0.22)"></span>Awake</div>
+        </div>
+      </div>
+
+      <h2 class="section-title">Recent nights</h2>
+      <ul class="activity-list" id="sleep-list"></ul>
+      <p class="muted" id="sleep-empty" hidden>No sleep synced yet. Run a Garmin sync to pull your recent nights.</p>
     </section>
 
     <section id="view-sync" class="section" hidden>

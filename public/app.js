@@ -105,6 +105,7 @@
     if (name === "trends") loadTrends();
     if (name === "races") loadRaces();
     if (name === "stretch") loadStretch();
+    if (name === "sleep") loadSleep();
     if (name === "sync") loadSyncStatus();
   }
 
@@ -880,6 +881,150 @@
       btn.textContent = "Sync ZwiftPower";
     }
   });
+
+  // --- Sleep -------------------------------------------------------------
+
+  // Seconds -> "7h 05m" (minutes zero-padded). Null/0 -> "--".
+  function fmtSleep(seconds) {
+    if (seconds == null || seconds <= 0) return "--";
+    const h = Math.floor(seconds / 3600);
+    const m = Math.round((seconds % 3600) / 60);
+    return `${h}h ${String(m).padStart(2, "0")}m`;
+  }
+
+  // ISO instant -> "10:48 PM" local. Null -> "".
+  function fmtClock(iso) {
+    if (!iso) return "";
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return "";
+    return d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+  }
+
+  // "2026-07-19" -> "Sun, Jul 19". Parsed as a local calendar day (append
+  // T00:00 so it is not shifted a day by UTC interpretation).
+  function fmtNightDate(ymd) {
+    if (!ymd) return "";
+    const d = new Date(`${ymd}T00:00:00`);
+    if (Number.isNaN(d.getTime())) return escapeHtml(ymd);
+    return d.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
+  }
+
+  const SLEEP_STAGES = [
+    { key: "deep_s", label: "Deep", color: "#3E6FC4" },
+    { key: "light_s", label: "Light", color: "#5B8DEF" },
+    { key: "rem_s", label: "REM", color: "#9B6FE0" },
+    { key: "awake_s", label: "Awake", color: "rgba(38,34,27,0.22)" },
+  ];
+
+  // Horizontal stacked stage bar for one night. Renders only the stages that
+  // have data; a night with no stage breakdown renders nothing (honest).
+  function stageBar(night) {
+    const total = SLEEP_STAGES.reduce((sum, s) => sum + (night[s.key] || 0), 0);
+    if (total <= 0) return "";
+    const segs = SLEEP_STAGES.filter((s) => (night[s.key] || 0) > 0)
+      .map((s) => `<span class="sleep-seg" style="flex:${night[s.key]};background:${s.color}" title="${s.label} ${fmtSleep(night[s.key])}"></span>`)
+      .join("");
+    return `<div class="sleep-bar">${segs}</div>`;
+  }
+
+  function renderSleepLast(night) {
+    const el = document.getElementById("sleep-last");
+    if (!night) {
+      el.innerHTML = `<p class="muted">No sleep recorded yet.</p>`;
+      return;
+    }
+    const window = night.start_time && night.end_time
+      ? `${fmtClock(night.start_time)} &rarr; ${fmtClock(night.end_time)}`
+      : "";
+    const score = night.score != null
+      ? `<span class="sleep-score">Score ${escapeHtml(String(night.score))}</span>`
+      : "";
+    const stages = SLEEP_STAGES.filter((s) => night[s.key] != null)
+      .map((s) => `<div class="sleep-stat"><span class="sleep-stat-label" style="color:${s.color}">${s.label}</span><span class="sleep-stat-val">${fmtSleep(night[s.key])}</span></div>`)
+      .join("");
+    el.innerHTML = `
+      <div class="sleep-last-head">
+        <div class="sleep-total">${fmtSleep(night.total_sleep_s)}</div>
+        <div class="sleep-last-meta">
+          <div class="sleep-date">${escapeHtml(fmtNightDate(night.date))}</div>
+          ${window ? `<div class="muted">${window}</div>` : ""}
+          ${score}
+        </div>
+      </div>
+      ${stageBar(night)}
+      <div class="sleep-stats">${stages}</div>`;
+  }
+
+  // Stacked-minutes trend across the recent nights (oldest -> newest).
+  function renderSleepTrend(nights) {
+    const svg = document.getElementById("sleep-trend");
+    const width = 640;
+    const height = 200;
+    const pad = { top: 10, right: 10, bottom: 26, left: 10 };
+    const chartW = width - pad.left - pad.right;
+    const chartH = height - pad.top - pad.bottom;
+    const series = nights.slice(0, 7).reverse();
+    if (series.length === 0) {
+      svg.innerHTML = "";
+      return;
+    }
+    const maxTotal = Math.max(
+      1,
+      ...series.map((n) => SLEEP_STAGES.reduce((s, st) => s + (n[st.key] || 0), 0)),
+    );
+    const groupW = chartW / series.length;
+    const barW = Math.min(48, groupW * 0.5);
+    let out = "";
+    series.forEach((n, i) => {
+      const cx = pad.left + groupW * i + groupW / 2;
+      const x = cx - barW / 2;
+      let yTop = pad.top + chartH;
+      SLEEP_STAGES.forEach((st) => {
+        const secs = n[st.key] || 0;
+        if (secs <= 0) return;
+        const h = (secs / maxTotal) * chartH;
+        yTop -= h;
+        out += `<rect x="${x.toFixed(1)}" y="${yTop.toFixed(1)}" width="${barW.toFixed(1)}" height="${h.toFixed(1)}" fill="${st.color}" rx="1"><title>${st.label} ${fmtSleep(secs)}</title></rect>`;
+      });
+      const label = new Date(`${n.date}T00:00:00`).toLocaleDateString(undefined, { weekday: "short" });
+      out += `<text x="${cx.toFixed(1)}" y="${(height - 8).toFixed(1)}" text-anchor="middle" font-size="11" fill="rgba(38,34,27,0.6)">${escapeHtml(label)}</text>`;
+    });
+    svg.innerHTML = out;
+  }
+
+  function renderSleepList(nights) {
+    const list = document.getElementById("sleep-list");
+    list.innerHTML = nights
+      .map((n) => {
+        const window = n.start_time && n.end_time ? `${fmtClock(n.start_time)} &rarr; ${fmtClock(n.end_time)}` : "";
+        const score = n.score != null ? `Score ${escapeHtml(String(n.score))}` : "";
+        const meta = [escapeHtml(fmtNightDate(n.date)), window, score].filter((s) => s).join(" &middot; ");
+        return `
+        <li class="activity-item">
+          <div class="activity-icon">\u{1F634}</div>
+          <div class="activity-main">
+            <div class="activity-title">${fmtSleep(n.total_sleep_s)}</div>
+            <div class="activity-meta">${meta}</div>
+            ${stageBar(n)}
+          </div>
+        </li>`;
+      })
+      .join("");
+  }
+
+  async function loadSleep() {
+    let data;
+    try {
+      data = await api("/api/sleep");
+    } catch {
+      return;
+    }
+    const nights = data.nights || [];
+    document.getElementById("sleep-empty").hidden = nights.length > 0;
+    renderSleepLast(nights[0] || null);
+    renderSleepTrend(nights);
+    renderSleepList(nights);
+  }
 
   function renderTrendChart(weeks) {
     const svg = document.getElementById("trend-svg");

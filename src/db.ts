@@ -82,7 +82,32 @@ export type SyncRunRow = {
   status: "running" | "success" | "error";
   activities_seen: number;
   activities_new: number;
+  // Sleep nights processed in the same run (ISC-243). Nullable/defaulted to 0
+  // via guarded ALTER so pre-sleep sync_runs rows read back as 0, not null.
+  sleep_seen: number;
+  sleep_new: number;
   error: string | null;
+};
+
+// One row per night of Garmin sleep (ISC-243). calendar_date is the night's
+// local calendar day and is UNIQUE, so re-syncing the same night is
+// idempotent (ISC-245) — exactly the zwiftpower_results / event_id pattern.
+// Every metric is nullable because Garmin returns partial nights. This table
+// is entirely separate from `activities` and never feeds the G1 training
+// metric (ISC-249): sleep is context, not a workout.
+export type SleepRow = {
+  id: number;
+  calendar_date: string; // YYYY-MM-DD (natural key, UNIQUE)
+  start_time: string | null; // UTC ISO-8601
+  end_time: string | null; // UTC ISO-8601
+  total_sleep_s: number | null;
+  deep_s: number | null;
+  light_s: number | null;
+  rem_s: number | null;
+  awake_s: number | null;
+  score: number | null; // Garmin overall sleep score (0-100) when present
+  created_at: string;
+  updated_at: string;
 };
 
 export type UserRow = {
@@ -339,6 +364,24 @@ export function runMigrations(database: Database): void {
       fat_g REAL NOT NULL DEFAULT 0
     );
     CREATE INDEX IF NOT EXISTS idx_nutrition_items_entry ON nutrition_items(entry_id);
+
+    -- Nightly Garmin sleep (ISC-243). calendar_date UNIQUE makes re-sync
+    -- idempotent (ISC-245). Separate from activities; never feeds G1 (ISC-249).
+    CREATE TABLE IF NOT EXISTS sleep (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      calendar_date TEXT UNIQUE NOT NULL,
+      start_time TEXT,
+      end_time TEXT,
+      total_sleep_s INTEGER,
+      deep_s INTEGER,
+      light_s INTEGER,
+      rem_s INTEGER,
+      awake_s INTEGER,
+      score INTEGER,
+      created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+      updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_sleep_date ON sleep(calendar_date);
   `);
 
   // Power columns on activities (ISC-135), added via the guarded ALTER so an
@@ -346,6 +389,12 @@ export function runMigrations(database: Database): void {
   // unaffected by the double run (ISC-10).
   addColumnIfMissing(database, "activities", "avg_power", "INTEGER");
   addColumnIfMissing(database, "activities", "norm_power", "INTEGER");
+
+  // Sleep tallies on sync_runs (ISC-243), added via the guarded ALTER so an
+  // existing production sync_runs table gains them (defaulting to 0 on every
+  // historical row) without a rebuild.
+  addColumnIfMissing(database, "sync_runs", "sleep_seen", "INTEGER NOT NULL DEFAULT 0");
+  addColumnIfMissing(database, "sync_runs", "sleep_new", "INTEGER NOT NULL DEFAULT 0");
 
   // Seed default G1 targets exactly once (INSERT OR IGNORE so re-running
   // migrations, or a settings row a user already edited, is never clobbered).

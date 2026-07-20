@@ -130,6 +130,10 @@ export class CadenceClient {
     return this.request("GET", "/api/sync/status");
   }
 
+  getSleep(): Promise<unknown> {
+    return this.request("GET", "/api/sleep");
+  }
+
   getRaceResults(): Promise<unknown> {
     return this.request("GET", "/api/zwiftpower/results");
   }

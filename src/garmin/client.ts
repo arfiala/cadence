@@ -25,7 +25,7 @@ import {
   GarminBotChallengeError,
   GarminRateLimitError,
 } from "garmin-connect-sdk";
-import type { GarminClient, GarminActivity } from "./types";
+import type { GarminClient, GarminActivity, GarminSleep } from "./types";
 import { GarminSyncError } from "./types";
 
 // GARMIN_TOKEN_PATH historically pointed at a session.json FILE; the SDK's
@@ -149,6 +149,68 @@ function firstNumber(...values: unknown[]): number | null {
   return null;
 }
 
+// Returns the first argument that is a finite number >= 0, else null. Used
+// for sleep-stage seconds, where 0 (e.g. zero awake time) is a legitimate
+// value that firstNumber() would wrongly reject.
+function firstNonNegative(...values: unknown[]): number | null {
+  for (const v of values) {
+    if (typeof v === "number" && Number.isFinite(v) && v >= 0) return Math.round(v);
+  }
+  return null;
+}
+
+// Garmin sleep timestamps arrive in several shapes across firmware/endpoints:
+// an epoch-milliseconds number, that same number as a string, or a
+// "YYYY-MM-DD HH:MM:SS" wall-clock string. Normalize any of them to an ISO
+// UTC instant; return null on anything unparseable rather than an Invalid
+// Date. (The exact field names/units cannot be pinned without a live sleep
+// sync — see ISA Decisions — so this reads defensively and degrades to null.)
+function parseGarminInstant(value: unknown): string | null {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return new Date(value).toISOString();
+  }
+  if (typeof value === "string" && value.length > 0) {
+    if (/^\d+$/.test(value)) return new Date(Number(value)).toISOString();
+    const iso = value.includes("T") ? value : value.replace(" ", "T");
+    const t = Date.parse(iso);
+    if (!Number.isNaN(t)) return new Date(t).toISOString();
+  }
+  return null;
+}
+
+// Maps one raw Garmin sleep record (as returned by sleep.getSleepRange) to a
+// normalized GarminSleep, or null when the record carries no usable night
+// (no dailySleepDTO / no calendarDate). The SDK validates with zod
+// .passthrough(), so undeclared fields like the GMT timestamps and the sleep
+// score survive parsing and are read here defensively.
+function toGarminSleep(raw: Record<string, unknown>): GarminSleep | null {
+  const dto = raw.dailySleepDTO as Record<string, unknown> | undefined;
+  if (dto === undefined) return null;
+  const calendarDate = typeof dto.calendarDate === "string" ? dto.calendarDate : null;
+  if (calendarDate === null || calendarDate.length === 0) return null;
+
+  // Prefer the GMT timestamp (unambiguous) over the local one.
+  const startTimeUtc = parseGarminInstant(dto.sleepStartTimestampGMT ?? dto.sleepStartTimestampLocal);
+  const endTimeUtc = parseGarminInstant(dto.sleepEndTimestampGMT ?? dto.sleepEndTimestampLocal);
+
+  // Sleep score lives at dailySleepDTO.sleepScores.overall.value on modern
+  // devices, or a flat overallSleepScore on older payloads. Read both.
+  const scores = dto.sleepScores as { overall?: { value?: unknown } } | undefined;
+  const score = firstNonNegative(scores?.overall?.value, dto.overallSleepScore);
+
+  return {
+    calendarDate,
+    startTimeUtc,
+    endTimeUtc,
+    totalSleepSeconds: firstNonNegative(dto.sleepTimeSeconds),
+    deepSeconds: firstNonNegative(dto.deepSleepSeconds),
+    lightSeconds: firstNonNegative(dto.lightSleepSeconds),
+    remSeconds: firstNonNegative(dto.remSleepSeconds),
+    awakeSeconds: firstNonNegative(dto.awakeSleepSeconds),
+    score,
+  };
+}
+
 export function createRealGarminClient(): GarminClient {
   return {
     async listRecentActivities(limit = 50): Promise<GarminActivity[]> {
@@ -160,6 +222,51 @@ export function createRealGarminClient(): GarminClient {
         if (err instanceof GarminSyncError) throw err;
         throw new GarminSyncError(
           `Garmin Connect request failed: ${err instanceof Error ? err.message : String(err)}`,
+          { cause: err },
+        );
+      }
+    },
+
+    async listRecentSleep(days = 14): Promise<GarminSleep[]> {
+      try {
+        const garmin = await authenticate();
+        const end = new Date();
+        const start = new Date(end.getTime() - Math.max(1, days - 1) * 24 * 60 * 60 * 1000);
+        const range = await garmin.sleep.getSleepRange(start, end);
+        const raw = range as unknown as Record<string, unknown>[];
+        const nights = raw.map(toGarminSleep).filter((s): s is GarminSleep => s !== null);
+
+        // DEFERRED-VERIFY trigger (ISC-252): the exact Garmin field names/units
+        // are unconfirmed until a live prod sleep sync. If Garmin returned
+        // records but NONE mapped to a usable night — or every mapped night is
+        // entirely null — a wrong field-name assumption would look identical to
+        // "the user didn't wear the watch". Log the raw key set once (keys only,
+        // never values) so the first real sync surfaces a shape mismatch loudly
+        // instead of a silently-empty Sleep tab.
+        const allEmpty =
+          nights.length === 0 ||
+          nights.every(
+            (n) =>
+              n.totalSleepSeconds === null &&
+              n.deepSeconds === null &&
+              n.lightSeconds === null &&
+              n.remSeconds === null,
+          );
+        if (raw.length > 0 && allEmpty) {
+          const first = raw[0] ?? {};
+          const dto = (first.dailySleepDTO ?? {}) as Record<string, unknown>;
+          console.warn(
+            `[cadence] Garmin sleep returned ${raw.length} record(s) but no usable sleep data was parsed. ` +
+              `This likely means the sleep field mapping needs updating for the live payload shape. ` +
+              `Top-level keys: [${Object.keys(first).join(", ")}]; dailySleepDTO keys: [${Object.keys(dto).join(", ")}]`,
+          );
+        }
+
+        return nights;
+      } catch (err) {
+        if (err instanceof GarminSyncError) throw err;
+        throw new GarminSyncError(
+          `Garmin Connect sleep request failed: ${err instanceof Error ? err.message : String(err)}`,
           { cause: err },
         );
       }

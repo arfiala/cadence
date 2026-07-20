@@ -224,6 +224,20 @@ export const TOOLS: ToolDefinition[] = [
     },
   },
   {
+    name: "get_sleep",
+    description:
+      "Get Austin's recent nightly sleep from Garmin (newest night first): total sleep time, sleep stages (deep/light/REM/awake seconds), bedtime and wake time, and Garmin's overall sleep score when available. Read-only. Sleep is context for recovery; it is not a training activity and never counts toward the G1 goal.",
+    inputSchema: {
+      type: "object",
+      properties: {},
+      additionalProperties: false,
+    },
+    handler: async (client) => {
+      const result = await client.getSleep();
+      return pretty(result);
+    },
+  },
+  {
     name: "get_race_results",
     description:
       "Get Austin's stored ZwiftPower race results (date, event, category, finishing position, and power numbers). Reports whether ZwiftPower is configured yet.",

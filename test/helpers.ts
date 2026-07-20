@@ -13,6 +13,7 @@ export function resetDb(): void {
   db.exec("DELETE FROM api_tokens;");
   db.exec("DELETE FROM activities;");
   db.exec("DELETE FROM sync_runs;");
+  db.exec("DELETE FROM sleep;");
   db.exec("DELETE FROM zwiftpower_results;");
   db.exec("DELETE FROM zwiftpower_sync_runs;");
   db.exec("DELETE FROM nutrition_items;");

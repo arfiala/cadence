@@ -14,6 +14,7 @@ import { getWeek } from "./routes/week";
 import { getTrends } from "./routes/trends";
 import { getSettingsRoute, patchSettingsRoute } from "./routes/settings";
 import { postSync, getSyncStatus } from "./routes/sync";
+import { getSleep } from "./routes/sleep";
 import { importCsv } from "./routes/csv";
 import { postZwiftPowerSync, getZwiftPowerResults, getZwiftPowerStatus } from "./routes/zwiftpower";
 import { getTrainingLoad, getConsistency, getRecords, getDigest } from "./routes/metrics";
@@ -83,6 +84,8 @@ async function handleApi(req: Request, url: URL): Promise<Response> {
 
   if (path === "/api/sync" && method === "POST") return postSync();
   if (path === "/api/sync/status" && method === "GET") return getSyncStatus();
+
+  if (path === "/api/sleep" && method === "GET") return getSleep(url);
 
   if (path === "/api/zwiftpower/sync" && method === "POST") return postZwiftPowerSync();
   if (path === "/api/zwiftpower/results" && method === "GET") return getZwiftPowerResults();
