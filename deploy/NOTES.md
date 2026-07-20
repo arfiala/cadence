@@ -43,6 +43,7 @@ Bootstrapped 2026-07-17 from the deploy records in the project ISA and PAI PROJE
 
 ## Deploy log
 
+- 2026-07-19 (UTC 07-20, follow-up): commit for wavy-underline removal, CSS-only. Same archive-rsync method, no restart needed (statics served from disk), no backup (no migration). Live bytes verified wavy-free, health 200, Interceptor render confirmed titles clean, rest of rebrand intact.
 - 2026-07-19 (UTC 07-20): commit 52da290 (whimsy rebrand ISC-221..242, PLUS nutrition MVP 3fcfc42 riding along since it was already on main; nutrition estimation degrades to manual entry until ANTHROPIC_API_KEY lands on the box). Backup cadence-pre-whimsy-20260720T022003.db (VACUUM INTO; bun needs explicit $HOME/.bun/bin PATH over non-interactive ssh). No dep change (bun install skipped), migration = guarded nutrition tables, landed on restart. All three sites 200, new palette + mascot bytes live, icon-192 md5 matches local, /api/activities 401 unauth, activities count 52 before and after, live Interceptor render through the real session showed the full rebrand with real data. Surprise: none. Method exactly as documented above.
 
 - 2026-07-16: Module-era deploys and stretch tab (see ISA Verification rounds for detail). Method as above.
