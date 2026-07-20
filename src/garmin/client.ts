@@ -250,15 +250,35 @@ function toGarminSleep(raw: Record<string, unknown>): GarminSleep | null {
   const scores = dto.sleepScores as { overall?: { value?: unknown } } | undefined;
   const score = firstNonNegative(scores?.overall?.value, dto.overallSleepScore);
 
+  const totalSleepSeconds = firstNonNegative(dto.sleepTimeSeconds);
+  const deepSeconds = firstNonNegative(dto.deepSleepSeconds);
+  const lightSeconds = firstNonNegative(dto.lightSleepSeconds);
+  const remSeconds = firstNonNegative(dto.remSleepSeconds);
+  const awakeSeconds = firstNonNegative(dto.awakeSleepSeconds);
+
+  // A night Garmin has a calendarDate for but no measurements (watch off, no
+  // sleep recorded) carries no signal — skip it so the Sleep tab never shows a
+  // phantom "--" row. A night with any one metric is kept.
+  if (
+    totalSleepSeconds === null &&
+    deepSeconds === null &&
+    lightSeconds === null &&
+    remSeconds === null &&
+    awakeSeconds === null &&
+    score === null
+  ) {
+    return null;
+  }
+
   return {
     calendarDate,
     startTimeUtc,
     endTimeUtc,
-    totalSleepSeconds: firstNonNegative(dto.sleepTimeSeconds),
-    deepSeconds: firstNonNegative(dto.deepSleepSeconds),
-    lightSeconds: firstNonNegative(dto.lightSleepSeconds),
-    remSeconds: firstNonNegative(dto.remSleepSeconds),
-    awakeSeconds: firstNonNegative(dto.awakeSleepSeconds),
+    totalSleepSeconds,
+    deepSeconds,
+    lightSeconds,
+    remSeconds,
+    awakeSeconds,
     score,
   };
 }
