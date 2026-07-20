@@ -167,14 +167,7 @@ a{color:var(--link);}
 
 /* --- Sections --- */
 .section{padding:28px 0;}
-.section-title{
-  font-size:1.3rem;font-weight:700;margin:0 0 16px;
-  text-decoration-line:underline;
-  text-decoration-style:wavy;
-  text-decoration-color:var(--coral);
-  text-decoration-thickness:2px;
-  text-underline-offset:7px;
-}
+.section-title{font-size:1.3rem;font-weight:700;margin:0 0 16px;}
 .rule{border:0;border-top:2px dashed rgba(38,34,27,0.25);height:0;margin:8px 0 0;background:none;}
 
 /* --- Dashboard cards --- */
