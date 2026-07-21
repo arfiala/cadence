@@ -2,8 +2,8 @@
 task: Cadence — Austin's personal fitness app (Garmin-synced, MCP-editable)
 project: cadence
 effort: E3
-phase: execute
-progress: 8/32
+phase: complete
+progress: 30/32
 mode: standard
 started: 2026-07-16T19:50:29Z
 updated: 2026-07-21T00:00:00Z
@@ -394,12 +394,12 @@ Cadence is live at `https://fit.austinfiala.com` behind Austin's single-user log
 - [x] ISC-287: shipped round-1 items are marked as built in ROADMAP.md so the file stays truthful, probe: grep SHIPPED returned 6 markers (items 2, 3, 4-partial, 6, 8, 10-as-MVP)
 - [x] ISC-288: plan presented to Austin and approved before any build begins, probe: ExitPlanMode returned "User has approved your plan"
 - [x] ISC-289: Advisor consulted at the commitment boundary before plan presentation, probe: Inference.ts advisor call returned 7 catches, recorded in Decisions
-- [ ] ISC-290: work committed with a descriptive message on approval, probe: git log
-- [ ] ISC-291: Anti: no deploy without Austin's explicit go, probe: transcript shows deploy gated
-- [ ] ISC-292: Anti: mascot and login screen untouched, probe: git diff excludes login-shell and mascot defs
-- [ ] ISC-293: PWA manifest and icons untouched by layout work, probe: git diff excludes manifest/icons
-- [ ] ISC-294: ISA Decisions and Changelog updated with this run's outcomes, probe: read ISA sections
-- [ ] ISC-295: PROJECTS.md updated with the session record, probe: read PROJECTS.md cadence section
+- [x] ISC-290: work committed with a descriptive message on approval, probe: git log shows cea8d22
+- [x] ISC-291: Anti: no deploy without Austin's explicit go, probe: Austin said "deploy" mid-build; deploy executed only after full verification, live-verified (three sites 200, new bytes, real-session render)
+- [x] ISC-292: Anti: mascot and login screen untouched, probe: git diff grep login-shell/cadence-mascot returned 0
+- [x] ISC-293: PWA manifest and icons untouched by layout work, probe: git diff on manifest/icons empty
+- [x] ISC-294: ISA Decisions and Changelog updated with this run's outcomes, probe: Decisions entry 2026-07-21 + Changelog entry this run
+- [x] ISC-295: PROJECTS.md updated with the session record, probe: cadence section gains 2026-07-21 layout + roadmap entry
 
 ## Test Strategy
 
@@ -616,6 +616,7 @@ Cadence is live at `https://fit.austinfiala.com` behind Austin's single-user log
 
 ## Changelog
 
+- conjectured: browser verification could proceed on this machine as it had on 2026-07-13, by launching the dedicated automation Chromium profile and driving it through Interceptor (VERIFY, 2026-07-21). refuted by: "no extensions connected" on every attempt; investigation showed two independent breaks: the automation profile's NativeMessagingHosts dir was missing the com.interceptor.host.json manifest entirely, and the only packed extension in the profile was KDE Plasma Integration, not Interceptor, which loads unpacked from ~/Projects/interceptor/extension/dist and had dropped out of the profile. learned: the Interceptor stack on Linux has three coupling points that must all agree: the unpacked extension path (extension/dist, whose path-derived ID must appear in allowed_origins), the native-host manifest present in EACH profile's own NativeMessagingHosts dir (a custom --user-data-dir does not inherit the default profile's), and a launch command that passes --load-extension explicitly. Fixed all three; the working launch is now: chromium --user-data-dir=~/.config/chromium-interceptor-profile --load-extension=~/Projects/interceptor/extension/dist. criterion now: ISC-281 verified through the repaired stack; gotcha recorded in the Interceptor skill.
 - conjectured: the garmin-connect-sdk sleep endpoints (`sleep.getSleepRange` / `getDailySleep`) would return usable sleep data the way `activities.list` does, so `listRecentSleep` could call them directly and map the result (BUILD, 2026-07-20). refuted by: the first real prod sync returned `sleep_seen: 0` with no error, and a raw probe on the box showed the SDK throwing `GarminValidationError` — its zod schema declares `sleepStartTimestampLocal`/`sleepEndTimestampLocal` as `string` but live Garmin sends epoch-millisecond `number`s, so validation fails on every night. learned: an alpha-pinned SDK's declared schema is not the live contract; for the sleep path the SDK's own validation is the failure point, and the fix belongs at the transport boundary (a custom `fetch` passed to the SDK that coerces just those two fields before validation) rather than abandoning the SDK or its auth/retry machinery. The best-effort try/catch that made this non-fatal also made it silent — the load-bearing lesson is that "degrade to null" needs a paired observability hook (which the advisor forced, ISC-252) AND a real live probe before declaring a DEFERRED-VERIFY closed. criterion now: ISC-244/252 verified against real data; the coercion is documented in client.ts as the one-file blast radius the src/garmin/ isolation was built for.
 - conjectured: the PWA service worker would serve stale CSS after the whimsy restyle deployed, so ISC-232 required a cache version bump (OBSERVE premortem, 2026-07-19). refuted by: reading sw.js — it is a deliberate no-op passthrough registered solely to satisfy Chromium installability (ISC-162), with no Cache storage and every request falling through to network. learned: premortems built on how a mechanism usually works must be probed against how this project actually built it before they become criteria; Cadence's sw.js is intentionally cache-free, so asset staleness is a browser-HTTP-cache concern, not a service-worker one. criterion now: ISC-232 tombstoned; no cache-bump step exists in the deploy path.
 
