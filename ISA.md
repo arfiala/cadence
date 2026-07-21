@@ -350,7 +350,8 @@ Cadence is live at `https://fit.austinfiala.com` behind Austin's single-user log
 - [x] ISC-249: Anti: sleep is structurally separate from `activities` and never feeds the G1 5-session/8h metric, probe: separate table + grep, sleep never read by week/metrics
 - [x] ISC-250: `get_sleep` MCP tool returns recent nights over one authenticated API call (read-only), probe: bun test tool registry (16 tools) + handler
 - [x] ISC-251: Sleep tab renders the last-night card (total, stages, bedtime→wake, score), a 7-night stacked-stage trend, and a recent-nights list, probe: Interceptor screenshot of a real login on a throwaway instance
-### Weight detail + nutrition surface (ISC-259..263, 2026-07-21)
+### Weight detail + nutrition surface (ISC-259..263, 2026-07-21, DEPLOYED commit b1e4d74)
+- Deploy: no migration (weight_kg already live), precautionary backup cadence-pre-weightdetail-20260721T140608Z.db, clean git-archive rsync + restart. Live-verified: box series current 85 / min 83 / max 85 / count 7; both the dashboard readings list and the Nutrition weight card browser-rendered through Austin's session with real data (dates + kg + per-reading change). Full record in deploy/NOTES.md.
 - [x] ISC-259: computeWeightSeries also returns all-time `min`, `max`, and `count` (distinct-day readings), probe: bun test empty + 3-reading cases
 - [x] ISC-260: the dashboard weight card shows a dated readings list (each reading's date, kg, and change from the previous reading) plus a "N readings · range min–max" stats line, probe: Interceptor screenshot
 - [x] ISC-261: the same weight card (via a shared renderer) appears in the Nutrition tab, carrying the "From your Zwift ride data" source label so it never implies nutrition-logged weight (advisor-raised), probe: Interceptor screenshot of the Nutrition tab
