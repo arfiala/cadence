@@ -8,7 +8,7 @@
 
 import { db } from "../db";
 import type { ZwiftPowerResultRow } from "../db";
-import type { ZwiftPowerClient, ZwiftPowerResult } from "./types";
+import type { ZwiftPowerClient, ZwiftPowerResult, ZwiftPowerCurvePoint } from "./types";
 import { ZwiftPowerSyncError } from "./types";
 
 export type ZpSyncOutcome = {
@@ -86,6 +86,38 @@ function upsertResult(result: ZwiftPowerResult): { isNew: boolean; changed: bool
   return { isNew: false, changed: true };
 }
 
+// Upsert a critical-power best effort, keyed on (duration_s, event_date) so a
+// repeated fetch of the same effort is idempotent, keeping the higher watts on
+// conflict. event_date falls back to the fetch instant when the profile omits
+// it, so the NOT NULL column and the read-time 90-day filter always have a
+// value to work with.
+function upsertPowerCurvePoint(point: ZwiftPowerCurvePoint): void {
+  const eventDate = point.eventDate ?? nowIso();
+  db.query(
+    `INSERT INTO power_curve_efforts (duration_s, watts, event_date, event_id)
+     VALUES (?, ?, ?, ?)
+     ON CONFLICT(duration_s, event_date) DO UPDATE SET
+       watts = MAX(power_curve_efforts.watts, excluded.watts),
+       event_id = excluded.event_id,
+       fetched_at = strftime('%Y-%m-%dT%H:%M:%fZ','now')`,
+  ).run(point.durationSeconds, point.watts, eventDate, point.eventId);
+}
+
+// Best-effort power-curve fetch (ISC-342, ISC-344): part of the same sync, but
+// a failure NEVER fails the results sync and NEVER crashes the server. The
+// read endpoint simply degrades to whatever is already stored. Returns the
+// number of points stored (0 on absence or failure).
+async function syncPowerCurve(client: ZwiftPowerClient): Promise<number> {
+  if (client.getPowerCurve === undefined) return 0;
+  try {
+    const points = await client.getPowerCurve();
+    for (const point of points) upsertPowerCurvePoint(point);
+    return points.length;
+  } catch {
+    return 0;
+  }
+}
+
 // Runs one sync attempt and records the result whether it succeeds or fails
 // (ISC-124: a failure must never crash the server and must leave a queryable
 // record).
@@ -106,6 +138,9 @@ export async function runZpSyncOnce(client: ZwiftPowerClient): Promise<ZpSyncOut
       const { isNew } = upsertResult(result);
       if (isNew) newCount += 1;
     }
+
+    // Power curve rides along in the same session, never breaking the run.
+    await syncPowerCurve(client);
 
     db.query(
       "UPDATE zwiftpower_sync_runs SET finished_at = ?, status = 'success', results_seen = ?, results_new = ? WHERE id = ?",

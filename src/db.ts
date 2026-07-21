@@ -62,6 +62,12 @@ export type ActivityRow = {
   // duration. Never user-editable.
   avg_power: number | null;
   norm_power: number | null;
+  // Rate of Perceived Exertion, 1..10, nullable (ISC-296). A Cadence-only
+  // field Garmin never supplies, so the Garmin sync never writes it and a
+  // re-sync can never clobber an entered value (ISC-298), the same
+  // preservation-by-construction that protects `notes`. Feeds the training-load
+  // engine's sRPE tier only when no power/HR-based load applies (ISC-299).
+  rpe: number | null;
   title: string | null;
   notes: string | null;
   // Field-level edit flags (ISC-27): once a user edits one of these fields on
@@ -190,6 +196,36 @@ export type NutritionItemRow = {
   protein_g: number;
   carbs_g: number;
   fat_g: number;
+};
+
+// Cached, normalized per-activity Garmin detail (ISC-318). Only validated
+// shapes are stored in the *_json columns (a laps array, a decimated polyline,
+// a small summary object), never the raw unknown Garmin payloads.
+export type ActivityDetailRow = {
+  activity_id: number;
+  laps_json: string | null;
+  polyline_json: string | null;
+  detail_summary_json: string | null;
+  fetched_at: string;
+};
+
+// One dismissed duplicate pair (ISC-308), keyed on the stable (min,max) ids.
+export type DuplicateDismissalRow = {
+  id: number;
+  a_id: number;
+  b_id: number;
+  created_at: string;
+};
+
+// One ZwiftPower critical-power best effort (ISC-342), one row per
+// (duration_s, event_date).
+export type PowerCurveEffortRow = {
+  id: number;
+  duration_s: number;
+  watts: number;
+  event_date: string;
+  event_id: string | null;
+  fetched_at: string;
 };
 
 // One row per ZwiftPower sync attempt, including failures (ISC-124), mirroring
@@ -383,7 +419,65 @@ export function runMigrations(database: Database): void {
       updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
     );
     CREATE INDEX IF NOT EXISTS idx_sleep_date ON sleep(calendar_date);
+
+    -- Lazily-fetched, cached per-activity Garmin detail (ISC-318). One row per
+    -- activity, keyed on activity_id, ON DELETE CASCADE so deleting an activity
+    -- removes its cached detail (ISC-327). Only VALIDATED, normalized shapes are
+    -- ever stored here (laps, a decimated GPS polyline, a small summary), never
+    -- the raw unknown-typed Garmin payloads. Populated on first detail view of a
+    -- Garmin-sourced activity, refreshed on demand; the Garmin sync never writes
+    -- here (ISC-320).
+    CREATE TABLE IF NOT EXISTS activity_details (
+      activity_id INTEGER PRIMARY KEY REFERENCES activities(id) ON DELETE CASCADE,
+      laps_json TEXT,
+      polyline_json TEXT,
+      detail_summary_json TEXT,
+      fetched_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+    );
+
+    -- Dismissed duplicate pairs (ISC-308). Keyed on the stable (min id, max id)
+    -- pair so the same two activities always resolve to one row regardless of
+    -- the order they were compared in. A dismissed pair is excluded from the
+    -- duplicate candidate list forever, even across re-sync (ISC-309), until it
+    -- is explicitly undismissed.
+    CREATE TABLE IF NOT EXISTS duplicate_dismissals (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      a_id INTEGER NOT NULL,
+      b_id INTEGER NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+      UNIQUE(a_id, b_id)
+    );
+
+    -- Tombstone for Garmin ids whose activity was the loser of a duplicate
+    -- merge (ISC-315). The Garmin sync checks this before inserting, so a
+    -- merged-away Garmin activity can never be resurrected by a later re-sync.
+    CREATE TABLE IF NOT EXISTS merged_garmin_ids (
+      garmin_id TEXT PRIMARY KEY,
+      created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+    );
+
+    -- ZwiftPower critical-power best efforts (ISC-342). One row per
+    -- (duration_s, event_date) so repeated fetches of the same effort are
+    -- idempotent. The rolling-90-day best per duration is computed at read time
+    -- (ISC-343) by filtering on event_date, never precomputed here. Cycling-only
+    -- by construction: the source is ZwiftPower (ISC-345).
+    CREATE TABLE IF NOT EXISTS power_curve_efforts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      duration_s INTEGER NOT NULL,
+      watts INTEGER NOT NULL,
+      event_date TEXT NOT NULL,
+      event_id TEXT,
+      fetched_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+      UNIQUE(duration_s, event_date)
+    );
+    CREATE INDEX IF NOT EXISTS idx_power_curve_duration ON power_curve_efforts(duration_s);
   `);
+
+  // RPE on activities (ISC-296), guarded ALTER so an existing production DB
+  // gains the nullable column without a rebuild and a double run is a no-op
+  // (ISC-347). Range 1..10 is enforced at the route/MCP layer, not by a DB
+  // CHECK, so the ALTER cannot fail on any existing row.
+  addColumnIfMissing(database, "activities", "rpe", "INTEGER");
 
   // Power columns on activities (ISC-135), added via the guarded ALTER so an
   // existing production DB gains them without a rebuild and a fresh DB is

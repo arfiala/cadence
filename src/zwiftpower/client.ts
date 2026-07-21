@@ -19,8 +19,8 @@
 
 import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { ZwiftPowerAPI } from "@codingwithspike/zwift-api-wrapper";
-import type { ZwiftPowerClient, ZwiftPowerResult } from "./types";
-import { ZwiftPowerSyncError } from "./types";
+import type { ZwiftPowerClient, ZwiftPowerResult, ZwiftPowerCurvePoint } from "./types";
+import { ZwiftPowerSyncError, POWER_CURVE_TARGETS } from "./types";
 import { getZwiftPowerConfig, zwiftCookieDir, zwiftCookiePath } from "./config";
 
 // The wrapper's raw result rows are DataTables-style: most numeric fields are
@@ -83,6 +83,49 @@ export function toResult(raw: RawResult): ZwiftPowerResult {
   };
 }
 
+// Parse the wrapper's ZwiftPowerCriticalPowerProfile into best-effort points
+// for the tracked durations (ISC-342). The profile shape (probed this build) is
+// `{ efforts: Record<string, Array<{ x: number; y: number; date: number; zid:
+// string }>> }`, where each point's x is the effort duration in seconds and y
+// the best watts, date a unix-seconds timestamp, zid the source event. We read
+// the "watts" series (falling back to the first series present) and pick the
+// point whose x exactly matches each target duration. Defensive throughout:
+// anything missing or oddly-typed is skipped, never thrown.
+export function toPowerCurve(profile: unknown): ZwiftPowerCurvePoint[] {
+  const rec =
+    typeof profile === "object" && profile !== null ? (profile as Record<string, unknown>) : null;
+  const effortsRec =
+    rec !== null && typeof rec.efforts === "object" && rec.efforts !== null
+      ? (rec.efforts as Record<string, unknown>)
+      : null;
+  if (effortsRec === null) return [];
+
+  const series =
+    (Array.isArray(effortsRec.watts) ? (effortsRec.watts as unknown[]) : null) ??
+    (Object.values(effortsRec).find((v) => Array.isArray(v)) as unknown[] | undefined) ??
+    [];
+
+  const out: ZwiftPowerCurvePoint[] = [];
+  for (const target of POWER_CURVE_TARGETS) {
+    let best: ZwiftPowerCurvePoint | null = null;
+    for (const raw of series) {
+      const p =
+        typeof raw === "object" && raw !== null ? (raw as Record<string, unknown>) : null;
+      if (p === null) continue;
+      const x = typeof p.x === "number" ? p.x : null;
+      const y = typeof p.y === "number" && Number.isFinite(p.y) && p.y > 0 ? p.y : null;
+      if (x !== target.seconds || y === null) continue;
+      const eventDate = typeof p.date === "number" && p.date > 0 ? new Date(p.date * 1000).toISOString() : null;
+      const eventId = typeof p.zid === "string" && p.zid.length > 0 ? p.zid : null;
+      if (best === null || y > best.watts) {
+        best = { durationSeconds: target.seconds, watts: Math.round(y), eventDate, eventId };
+      }
+    }
+    if (best !== null) out.push(best);
+  }
+  return out;
+}
+
 // Load a previously persisted cookie jar (serialized JSON string), if any.
 function loadCookies(): string | undefined {
   const path = zwiftCookiePath();
@@ -140,6 +183,31 @@ export function createRealZwiftPowerClient(): ZwiftPowerClient {
         // limit) as a ZwiftPowerSyncError with a NON-secret message.
         throw new ZwiftPowerSyncError(
           `ZwiftPower request failed: ${err instanceof Error ? err.message : String(err)}`,
+          { cause: err },
+        );
+      }
+    },
+
+    async getPowerCurve(): Promise<ZwiftPowerCurvePoint[]> {
+      const config = getZwiftPowerConfig();
+      const api = new ZwiftPowerAPI(config.username, config.password);
+      try {
+        // Reuse the persisted session (ISC-344: no new session dance).
+        const serialized = await api.authenticate(loadCookies());
+        if (typeof serialized === "string" && serialized.length > 0) {
+          saveCookies(serialized);
+        }
+        const response = await api.getCriticalPowerProfile(config.profileId);
+        if (response.error !== undefined || response.body === undefined) {
+          throw new ZwiftPowerSyncError(
+            `ZwiftPower critical-power request failed (status ${response.statusCode}${response.error !== undefined ? `: ${response.error}` : ""}).`,
+          );
+        }
+        return toPowerCurve(response.body);
+      } catch (err) {
+        if (err instanceof ZwiftPowerSyncError) throw err;
+        throw new ZwiftPowerSyncError(
+          `ZwiftPower critical-power request failed: ${err instanceof Error ? err.message : String(err)}`,
           { cause: err },
         );
       }

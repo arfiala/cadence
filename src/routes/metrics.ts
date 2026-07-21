@@ -12,6 +12,10 @@ import { computeConsistency } from "../metrics/consistency";
 import { computeRecords } from "../metrics/records";
 import { computeDigest } from "../metrics/digest";
 import { computeWeightSeries } from "../metrics/weight";
+import { computeG1Risk, computePacing } from "../metrics/g1risk";
+import { computeYoy } from "../metrics/yoy";
+import { computePowerCurve } from "../metrics/powerCurve";
+import { isZwiftPowerConfigured } from "../zwiftpower/config";
 
 const DEFAULT_DAYS = 90;
 const MAX_DAYS = 365;
@@ -66,4 +70,31 @@ export function getWeight(): Response {
 // the get_week_digest MCP tool so the tool stays a thin API call (ISC-71).
 export function getDigest(): Response {
   return Response.json(computeDigest(new Date()));
+}
+
+// GET /api/metrics/g1-risk (ISC-334, ISC-335): week-to-date G1 progress plus a
+// projection-based verdict. Pure sessions/hours math, never the load series.
+export function getG1Risk(): Response {
+  return Response.json(computeG1Risk(new Date()));
+}
+
+// GET /api/metrics/pacing (ISC-337, ISC-338): the trailing-8-week per-weekday
+// "usual rhythm", or insufficient_history when there is under two weeks of data.
+export function getPacing(): Response {
+  return Response.json(computePacing(new Date()));
+}
+
+// GET /api/metrics/yoy (ISC-339): this ISO week versus the same ISO week last
+// year, per-metric with an insufficient_history fallback.
+export function getYoy(): Response {
+  return Response.json(computeYoy(new Date()));
+}
+
+// GET /api/metrics/power-curve (ISC-343): the rolling-90-day cycling power curve
+// from stored ZwiftPower efforts, degrading to stored data on any ZP failure.
+export function getPowerCurveRoute(): Response {
+  return Response.json({
+    configured: isZwiftPowerConfigured(),
+    ...computePowerCurve(new Date()),
+  });
 }

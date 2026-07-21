@@ -49,6 +49,18 @@ export interface GarminClient {
   // skips the sleep pull when it is absent. The real garmin-connect-sdk
   // client always implements it (via garmin.sleep.getSleepRange).
   listRecentSleep?(days?: number): Promise<GarminSleep[]>;
+
+  // Per-activity detail, fetched lazily and one activity at a time (ISC-319),
+  // NEVER in bulk during sync (ISC-320). Both return `unknown`: the Garmin
+  // splits/details payloads are undeclared and vary by sport/firmware, so every
+  // consumer parses them defensively at the boundary (ISC-321) and degrades to
+  // null. OPTIONAL so existing fakes that only implement activities/sleep keep
+  // working (same precedent as listRecentSleep). The real garmin-connect-sdk
+  // client implements them via garmin.activities.getSplits/getDetails, using a
+  // SESSION-RESTORE-ONLY authentication that never performs a fresh login
+  // (ISC-330).
+  getSplits?(garminId: string): Promise<unknown>;
+  getDetails?(garminId: string): Promise<unknown>;
 }
 
 // Thrown by a GarminClient implementation on any failure (bad creds,

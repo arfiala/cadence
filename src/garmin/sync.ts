@@ -9,6 +9,7 @@ import type { ActivityRow, SleepRow } from "../db";
 import type { GarminClient, GarminActivity, GarminSleep } from "./types";
 import { GarminSyncError } from "./types";
 import { mapGarminTypeToSport } from "./mapping";
+import { isGarminIdTombstoned } from "../metrics/duplicates";
 
 export type SyncOutcome = {
   status: "success" | "error";
@@ -33,6 +34,14 @@ function nowIso(): string {
 // whether to bump updated_at — ISC-26: "same activity twice -> one row,
 // updated_at bumped only on change").
 function upsertActivity(activity: GarminActivity): { isNew: boolean; changed: boolean } {
+  // A Garmin id that was merged away as a duplicate loser is tombstoned
+  // (ISC-315): skip it entirely so a re-sync cannot resurrect the row. This is
+  // a READ of the tombstone set only. The merge itself is never called from
+  // this path (ISC-314).
+  if (isGarminIdTombstoned(activity.garminId)) {
+    return { isNew: false, changed: false };
+  }
+
   const existing = db
     .query("SELECT * FROM activities WHERE garmin_id = ?")
     .get(activity.garminId) as ActivityRow | null;

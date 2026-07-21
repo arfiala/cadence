@@ -10,7 +10,16 @@ import { db, isValidSport } from "../db";
 import type { ActivityRow, Source } from "../db";
 import { jsonError, readJsonBody } from "../lib/http";
 
-function serializeActivity(row: ActivityRow) {
+// Whether a cached Garmin detail row exists for an activity (ISC-331). Used to
+// tell the UI which rows are clickable-rich without a per-row fetch.
+function hasCachedDetail(id: number): boolean {
+  const row = db
+    .query("SELECT 1 AS present FROM activity_details WHERE activity_id = ?")
+    .get(id) as { present: number } | null;
+  return row !== null;
+}
+
+export function serializeActivity(row: ActivityRow, hasDetail?: boolean) {
   return {
     id: row.id,
     source: row.source,
@@ -24,8 +33,14 @@ function serializeActivity(row: ActivityRow) {
     avg_hr: row.avg_hr,
     avg_power: row.avg_power,
     norm_power: row.norm_power,
+    rpe: row.rpe,
     title: row.title,
     notes: row.notes,
+    // Hints for the UI (ISC-331): whether this row is Garmin-sourced (so a
+    // rich lap/GPS detail can be lazily fetched) and whether a detail is
+    // already cached locally.
+    garmin_sourced: row.garmin_id !== null,
+    has_detail: hasDetail ?? hasCachedDetail(row.id),
     created_at: row.created_at,
     updated_at: row.updated_at,
   };
@@ -86,7 +101,17 @@ export function listActivities(url: URL): Response {
     .query(`SELECT * FROM activities ${where} ORDER BY start_time DESC LIMIT ?`)
     .all(...params) as ActivityRow[];
 
-  return Response.json({ activities: rows.map(serializeActivity) });
+  // Precompute the set of activity ids that already have a cached detail row in
+  // one query, so the list does not run a per-row detail lookup (ISC-331).
+  const detailIds = new Set(
+    (db.query("SELECT activity_id FROM activity_details").all() as { activity_id: number }[]).map(
+      (r) => r.activity_id,
+    ),
+  );
+
+  return Response.json({
+    activities: rows.map((r) => serializeActivity(r, detailIds.has(r.id))),
+  });
 }
 
 type CreateActivityInput = {
@@ -235,6 +260,18 @@ export async function updateActivity(req: Request, idParam: string): Promise<Res
     }
     sets.push("distance_m = ?");
     params.push(d as number | null);
+  }
+  // RPE (ISC-297): an integer 1..10, or null to clear it. Out-of-range values
+  // are rejected. RPE is never marked with an *_edited flag because Garmin
+  // never supplies it, the sync simply never writes rpe, so it survives
+  // re-sync by construction (ISC-298).
+  if ("rpe" in body) {
+    const r = body.rpe;
+    if (r !== null && (typeof r !== "number" || !Number.isInteger(r) || r < 1 || r > 10)) {
+      return jsonError("rpe must be an integer from 1 to 10, or null", 400);
+    }
+    sets.push("rpe = ?");
+    params.push(r as number | null);
   }
 
   if (sets.length === 0) return jsonError("No editable fields provided", 400);

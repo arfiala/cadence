@@ -4,23 +4,44 @@
 // TrainingPeaks partner API. Every function here is pure arithmetic over the
 // fields already stored on an activity plus the user's FTP / LTHR thresholds.
 //
-// Three tiers, best-available first (ISC-136), and the tier used is reported
-// per activity so the UI and tests can see which path produced a number:
+// Four tiers, best-available first (ISC-136, ISC-301), and the tier used is
+// reported per activity so the UI and tests can see which path produced a
+// number. The precedence is power > hr > srpe > duration:
 //   1. "power"   , Coggan TSS, when a power number and FTP are both present.
 //   2. "hr"      , hrTSS from average heart rate and LTHR.
-//   3. "duration", a flat moderate-intensity estimate from duration alone.
+//   3. "srpe"    , session-RPE load, when an RPE is set and neither power nor
+//                  HR tiers apply (ISC-299).
+//   4. "duration", a flat moderate-intensity estimate from duration alone.
+//
+// Because power and hr are tried first, setting an RPE on an activity that
+// already scores from power or HR changes NOTHING (ISC-302, advisor pin): the
+// srpe tier is only ever reached when no objective-intensity data exists, so a
+// Zwift/power ride's load can never shift because a human typed an RPE.
+//
+// sRPE (ISC-300): a session-RPE load on the same TSS point scale as the other
+// tiers, using RPE/10 as an intensity-factor proxy:
+//   load = (rpe / 10)^2 * 100 * hours
+// This is NOT raw Foster session-RPE units (RPE * minutes); it is deliberately
+// mapped onto the 100-points-per-hour-at-threshold scale so a mixed history of
+// power, HR, and RPE activities sums into one coherent daily series. Worked
+// vector: rpe 7 for 60 min = (0.7)^2 * 100 * 1.0 = 49.0.
 //
 // The metric names in the public API and UI are deliberately generic ("load",
 // "fitness", "fatigue", "form") to avoid the TrainingPeaks trademark strings
 // (ISC-142). The identifiers below (TSS, IF) are code-internal only.
 
-export type LoadTier = "power" | "hr" | "duration";
+export type LoadTier = "power" | "hr" | "srpe" | "duration";
 
 export type ActivityLoadInput = {
   durationSeconds: number;
   avgHr: number | null;
   avgPower: number | null;
   normPower: number | null;
+  // Rate of Perceived Exertion, 1..10, or null. Drives the srpe tier only when
+  // no power/HR load applies (ISC-299). Optional so existing callers that do
+  // not pass it behave exactly as before (rpe undefined === null, no srpe tier,
+  // series byte-identical, ISC-302).
+  rpe?: number | null;
 };
 
 export type Thresholds = {
@@ -105,7 +126,22 @@ export function activityLoad(input: ActivityLoadInput, thresholds: Thresholds): 
     };
   }
 
-  // Tier 3: duration estimate. Always available.
+  // Tier 3: session-RPE. Only reached when neither power nor HR applied, so it
+  // can never override an objective-intensity load (ISC-301, ISC-302). Needs a
+  // valid RPE in 1..10.
+  const rpe = input.rpe ?? null;
+  if (rpe !== null && Number.isFinite(rpe) && rpe >= 1 && rpe <= 10) {
+    const intensityFactor = rpe / 10;
+    const load = (duration / 3600) * intensityFactor * intensityFactor * 100;
+    return {
+      load: round1(load),
+      tier: "srpe",
+      intensityFactor: round1(intensityFactor * 100) / 100,
+      estimated: true,
+    };
+  }
+
+  // Tier 4: duration estimate. Always available.
   const load = (duration / 3600) * DURATION_TIER_IF * DURATION_TIER_IF * 100;
   return {
     load: round1(load),

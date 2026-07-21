@@ -274,6 +274,41 @@ export const TOOLS: ToolDefinition[] = [
     },
   },
   {
+    name: "get_activity_detail",
+    description:
+      "Get the full detail for one activity by id: the local summary (sport, date, duration, distance, HR, power, RPE, notes) plus, for Garmin-sourced activities, lap splits and a GPS track when available. The rich Garmin detail is fetched lazily and cached on first view; if Garmin cannot be reached the local summary is still returned with detail_error set.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        id: { type: "number", description: "The activity id to fetch detail for." },
+      },
+      required: ["id"],
+      additionalProperties: false,
+    },
+    handler: async (client, args) => {
+      const id = args.id;
+      if (typeof id !== "number" || !Number.isInteger(id)) {
+        throw new Error("id must be an integer");
+      }
+      const result = await client.getActivityDetail(id);
+      return pretty(result);
+    },
+  },
+  {
+    name: "get_g1_risk",
+    description:
+      "Get whether Austin is on pace for TELOS goal G1 this week: week-to-date sessions and hours, how many more are needed, days left, a projection from the trailing four-week rhythm, and a verdict of met, on_track, or at_risk. Read-only, based only on session and hour counts.",
+    inputSchema: {
+      type: "object",
+      properties: {},
+      additionalProperties: false,
+    },
+    handler: async (client) => {
+      const result = await client.getG1Risk();
+      return pretty(result);
+    },
+  },
+  {
     name: "get_week_digest",
     description:
       "Get the Monday digest for the LAST COMPLETED week: G1 sessions and hours vs target with a verdict, current Fitness/Fatigue/Form, any personal records set that week, and any ZwiftPower races that week. Read-only, for the weekly review.",

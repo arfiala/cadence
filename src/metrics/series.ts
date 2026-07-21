@@ -73,6 +73,7 @@ function loadOf(row: ActivityRow, thresholds: Thresholds): number {
       avgHr: row.avg_hr,
       avgPower: row.avg_power,
       normPower: row.norm_power,
+      rpe: row.rpe,
     },
     thresholds,
   ).load;

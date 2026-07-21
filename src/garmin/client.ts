@@ -283,8 +283,44 @@ function toGarminSleep(raw: Record<string, unknown>): GarminSleep | null {
   };
 }
 
+// Session-restore-ONLY authentication for the lazy detail fetch (ISC-330). It
+// never performs a fresh login (no password, no MFA, no bot-challenge dance):
+// if there is no restorable saved session it throws, and the detail route turns
+// that into detail_error:true. This keeps a per-activity detail click from ever
+// triggering a credential flow.
+async function authenticateRestoreOnly(): Promise<GarminConnectSDK> {
+  const dir = tokenDir();
+  if (!existsSync(dir)) {
+    throw new GarminSyncError("No saved Garmin session to restore for detail fetch.");
+  }
+  const garmin = new GarminConnectSDK({
+    storage: new FileTokenStorage(dir),
+    fetch: sleepCoercingFetch as unknown as typeof fetch,
+  });
+  let restored = false;
+  try {
+    restored = await garmin.restoreSession();
+  } catch {
+    restored = false;
+  }
+  if (!restored) {
+    throw new GarminSyncError("Saved Garmin session could not be restored for detail fetch.");
+  }
+  return garmin;
+}
+
 export function createRealGarminClient(): GarminClient {
   return {
+    async getSplits(garminId: string): Promise<unknown> {
+      const garmin = await authenticateRestoreOnly();
+      return garmin.activities.getSplits(garminId);
+    },
+
+    async getDetails(garminId: string): Promise<unknown> {
+      const garmin = await authenticateRestoreOnly();
+      return garmin.activities.getDetails(garminId);
+    },
+
     async listRecentActivities(limit = 50): Promise<GarminActivity[]> {
       try {
         const garmin = await authenticate();

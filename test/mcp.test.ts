@@ -52,7 +52,7 @@ describe("readConfig (ISC-68)", () => {
 });
 
 describe("tool surface (ISC-60, ISC-61..67)", () => {
-  test("exactly the 16 specified tools are registered", () => {
+  test("exactly the 18 specified tools are registered", () => {
     const names = TOOLS.map((t) => t.name).sort();
     expect(names).toEqual(
       [
@@ -60,6 +60,8 @@ describe("tool surface (ISC-60, ISC-61..67)", () => {
         "delete_nutrition",
         "edit_activity",
         "edit_nutrition",
+        "get_activity_detail",
+        "get_g1_risk",
         "get_goal_progress",
         "get_nutrition_day",
         "get_race_results",
@@ -148,6 +150,20 @@ describe("tool round-trips against a live instance (ISC-91)", () => {
     expect((db.query("SELECT COUNT(*) as n FROM activities").get() as { n: number }).n).toBe(0);
   });
 
+  test("get_activity_detail returns a manual activity's detail as null (ISC-348)", async () => {
+    await callTool(client(), "log_activity", { sport: "swimming", date: "2026-07-14T06:00:00Z", duration_minutes: 30 });
+    const id = (db.query("SELECT id FROM activities LIMIT 1").get() as { id: number }).id;
+    const res = await callTool(client(), "get_activity_detail", { id });
+    expect(res.isError).toBe(false);
+    expect(res.text).toContain("\"detail\": null");
+  });
+
+  test("get_g1_risk returns a verdict (ISC-348)", async () => {
+    const res = await callTool(client(), "get_g1_risk", {});
+    expect(res.isError).toBe(false);
+    expect(res.text).toContain("verdict");
+  });
+
   test("get_sync_status returns runs (ISC-66)", async () => {
     db.query(
       "INSERT INTO sync_runs (started_at, status) VALUES ('2026-07-14T10:00:00Z','success')",
@@ -185,7 +201,7 @@ describe("full stdio MCP handshake (ISC-60)", () => {
 
     const tools = await mcpClient.listTools();
     expect(tools.tools.map((t) => t.name).sort()).toContain("get_week_summary");
-    expect(tools.tools.length).toBe(16);
+    expect(tools.tools.length).toBe(18);
 
     await callTool(client(), "log_activity", { sport: "cycling", date: "2026-07-14T06:00:00Z", duration_minutes: 60 });
     const result = await mcpClient.callTool({ name: "get_goal_progress", arguments: {} });

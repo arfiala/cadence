@@ -17,7 +17,9 @@ import { postSync, getSyncStatus } from "./routes/sync";
 import { getSleep } from "./routes/sleep";
 import { importCsv } from "./routes/csv";
 import { postZwiftPowerSync, getZwiftPowerResults, getZwiftPowerStatus } from "./routes/zwiftpower";
-import { getTrainingLoad, getConsistency, getRecords, getDigest, getWeight } from "./routes/metrics";
+import { getTrainingLoad, getConsistency, getRecords, getDigest, getWeight, getG1Risk, getPacing, getYoy, getPowerCurveRoute } from "./routes/metrics";
+import { getActivityDetail } from "./routes/activityDetail";
+import { getDuplicates, postDismissDuplicate, postUndismissDuplicate, postMergeDuplicate } from "./routes/duplicates";
 import {
   estimateNutritionRoute,
   createNutrition,
@@ -69,12 +71,25 @@ async function handleApi(req: Request, url: URL): Promise<Response> {
   if (path === "/api/activities" && method === "GET") return listActivities(url);
   if (path === "/api/activities" && method === "POST") return createActivity(req);
 
+  // Lazy per-activity Garmin detail (ISC-319). Matched before the bare
+  // /:id route below; the detail suffix keeps the two patterns disjoint.
+  const detailMatch = /^\/api\/activities\/(\d+)\/detail$/.exec(path);
+  if (detailMatch !== null && method === "GET") {
+    return getActivityDetail(url, detailMatch[1] as string, createRealGarminClient);
+  }
+
   const activityMatch = /^\/api\/activities\/(\d+)$/.exec(path);
   if (activityMatch !== null) {
     const id = activityMatch[1] as string;
     if (method === "PATCH") return updateActivity(req, id);
     if (method === "DELETE") return deleteActivity(url, id);
   }
+
+  // Duplicate review (ISC-310..312). On-demand only; never in the sync path.
+  if (path === "/api/duplicates" && method === "GET") return getDuplicates();
+  if (path === "/api/duplicates/dismiss" && method === "POST") return postDismissDuplicate(req);
+  if (path === "/api/duplicates/undismiss" && method === "POST") return postUndismissDuplicate(req);
+  if (path === "/api/duplicates/merge" && method === "POST") return postMergeDuplicate(req);
 
   if (path === "/api/week" && method === "GET") return getWeek(url);
   if (path === "/api/trends" && method === "GET") return getTrends(url);
@@ -96,6 +111,10 @@ async function handleApi(req: Request, url: URL): Promise<Response> {
   if (path === "/api/metrics/records" && method === "GET") return getRecords();
   if (path === "/api/metrics/digest" && method === "GET") return getDigest();
   if (path === "/api/metrics/weight" && method === "GET") return getWeight();
+  if (path === "/api/metrics/g1-risk" && method === "GET") return getG1Risk();
+  if (path === "/api/metrics/pacing" && method === "GET") return getPacing();
+  if (path === "/api/metrics/yoy" && method === "GET") return getYoy();
+  if (path === "/api/metrics/power-curve" && method === "GET") return getPowerCurveRoute();
 
   if (path === "/api/import/csv" && method === "POST") return importCsv(req);
 

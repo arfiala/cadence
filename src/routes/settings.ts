@@ -30,8 +30,35 @@ function nutritionTargets(): { nutrition_target_kcal: number; nutrition_target_p
   };
 }
 
+// Race target (ISC-332): a race name and ISO date the user is training toward.
+// Both nullable and stored as ordinary settings rows (absent === unset), read
+// here directly rather than through getSettings (which stays the load-engine
+// shape). Clearing a value deletes the row so it reads back as null.
+export function raceTarget(): { race_name: string | null; race_date: string | null } {
+  const rows = db
+    .query("SELECT key, value FROM settings WHERE key IN ('race_name','race_date')")
+    .all() as { key: string; value: string }[];
+  const map = new Map(rows.map((r) => [r.key, r.value]));
+  return {
+    race_name: map.get("race_name") ?? null,
+    race_date: map.get("race_date") ?? null,
+  };
+}
+
+// A calendar date in YYYY-MM-DD form that is also a real date (ISC-333). Rejects
+// junk like "2026-13-40" that a bare regex would pass but Date normalizes away.
+function isValidIsoDateOnly(value: unknown): value is string {
+  if (typeof value !== "string") return false;
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (m === null) return false;
+  const d = new Date(`${value}T00:00:00Z`);
+  if (Number.isNaN(d.getTime())) return false;
+  // Round-trip guard: reject dates the Date constructor silently rolled over.
+  return d.toISOString().slice(0, 10) === value;
+}
+
 export function getSettingsRoute(): Response {
-  return Response.json({ ...getSettings(), ...nutritionTargets() });
+  return Response.json({ ...getSettings(), ...nutritionTargets(), ...raceTarget() });
 }
 
 export async function patchSettingsRoute(req: Request): Promise<Response> {
@@ -89,6 +116,29 @@ export async function patchSettingsRoute(req: Request): Promise<Response> {
     updates.push(["nutrition_target_protein_g", String(v)]);
   }
 
+  // Race target (ISC-332, ISC-333). race_name: a non-empty string or null to
+  // clear. race_date: a valid YYYY-MM-DD or null to clear.
+  if ("race_name" in body) {
+    const v = body.race_name;
+    if (v === null || (typeof v === "string" && v.trim().length === 0)) {
+      clears.push("race_name");
+    } else if (typeof v !== "string") {
+      return jsonError("race_name must be a string or null", 400);
+    } else {
+      updates.push(["race_name", v]);
+    }
+  }
+  if ("race_date" in body) {
+    const v = body.race_date;
+    if (v === null) {
+      clears.push("race_date");
+    } else if (!isValidIsoDateOnly(v)) {
+      return jsonError("race_date must be a valid ISO date (YYYY-MM-DD) or null", 400);
+    } else {
+      updates.push(["race_date", v]);
+    }
+  }
+
   if (updates.length === 0 && clears.length === 0) {
     return jsonError("No editable settings provided", 400);
   }
@@ -104,5 +154,5 @@ export async function patchSettingsRoute(req: Request): Promise<Response> {
     del.run(key);
   }
 
-  return Response.json({ ...getSettings(), ...nutritionTargets() });
+  return Response.json({ ...getSettings(), ...nutritionTargets(), ...raceTarget() });
 }

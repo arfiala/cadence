@@ -142,6 +142,14 @@ export class CadenceClient {
     return this.request("GET", "/api/metrics/training-load");
   }
 
+  getActivityDetail(id: number): Promise<unknown> {
+    return this.request("GET", `/api/activities/${id}/detail`);
+  }
+
+  getG1Risk(): Promise<unknown> {
+    return this.request("GET", "/api/metrics/g1-risk");
+  }
+
   getWeekDigest(): Promise<unknown> {
     return this.request("GET", "/api/metrics/digest");
   }

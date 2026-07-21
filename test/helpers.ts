@@ -11,6 +11,10 @@ import { fetchHandler } from "../src/server";
 export function resetDb(): void {
   db.exec("DELETE FROM sessions;");
   db.exec("DELETE FROM api_tokens;");
+  db.exec("DELETE FROM activity_details;");
+  db.exec("DELETE FROM duplicate_dismissals;");
+  db.exec("DELETE FROM merged_garmin_ids;");
+  db.exec("DELETE FROM power_curve_efforts;");
   db.exec("DELETE FROM activities;");
   db.exec("DELETE FROM sync_runs;");
   db.exec("DELETE FROM sleep;");
@@ -91,11 +95,12 @@ export function insertActivity(fields: {
   distance_m?: number | null;
   title?: string | null;
   notes?: string | null;
+  rpe?: number | null;
 }): number {
   const row = db
     .query(
-      `INSERT INTO activities (source, garmin_id, sport, raw_type, start_time, duration_s, distance_m, title, notes)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`,
+      `INSERT INTO activities (source, garmin_id, sport, raw_type, start_time, duration_s, distance_m, title, notes, rpe)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`,
     )
     .get(
       fields.source ?? "manual",
@@ -107,6 +112,7 @@ export function insertActivity(fields: {
       fields.distance_m ?? null,
       fields.title ?? null,
       fields.notes ?? null,
+      fields.rpe ?? null,
     ) as { id: number };
   return row.id;
 }
