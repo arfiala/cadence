@@ -422,7 +422,9 @@ Cadence is live at `https://fit.austinfiala.com` behind Austin's single-user log
 
 ## Verification
 
-### Weight progress from Zwift (2026-07-21, ISC-253..258, built, NOT yet deployed)
+### Weight progress from Zwift (2026-07-21, ISC-253..258, DEPLOYED, commit 678ec5a)
+
+- Deploy: backup cadence-pre-weight-20260721T134806Z.db (verified), clean git-archive rsync, restart, migration landed (weight_kg column), activities intact (53). Post-deploy real ZwiftPower sync repopulated weight_kg on all 7 result rows (83.2–85 kg); live Interceptor render through Austin's session confirmed the dashboard card with real data (85 kg, ↑0.5 kg since first ride). /api/metrics/weight 401 unauth. Full deploy record in deploy/NOTES.md.
 
 - ISC-253: bun test — `toResult({weight:["84.5",0]})` → weightKg 84.5; bare number and missing/zero/empty → null; `PRAGMA table_info(zwiftpower_results)` includes weight_kg. Feasibility grounded by a live probe of the box's ZwiftPower feed (weight present as a string tuple).
 - ISC-254: bun test — sync stores weight_kg=84.5, a changed-weight re-sync updates to 83.1 with one row (idempotent on event_id).
