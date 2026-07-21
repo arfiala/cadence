@@ -179,8 +179,9 @@
 
   // Renders a small progress line across the weight points; single-point or
   // flat series still draws a centered line so the widget never looks broken.
-  function renderWeightSparkline(points) {
-    const svg = document.getElementById("weight-svg");
+  function renderWeightSparkline(points, svgId) {
+    const svg = document.getElementById(svgId);
+    if (!svg) return;
     const width = 320;
     const height = 64;
     const pad = { x: 6, y: 8 };
@@ -202,31 +203,111 @@
     svg.innerHTML = `${line}${dots}`;
   }
 
-  async function loadWeight() {
-    let data;
-    try {
-      data = await api("/api/metrics/weight");
-    } catch {
-      return;
+  // A dated list of readings, newest first, each with its kg value and the
+  // change from the previous (older) reading. `points` are oldest-first. Caps
+  // at the newest MAX_WEIGHT_READINGS so a long ride history never floods the
+  // card; the stats line still reports the true total count.
+  const MAX_WEIGHT_READINGS = 12;
+  function weightReadingsHtml(points, unit) {
+    const rows = [];
+    const stop = Math.max(0, points.length - MAX_WEIGHT_READINGS);
+    for (let i = points.length - 1; i >= stop; i--) {
+      const p = points[i];
+      const prev = i > 0 ? points[i - 1] : null;
+      const change = prev ? Math.round((p.weight_kg - prev.weight_kg) * 10) / 10 : null;
+      let chip = "";
+      if (change !== null && change !== 0) {
+        const down = change < 0;
+        chip = `<span class="wr-chip ${down ? "down" : "up"}">${down ? "↓" : "↑"} ${Math.abs(change)}</span>`;
+      } else if (change === 0) {
+        chip = `<span class="wr-chip flat">±0</span>`;
+      }
+      rows.push(
+        `<li class="wr-row"><span class="wr-date">${escapeHtml(fmtNightDate(p.date))}</span><span class="wr-kg">${p.weight_kg} ${unit}</span>${chip}</li>`,
+      );
     }
-    const section = document.getElementById("view-weight-card");
+    return rows.join("");
+  }
+
+  async function fetchWeightData() {
+    try {
+      return await api("/api/metrics/weight");
+    } catch {
+      return null;
+    }
+  }
+
+  // Fills a weight widget from the shared /api/metrics/weight data. `els` maps
+  // roles to element ids so the same renderer drives both the dashboard card
+  // and the nutrition-tab card; any id may be absent on a given surface.
+  function renderWeightWidget(els, data) {
     const points = data.points || [];
+    const unit = escapeHtml(data.unit || "kg");
+    const section = els.section ? document.getElementById(els.section) : null;
     // Honest empty state: no Zwift weight data yet -> hide the whole widget.
     if (section) section.hidden = data.current == null;
     if (data.current == null) return;
 
-    document.getElementById("weight-current").textContent = `${data.current} ${escapeHtml(data.unit || "kg")}`;
+    const cur = els.current ? document.getElementById(els.current) : null;
+    if (cur) cur.textContent = `${data.current} ${unit}`;
 
-    const deltaEl = document.getElementById("weight-delta");
-    if (data.delta == null || data.delta === 0 || points.length < 2) {
-      deltaEl.textContent = points.length < 2 ? "First reading from Zwift" : "No change yet";
-      deltaEl.className = "weight-delta flat";
-    } else {
-      const down = data.delta < 0;
-      deltaEl.textContent = `${down ? "↓" : "↑"} ${Math.abs(data.delta)} kg since first ride`;
-      deltaEl.className = `weight-delta ${down ? "down" : "up"}`;
+    const deltaEl = els.delta ? document.getElementById(els.delta) : null;
+    if (deltaEl) {
+      if (data.delta == null || data.delta === 0 || points.length < 2) {
+        deltaEl.textContent = points.length < 2 ? "First reading from Zwift" : "No change yet";
+        deltaEl.className = "weight-delta flat";
+      } else {
+        const down = data.delta < 0;
+        deltaEl.textContent = `${down ? "↓" : "↑"} ${Math.abs(data.delta)} kg since first ride`;
+        deltaEl.className = `weight-delta ${down ? "down" : "up"}`;
+      }
     }
-    renderWeightSparkline(points);
+
+    if (els.svg) renderWeightSparkline(points, els.svg);
+
+    const statsEl = els.stats ? document.getElementById(els.stats) : null;
+    if (statsEl) {
+      const count = data.count != null ? data.count : points.length;
+      if (count > 0 && data.min != null && data.max != null) {
+        // count/min/max are all-time (server-side over every reading); the list
+        // below is capped, so say so when it is truncated to avoid implying the
+        // shown rows are all of them.
+        const truncated = count > MAX_WEIGHT_READINGS ? ` · newest ${MAX_WEIGHT_READINGS} shown` : "";
+        statsEl.textContent = `${count} reading${count === 1 ? "" : "s"} · range ${data.min}–${data.max} ${unit}${truncated}`;
+      } else {
+        statsEl.textContent = "";
+      }
+    }
+
+    const readingsEl = els.readings ? document.getElementById(els.readings) : null;
+    if (readingsEl) readingsEl.innerHTML = weightReadingsHtml(points, unit);
+  }
+
+  const DASHBOARD_WEIGHT_ELS = {
+    section: "view-weight-card",
+    current: "weight-current",
+    delta: "weight-delta",
+    svg: "weight-svg",
+    stats: "weight-stats",
+    readings: "weight-readings",
+  };
+  const NUTRITION_WEIGHT_ELS = {
+    section: "nutri-weight-card",
+    current: "nutri-weight-current",
+    delta: "nutri-weight-delta",
+    svg: "nutri-weight-svg",
+    stats: "nutri-weight-stats",
+    readings: "nutri-weight-readings",
+  };
+
+  async function loadWeight() {
+    const data = await fetchWeightData();
+    if (data) renderWeightWidget(DASHBOARD_WEIGHT_ELS, data);
+  }
+
+  async function loadNutritionWeight() {
+    const data = await fetchWeightData();
+    if (data) renderWeightWidget(NUTRITION_WEIGHT_ELS, data);
   }
 
   // --- Quick log presets + toast --------------------------------------
@@ -744,6 +825,7 @@
     document.getElementById("nutri-editor").hidden = true;
     document.getElementById("nutri-estimate-status").textContent = "";
     await loadNutritionDay();
+    loadNutritionWeight();
   }
 
   // --- Trends ------------------------------------------------------

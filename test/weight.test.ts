@@ -75,6 +75,9 @@ describe("computeWeightSeries", () => {
     expect(s.current).toBeNull();
     expect(s.first).toBeNull();
     expect(s.delta).toBeNull();
+    expect(s.min).toBeNull();
+    expect(s.max).toBeNull();
+    expect(s.count).toBe(0);
     expect(s.points).toEqual([]);
   });
 
@@ -91,6 +94,9 @@ describe("computeWeightSeries", () => {
     expect(s.first).toBe(86.0);
     expect(s.current).toBe(84.5);
     expect(s.delta).toBe(-1.5); // lost 1.5 kg
+    expect(s.min).toBe(84.5);
+    expect(s.max).toBe(86.0);
+    expect(s.count).toBe(3);
     expect(s.points[0]!.weight_kg).toBe(86.0);
     expect(s.points[2]!.weight_kg).toBe(84.5);
   });

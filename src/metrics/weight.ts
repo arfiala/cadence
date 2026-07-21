@@ -16,6 +16,9 @@ export type WeightSeries = {
   current: number | null; // most recent recorded weight
   first: number | null; // earliest recorded weight in the series
   delta: number | null; // current - first, rounded to 0.1 (negative = lost weight)
+  min: number | null; // lightest recorded weight
+  max: number | null; // heaviest recorded weight
+  count: number; // number of distinct-day readings
   points: WeightPoint[]; // oldest first, one per day
 };
 
@@ -45,6 +48,9 @@ export function computeWeightSeries(): WeightSeries {
   const current = points.length > 0 ? points[points.length - 1]!.weight_kg : null;
   const first = points.length > 0 ? points[0]!.weight_kg : null;
   const delta = current !== null && first !== null ? round1(current - first) : null;
+  const weights = points.map((p) => p.weight_kg);
+  const min = weights.length > 0 ? Math.min(...weights) : null;
+  const max = weights.length > 0 ? Math.max(...weights) : null;
 
-  return { unit: "kg", current, first, delta, points };
+  return { unit: "kg", current, first, delta, min, max, count: points.length, points };
 }

@@ -111,6 +111,8 @@
             <div class="weight-delta flat" id="weight-delta"></div>
           </div>
           <svg id="weight-svg" class="weight-spark" viewBox="0 0 320 64" preserveAspectRatio="xMidYMid meet"></svg>
+          <div class="weight-stats" id="weight-stats"></div>
+          <ul class="weight-readings" id="weight-readings"></ul>
           <p class="muted weight-note">From your Zwift ride data.</p>
         </div>
         <hr class="rule">
@@ -207,6 +209,20 @@
       </div>
       <ul class="activity-list" id="nutri-entries"></ul>
       <p class="muted" id="nutri-empty" hidden>No entries logged today. Describe a meal above to get started.</p>
+
+      <div id="nutri-weight-card" hidden>
+        <h2 class="section-title">Weight</h2>
+        <div class="card weight-card">
+          <div class="weight-head">
+            <div class="weight-current" id="nutri-weight-current">--</div>
+            <div class="weight-delta flat" id="nutri-weight-delta"></div>
+          </div>
+          <svg id="nutri-weight-svg" class="weight-spark" viewBox="0 0 320 64" preserveAspectRatio="xMidYMid meet"></svg>
+          <div class="weight-stats" id="nutri-weight-stats"></div>
+          <ul class="weight-readings" id="nutri-weight-readings"></ul>
+          <p class="muted weight-note">From your Zwift ride data.</p>
+        </div>
+      </div>
     </section>
 
     <section id="view-trends" class="section" hidden>
