@@ -171,8 +171,55 @@
       })
       .join("");
     document.getElementById("day-dots").innerHTML = dotsHtml;
+    renderTodayWeekChip(week);
+    loadTodayForm();
+    loadTodaySleep();
     loadRecords();
     loadWeight();
+  }
+
+  // --- Today strip (dashboard glance band) -----------------------------
+  //
+  // Three compact chips above Quick log. The week chip reuses the /api/week
+  // data the dashboard already fetched; Form and Last sleep each do one extra
+  // read, filled independently so a slow or empty response never blocks the
+  // rest of the dashboard. Every chip shows a quiet placeholder rather than
+  // NaN or undefined when its data is missing.
+
+  function renderTodayWeekChip(week) {
+    const val = document.getElementById("today-week");
+    const sub = document.getElementById("today-week-sub");
+    if (val) val.textContent = `${week.sessions} sess, ${week.hours_g1} h`;
+    if (sub) {
+      const noGap = week.gap_sessions === 0 && week.gap_hours === 0;
+      sub.textContent = noGap
+        ? "G1 target met"
+        : `${week.gap_sessions} sess, ${week.gap_hours} h to go`;
+    }
+  }
+
+  async function loadTodayForm() {
+    const el = document.getElementById("today-form");
+    if (!el) return;
+    try {
+      const data = await api("/api/metrics/training-load?days=1");
+      const form = data && data.current ? data.current.form : null;
+      el.textContent = form == null ? "--" : String(form);
+    } catch {
+      el.textContent = "--";
+    }
+  }
+
+  async function loadTodaySleep() {
+    const el = document.getElementById("today-sleep");
+    if (!el) return;
+    try {
+      const data = await api("/api/sleep?limit=1");
+      const night = data && data.nights && data.nights[0] ? data.nights[0] : null;
+      el.textContent = night ? fmtSleep(night.total_sleep_s) : "--";
+    } catch {
+      el.textContent = "--";
+    }
   }
 
   // --- Weight progress (from Zwift ride data) --------------------------

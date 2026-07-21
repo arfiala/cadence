@@ -78,92 +78,118 @@
   <main class="wrap">
 
     <section id="view-dashboard" class="section">
-      <h2 class="section-title">Quick log</h2>
-      <p class="muted quick-log-hint">One tap logs it with the current time. Undo is in the toast if you fat-thumb.</p>
-      <div class="preset-row" id="preset-row">
-        <button type="button" class="preset-btn" data-preset="ride"><span class="preset-emoji">&#127918;</span>30 min trainer ride</button>
-        <button type="button" class="preset-btn" data-preset="swim"><span class="preset-emoji">&#127754;</span>45 min swim</button>
-        <button type="button" class="preset-btn" data-preset="stretch"><span class="preset-emoji">&#129496;</span>15 min stretch</button>
-      </div>
-
-      <h2 class="section-title">This week</h2>
-      <div class="stat-row">
-        <div class="stat-card">
-          <div class="stat-label">Sessions</div>
-          <div class="stat-value"><span id="stat-sessions">0</span></div>
-          <div class="stat-target">of <span id="stat-sessions-target">5</span> target</div>
+      <div class="today-strip" id="today-strip">
+        <div class="today-chip">
+          <div class="today-chip-label">This week</div>
+          <div class="today-chip-value" id="today-week">--</div>
+          <div class="today-chip-sub" id="today-week-sub"></div>
         </div>
-        <div class="stat-card">
-          <div class="stat-label">Hours</div>
-          <div class="stat-value"><span id="stat-hours">0</span></div>
-          <div class="stat-target">of <span id="stat-hours-target">8</span> h target</div>
+        <div class="today-chip">
+          <div class="today-chip-label">Form</div>
+          <div class="today-chip-value" id="today-form">--</div>
+          <div class="today-chip-sub">load balance</div>
+        </div>
+        <div class="today-chip">
+          <div class="today-chip-label">Last sleep</div>
+          <div class="today-chip-value" id="today-sleep">--</div>
+          <div class="today-chip-sub">most recent night</div>
         </div>
       </div>
-      <div class="gap-line" id="gap-line">Loading...</div>
-      <div class="day-dots" id="day-dots"></div>
-      <hr class="rule">
 
-      <div id="view-weight-card" hidden>
-        <h2 class="section-title">Weight progress</h2>
-        <div class="card weight-card">
-          <div class="weight-head">
-            <div class="weight-current" id="weight-current">--</div>
-            <div class="weight-delta flat" id="weight-delta"></div>
+      <div class="dash-grid">
+        <div class="dash-col dash-col-main">
+          <h2 class="section-title">Quick log</h2>
+          <p class="muted quick-log-hint">One tap logs it with the current time. Undo is in the toast if you fat-thumb.</p>
+          <div class="preset-row" id="preset-row">
+            <button type="button" class="preset-btn" data-preset="ride"><span class="preset-emoji">&#127918;</span>30 min trainer ride</button>
+            <button type="button" class="preset-btn" data-preset="swim"><span class="preset-emoji">&#127754;</span>45 min swim</button>
+            <button type="button" class="preset-btn" data-preset="stretch"><span class="preset-emoji">&#129496;</span>15 min stretch</button>
           </div>
-          <svg id="weight-svg" class="weight-spark" viewBox="0 0 320 64" preserveAspectRatio="xMidYMid meet"></svg>
-          <div class="weight-stats" id="weight-stats"></div>
-          <ul class="weight-readings" id="weight-readings"></ul>
-          <p class="muted weight-note">From your Zwift ride data.</p>
-        </div>
-        <hr class="rule">
-      </div>
 
-      <h2 class="section-title">Personal records</h2>
-      <div class="pr-board" id="pr-board"></div>
-      <div class="streak-row" id="streak-row"></div>
+          <h2 class="section-title">This week</h2>
+          <div class="stat-row">
+            <div class="stat-card">
+              <div class="stat-label">Sessions</div>
+              <div class="stat-value"><span id="stat-sessions">0</span></div>
+              <div class="stat-target">of <span id="stat-sessions-target">5</span> target</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Hours</div>
+              <div class="stat-value"><span id="stat-hours">0</span></div>
+              <div class="stat-target">of <span id="stat-hours-target">8</span> h target</div>
+            </div>
+          </div>
+          <div class="gap-line" id="gap-line">Loading...</div>
+          <div class="day-dots" id="day-dots"></div>
+          <hr class="rule dash-rule">
+        </div>
+
+        <div class="dash-col dash-col-side">
+          <div id="view-weight-card" hidden>
+            <h2 class="section-title">Weight progress</h2>
+            <div class="card weight-card">
+              <div class="weight-head">
+                <div class="weight-current" id="weight-current">--</div>
+                <div class="weight-delta flat" id="weight-delta"></div>
+              </div>
+              <svg id="weight-svg" class="weight-spark" viewBox="0 0 320 64" preserveAspectRatio="xMidYMid meet"></svg>
+              <div class="weight-stats" id="weight-stats"></div>
+              <ul class="weight-readings" id="weight-readings"></ul>
+              <p class="muted weight-note">From your Zwift ride data.</p>
+            </div>
+            <hr class="rule dash-rule">
+          </div>
+
+          <h2 class="section-title">Personal records</h2>
+          <div class="pr-board" id="pr-board"></div>
+          <div class="streak-row" id="streak-row"></div>
+        </div>
+      </div>
     </section>
 
     <section id="view-activities" class="section" hidden>
-      <h2 class="section-title">Add activity</h2>
-      <div class="card">
-        <form id="add-form">
-          <div class="form-grid">
-            <div class="field">
-              <label for="add-sport">Sport</label>
-              <select id="add-sport" required>
-                <option value="cycling">Cycling</option>
-                <option value="virtual_cycling">Virtual cycling (Zwift)</option>
-                <option value="swimming">Swimming</option>
-                <option value="running">Running</option>
-                <option value="strength">Strength</option>
-                <option value="other">Other</option>
-              </select>
-            </div>
-            <div class="field">
-              <label for="add-date">Date &amp; time</label>
-              <input type="datetime-local" id="add-date" required>
-            </div>
-            <div class="field">
-              <label for="add-duration">Duration (minutes)</label>
-              <input type="number" id="add-duration" min="1" step="1" required>
-            </div>
-            <div class="field">
-              <label for="add-distance">Distance (km, optional)</label>
-              <input type="number" id="add-distance" min="0" step="0.01">
-            </div>
-          </div>
-          <div class="field">
-            <label for="add-notes">Notes (optional)</label>
-            <textarea id="add-notes" rows="2"></textarea>
-          </div>
-          <div class="form-actions">
-            <button type="submit" class="btn" id="add-submit">Add activity</button>
-          </div>
-        </form>
-      </div>
-
       <h2 class="section-title">Recent activities</h2>
       <ul class="activity-list" id="activity-list"></ul>
+
+      <details class="add-activity-details">
+        <summary>Add an activity manually</summary>
+        <div class="card">
+          <form id="add-form">
+            <div class="form-grid">
+              <div class="field">
+                <label for="add-sport">Sport</label>
+                <select id="add-sport" required>
+                  <option value="cycling">Cycling</option>
+                  <option value="virtual_cycling">Virtual cycling (Zwift)</option>
+                  <option value="swimming">Swimming</option>
+                  <option value="running">Running</option>
+                  <option value="strength">Strength</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="add-date">Date &amp; time</label>
+                <input type="datetime-local" id="add-date" required>
+              </div>
+              <div class="field">
+                <label for="add-duration">Duration (minutes)</label>
+                <input type="number" id="add-duration" min="1" step="1" required>
+              </div>
+              <div class="field">
+                <label for="add-distance">Distance (km, optional)</label>
+                <input type="number" id="add-distance" min="0" step="0.01">
+              </div>
+            </div>
+            <div class="field">
+              <label for="add-notes">Notes (optional)</label>
+              <textarea id="add-notes" rows="2"></textarea>
+            </div>
+            <div class="form-actions">
+              <button type="submit" class="btn" id="add-submit">Add activity</button>
+            </div>
+          </form>
+        </div>
+      </details>
     </section>
 
     <section id="view-nutrition" class="section" hidden>
