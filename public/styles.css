@@ -430,7 +430,7 @@ input.nutri-col-num{text-align:right;}
 
 /* --- Weight progress card --- */
 .weight-head{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;margin-bottom:8px;}
-.weight-current{font-family:var(--font-head);font-size:2rem;font-weight:700;color:var(--ink);line-height:1;}
+.weight-current{font-family:var(--font-head);font-size:2rem;font-weight:700;color:var(--ink);line-height:1;white-space:nowrap;}
 .weight-delta{font-size:0.85rem;font-weight:600;padding:1px 8px;border-radius:10px;}
 .weight-delta.flat{color:var(--muted-text);background:rgba(38,34,27,0.06);}
 .weight-delta.down{color:#1F7A50;background:rgba(31,138,112,0.14);}
