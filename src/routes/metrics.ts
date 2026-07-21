@@ -11,6 +11,7 @@ import { computeDailySeries, currentWeekLoad } from "../metrics/series";
 import { computeConsistency } from "../metrics/consistency";
 import { computeRecords } from "../metrics/records";
 import { computeDigest } from "../metrics/digest";
+import { computeWeightSeries } from "../metrics/weight";
 
 const DEFAULT_DAYS = 90;
 const MAX_DAYS = 365;
@@ -53,6 +54,12 @@ export function getConsistency(): Response {
 // streaks and the in-progress week, reported separately.
 export function getRecords(): Response {
   return Response.json(computeRecords(new Date()));
+}
+
+// GET /api/metrics/weight: the weight-progress series from Zwift ride data
+// (current, first, delta, and one point per day). Pure read, recomputed fresh.
+export function getWeight(): Response {
+  return Response.json(computeWeightSeries());
 }
 
 // GET /api/metrics/digest (ISC-181): the last completed week's digest. Backs

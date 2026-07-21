@@ -17,7 +17,7 @@ import { postSync, getSyncStatus } from "./routes/sync";
 import { getSleep } from "./routes/sleep";
 import { importCsv } from "./routes/csv";
 import { postZwiftPowerSync, getZwiftPowerResults, getZwiftPowerStatus } from "./routes/zwiftpower";
-import { getTrainingLoad, getConsistency, getRecords, getDigest } from "./routes/metrics";
+import { getTrainingLoad, getConsistency, getRecords, getDigest, getWeight } from "./routes/metrics";
 import {
   estimateNutritionRoute,
   createNutrition,
@@ -95,6 +95,7 @@ async function handleApi(req: Request, url: URL): Promise<Response> {
   if (path === "/api/metrics/consistency" && method === "GET") return getConsistency();
   if (path === "/api/metrics/records" && method === "GET") return getRecords();
   if (path === "/api/metrics/digest" && method === "GET") return getDigest();
+  if (path === "/api/metrics/weight" && method === "GET") return getWeight();
 
   if (path === "/api/import/csv" && method === "POST") return importCsv(req);
 

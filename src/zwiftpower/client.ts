@@ -38,6 +38,21 @@ function tupleNumber(value: unknown): number | null {
   return null;
 }
 
+// Some tuple fields carry their display value as a STRING first element (e.g.
+// weight arrives as ["84.5", 0]). Parse a float from a string-or-number tuple,
+// or a bare string/number, and null anything non-positive or unparseable.
+function tupleFloat(value: unknown): number | null {
+  const first = Array.isArray(value) ? value[0] : value;
+  if (typeof first === "string") {
+    const n = Number.parseFloat(first);
+    return Number.isFinite(n) && n > 0 ? n : null;
+  }
+  if (typeof first === "number") {
+    return Number.isFinite(first) && first > 0 ? first : null;
+  }
+  return null;
+}
+
 function unixToIso(value: unknown): string | null {
   if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) return null;
   const ms = value * 1000;
@@ -51,7 +66,10 @@ function normalizeCategory(value: unknown): string | null {
   return trimmed.length > 0 ? trimmed : null;
 }
 
-function toResult(raw: RawResult): ZwiftPowerResult {
+// Exported for unit testing of the raw->result mapping (including the weight
+// string-tuple parse). Tests import this pure function; they never construct
+// the real client or perform a login (ISC-129).
+export function toResult(raw: RawResult): ZwiftPowerResult {
   return {
     eventId: String(raw.zid ?? raw.DT_RowId ?? ""),
     eventDate: unixToIso(raw.event_date),
@@ -61,6 +79,7 @@ function toResult(raw: RawResult): ZwiftPowerResult {
     avgPower: tupleNumber(raw.avg_power),
     normPower: tupleNumber(raw.np),
     timeSeconds: tupleNumber(raw.time),
+    weightKg: tupleFloat(raw.weight),
   };
 }
 

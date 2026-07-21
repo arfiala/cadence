@@ -16,6 +16,10 @@ export type ZwiftPowerResult = {
   avgPower: number | null; // watts
   normPower: number | null; // watts
   timeSeconds: number | null; // race time in seconds
+  // Rider body weight in kg as recorded by Zwift for this ride (the profile
+  // weight set at ride time, used for w/kg — a manually-entered value, not a
+  // per-ride measurement). Powers the dashboard weight-progress widget.
+  weightKg: number | null;
 };
 
 export interface ZwiftPowerClient {

@@ -172,6 +172,61 @@
       .join("");
     document.getElementById("day-dots").innerHTML = dotsHtml;
     loadRecords();
+    loadWeight();
+  }
+
+  // --- Weight progress (from Zwift ride data) --------------------------
+
+  // Renders a small progress line across the weight points; single-point or
+  // flat series still draws a centered line so the widget never looks broken.
+  function renderWeightSparkline(points) {
+    const svg = document.getElementById("weight-svg");
+    const width = 320;
+    const height = 64;
+    const pad = { x: 6, y: 8 };
+    if (points.length === 0) {
+      svg.innerHTML = "";
+      return;
+    }
+    const weights = points.map((p) => p.weight_kg);
+    const min = Math.min(...weights);
+    const max = Math.max(...weights);
+    const span = max - min || 1; // flat series -> centered line
+    const n = points.length;
+    const xAt = (i) => pad.x + (n === 1 ? (width - 2 * pad.x) / 2 : (i * (width - 2 * pad.x)) / (n - 1));
+    const yAt = (w) => height - pad.y - ((w - min) / span) * (height - 2 * pad.y);
+    const coords = points.map((p, i) => [xAt(i), yAt(p.weight_kg)]);
+    const path = coords.map(([x, y], i) => `${i === 0 ? "M" : "L"}${x.toFixed(1)},${y.toFixed(1)}`).join(" ");
+    const dots = coords.map(([x, y]) => `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="2.5" fill="#3E6FC4"/>`).join("");
+    const line = n > 1 ? `<path d="${path}" fill="none" stroke="#3E6FC4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>` : "";
+    svg.innerHTML = `${line}${dots}`;
+  }
+
+  async function loadWeight() {
+    let data;
+    try {
+      data = await api("/api/metrics/weight");
+    } catch {
+      return;
+    }
+    const section = document.getElementById("view-weight-card");
+    const points = data.points || [];
+    // Honest empty state: no Zwift weight data yet -> hide the whole widget.
+    if (section) section.hidden = data.current == null;
+    if (data.current == null) return;
+
+    document.getElementById("weight-current").textContent = `${data.current} ${escapeHtml(data.unit || "kg")}`;
+
+    const deltaEl = document.getElementById("weight-delta");
+    if (data.delta == null || data.delta === 0 || points.length < 2) {
+      deltaEl.textContent = points.length < 2 ? "First reading from Zwift" : "No change yet";
+      deltaEl.className = "weight-delta flat";
+    } else {
+      const down = data.delta < 0;
+      deltaEl.textContent = `${down ? "↓" : "↑"} ${Math.abs(data.delta)} kg since first ride`;
+      deltaEl.className = `weight-delta ${down ? "down" : "up"}`;
+    }
+    renderWeightSparkline(points);
   }
 
   // --- Quick log presets + toast --------------------------------------

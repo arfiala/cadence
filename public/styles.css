@@ -428,6 +428,16 @@ input.nutri-col-num{text-align:right;}
 .sleep-stat-val{font-size:1.05rem;font-weight:600;color:var(--ink);}
 .sleep-last .sleep-bar{height:16px;}
 
+/* --- Weight progress card --- */
+.weight-head{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;margin-bottom:8px;}
+.weight-current{font-family:var(--font-head);font-size:2rem;font-weight:700;color:var(--ink);line-height:1;}
+.weight-delta{font-size:0.85rem;font-weight:600;padding:1px 8px;border-radius:10px;}
+.weight-delta.flat{color:var(--muted-text);background:rgba(38,34,27,0.06);}
+.weight-delta.down{color:#1F7A50;background:rgba(31,138,112,0.14);}
+.weight-delta.up{color:#B4531F;background:rgba(232,95,65,0.14);}
+.weight-spark{width:100%;max-width:320px;height:64px;display:block;}
+.weight-note{margin-top:6px;font-size:0.78rem;}
+
 /* --- Responsive: 375px phone target (ISC-56) --- */
 @media (max-width:480px){
   body{font-size:16px;}

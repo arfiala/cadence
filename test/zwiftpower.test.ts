@@ -51,6 +51,7 @@ const RESULT_B: ZwiftPowerResult = {
   avgPower: 240,
   normPower: 268,
   timeSeconds: 3125,
+  weightKg: 84.5,
 };
 
 describe("configured gate (ISC-120, ISC-131)", () => {

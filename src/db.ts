@@ -150,6 +150,7 @@ export type ZwiftPowerResultRow = {
   avg_power: number | null; // watts
   norm_power: number | null; // watts
   time_s: number | null; // race time in seconds
+  weight_kg: number | null; // rider body weight (kg) recorded by Zwift at ride time
   created_at: string;
   updated_at: string;
 };
@@ -395,6 +396,11 @@ export function runMigrations(database: Database): void {
   // historical row) without a rebuild.
   addColumnIfMissing(database, "sync_runs", "sleep_seen", "INTEGER NOT NULL DEFAULT 0");
   addColumnIfMissing(database, "sync_runs", "sleep_new", "INTEGER NOT NULL DEFAULT 0");
+
+  // Rider weight on ZwiftPower results (dashboard weight-progress widget),
+  // guarded ALTER so an existing prod table gains it (null on historical rows
+  // until the next sync re-populates them) without a rebuild.
+  addColumnIfMissing(database, "zwiftpower_results", "weight_kg", "REAL");
 
   // Seed default G1 targets exactly once (INSERT OR IGNORE so re-running
   // migrations, or a settings row a user already edited, is never clobbered).

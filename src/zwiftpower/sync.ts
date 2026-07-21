@@ -37,8 +37,8 @@ function upsertResult(result: ZwiftPowerResult): { isNew: boolean; changed: bool
   if (existing === null) {
     db.query(
       `INSERT INTO zwiftpower_results
-         (event_id, event_date, title, category, position, avg_power, norm_power, time_s)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+         (event_id, event_date, title, category, position, avg_power, norm_power, time_s, weight_kg)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     ).run(
       result.eventId,
       result.eventDate,
@@ -48,6 +48,7 @@ function upsertResult(result: ZwiftPowerResult): { isNew: boolean; changed: bool
       result.avgPower,
       result.normPower,
       result.timeSeconds,
+      result.weightKg,
     );
     return { isNew: true, changed: true };
   }
@@ -59,14 +60,15 @@ function upsertResult(result: ZwiftPowerResult): { isNew: boolean; changed: bool
     existing.position !== result.position ||
     existing.avg_power !== result.avgPower ||
     existing.norm_power !== result.normPower ||
-    existing.time_s !== result.timeSeconds;
+    existing.time_s !== result.timeSeconds ||
+    existing.weight_kg !== result.weightKg;
 
   if (!changed) return { isNew: false, changed: false };
 
   db.query(
     `UPDATE zwiftpower_results SET
        event_date = ?, title = ?, category = ?, position = ?,
-       avg_power = ?, norm_power = ?, time_s = ?, updated_at = ?
+       avg_power = ?, norm_power = ?, time_s = ?, weight_kg = ?, updated_at = ?
      WHERE id = ?`,
   ).run(
     result.eventDate,
@@ -76,6 +78,7 @@ function upsertResult(result: ZwiftPowerResult): { isNew: boolean; changed: bool
     result.avgPower,
     result.normPower,
     result.timeSeconds,
+    result.weightKg,
     nowIso(),
     existing.id,
   );
