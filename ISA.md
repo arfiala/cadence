@@ -3,7 +3,7 @@ task: Cadence — Austin's personal fitness app (Garmin-synced, MCP-editable)
 project: cadence
 effort: E4
 phase: build
-progress: 0/103
+progress: 53/103
 mode: standard
 started: 2026-07-16T19:50:29Z
 updated: 2026-07-21T00:00:00Z
@@ -404,59 +404,59 @@ Cadence is live at `https://fit.austinfiala.com` behind Austin's single-user log
 ### Round-2 build: all ten features + workout detail view (ISC-296..415, 2026-07-21)
 
 #### Wave 1 — backend/engine (RPE, duplicates, detail data, race target, G1 risk, forecast, YoY, power curve)
-- [ ] ISC-296: activities gain a nullable `rpe INTEGER` column (1..10) via guarded additive migration, probe: PRAGMA table_info
-- [ ] ISC-297: PATCH edit route accepts/validates rpe (1..10 or null), rejects out-of-range, probe: bun test
-- [ ] ISC-298: rpe survives Garmin re-sync (added to the user-edit preservation set), probe: bun test edit-then-resync
-- [ ] ISC-299: load engine gains an sRPE tier used when rpe present AND no power-TSS/hrTSS available, probe: unit test tier selection
-- [ ] ISC-300: sRPE maps onto the TSS-point scale via documented formula (IF proxy = rpe/10, TSS = (rpe/10)^2 x 100 x hours), never raw Foster units, probe: golden vector test
-- [ ] ISC-301: tier precedence is power > hr > srpe > duration, recorded per-activity in the existing tier field, probe: unit test
-- [ ] ISC-302: activities without rpe keep their current tier and value (series regression-identical without rpe), probe: regression test on existing fixture
-- [ ] ISC-303: Anti: rpe never affects the G1 sessions/hours metric, probe: grep week.ts + test
-- [ ] ISC-304: setting rpe recomputes the load series on next read (no stale cache), probe: test edit-then-read
-- [ ] ISC-305: MCP edit_activity accepts rpe, probe: tool schema + round-trip test
-- [ ] ISC-306: pure `findDuplicateCandidates` flags pairs with start-time overlap and duration within 20% or 5 min AND same-day, distinct sources preferred, criteria documented in the module header, probe: unit tests incl. legit back-to-back non-flag
-- [ ] ISC-307: back-to-back same-sport sessions (no time overlap) are NOT flagged, probe: unit test
-- [ ] ISC-308: `duplicate_dismissals` table persists dismissed pairs on a stable key (min/max activity id), probe: PRAGMA + test
-- [ ] ISC-309: dismissed pairs never re-flag after re-sync, probe: test dismiss-then-rescan
-- [ ] ISC-310: GET /api/duplicates returns current candidate pairs with both activities' summaries, auth-gated, probe: bun test + 401 test
-- [ ] ISC-311: POST /api/duplicates/dismiss marks a pair kept, probe: bun test
-- [ ] ISC-312: POST /api/duplicates/merge deletes the chosen loser and keeps the richer record, requires explicit loser id, probe: bun test
-- [ ] ISC-313: merge preserves user edits (notes/title/sport/rpe) from the kept row, never blends, probe: unit test
-- [ ] ISC-314: Anti: merge never runs automatically anywhere (no scheduler/sync call path reaches it), probe: grep call sites
-- [ ] ISC-315: merge of a Garmin-sourced loser records its garmin id in a tombstone so re-sync does not resurrect it, probe: test merge-then-resync
-- [ ] ISC-316: Anti: cross-week merge cannot corrupt week summaries (recompute path covered), probe: test week totals before/after merge
-- [ ] ISC-317: duplicate scan is on-demand (API call), never blocks or runs inside Garmin sync, probe: grep sync path
-- [ ] ISC-318: `activity_details` table stores per-activity laps JSON, GPS polyline JSON (decimated), detail summary fields, fetched_at, via guarded migration, probe: PRAGMA
-- [ ] ISC-319: GET /api/activities/:id/detail returns local row + cached detail; on first request for a Garmin activity it lazily fetches getSplits + getDetails once and caches, probe: bun test with fake client
-- [ ] ISC-320: detail fetch is NEVER bulk: sync path performs zero detail calls, probe: grep sync code + test
-- [ ] ISC-321: Garmin detail/splits parse defensively (unknown-typed): missing/odd fields degrade to null, never throw to the route, probe: malformed-payload tests
-- [ ] ISC-322: a non-empty payload parsing to all-null logs its key set once (sleep-lesson observability), probe: unit test log hook
-- [ ] ISC-323: lap rows expose per-lap duration, distance, avg/max HR, avg power when present, probe: fixture test
-- [ ] ISC-324: GPS polyline decimated to <=200 points before storage, probe: unit test with 5000-point fixture
-- [ ] ISC-325: manual activities (no garmin id) return local fields with detail:null and NO fetch attempt, probe: test fake-client call count 0
-- [ ] ISC-326: detail refresh param forces a re-fetch and updates fetched_at, probe: bun test
-- [ ] ISC-327: deleting an activity deletes its cached detail row, probe: test cascade
-- [ ] ISC-328: detail fetch failure (network/rate-limit) returns the local summary with detail_error flag, HTTP 200, probe: throwing-fake test
-- [ ] ISC-329: detail fetch has a timeout guard so a hung Garmin call cannot hang the route, probe: timeout race test
-- [ ] ISC-330: Anti: detail fetch never triggers a Garmin LOGIN (session-restore only; unauthenticated client = detail_error, no credential dance), probe: fake asserting no login call
-- [ ] ISC-331: GET /api/activities list gains has_detail/garmin-sourced hints so the UI knows what is clickable-rich, probe: shape test
-- [ ] ISC-332: settings gain race_name + race_date (nullable), PATCH-editable, probe: bun test round-trip
-- [ ] ISC-333: race_date validates ISO date, clearable to null, probe: validation test
-- [ ] ISC-334: GET /api/metrics/g1-risk returns week-to-date sessions/hours, remaining need, days left (NY Monday-anchored via existing week logic), and projection from trailing 4-week per-weekday rhythm, probe: bun test fixed clock
-- [ ] ISC-335: g1-risk verdict field: on_track | at_risk | met, thresholds documented in module, probe: unit tests all three states
-- [ ] ISC-336: Anti: g1-risk math reads sessions/hours only, never the load/form series, probe: grep imports
-- [ ] ISC-337: GET /api/metrics/pacing returns per-weekday historical session frequency + typical hours from trailing 8 weeks (the "usual rhythm" data), probe: bun test with seeded history
-- [ ] ISC-338: pacing handles <2 weeks history with insufficient_history:true, probe: empty-DB test
-- [ ] ISC-339: GET /api/metrics/yoy returns this-week vs same-ISO-week-last-year sessions/hours/distance deltas, probe: bun test seeded two years
-- [ ] ISC-340: yoy returns insufficient_history per metric when the prior-year week has no data, probe: test
-- [ ] ISC-341: ISO week-53 edge handled (falls back to week 52 comparison when prior year lacks 53), probe: unit test
-- [ ] ISC-342: ZwiftPower critical-power fetch stores best-effort watts for 15s/1m/5m/20m with a rolling-90-day window computed at read, probe: fake-payload test
-- [ ] ISC-343: GET /api/metrics/power-curve returns curve points + per-point source event, auth-gated, probe: bun test + 401
-- [ ] ISC-344: power-curve fetch is part of the existing ZP sync (no new session dance) and degrades to stored data on ZP failure, probe: throwing-fake test
-- [ ] ISC-345: Anti: power curve scoped to cycling only, no swim/run contamination, probe: shape test
-- [ ] ISC-346: all new routes auth-gated (401 unauthenticated), probe: loop test over new endpoints
-- [ ] ISC-347: all new tables/columns via guarded idempotent migrations (double-boot safe), probe: double-migrate test
-- [ ] ISC-348: MCP gains get_activity_detail and get_g1_risk tools over the new APIs, probe: tool round-trip tests
+- [x] ISC-296: activities gain a nullable `rpe INTEGER` column (1..10) via guarded additive migration, probe: PRAGMA table_info
+- [x] ISC-297: PATCH edit route accepts/validates rpe (1..10 or null), rejects out-of-range, probe: bun test
+- [x] ISC-298: rpe survives Garmin re-sync (added to the user-edit preservation set), probe: bun test edit-then-resync
+- [x] ISC-299: load engine gains an sRPE tier used when rpe present AND no power-TSS/hrTSS available, probe: unit test tier selection
+- [x] ISC-300: sRPE maps onto the TSS-point scale via documented formula (IF proxy = rpe/10, TSS = (rpe/10)^2 x 100 x hours), never raw Foster units, probe: golden vector test
+- [x] ISC-301: tier precedence is power > hr > srpe > duration, recorded per-activity in the existing tier field, probe: unit test
+- [x] ISC-302: activities without rpe keep their current tier and value (series regression-identical without rpe), probe: regression test on existing fixture
+- [x] ISC-303: Anti: rpe never affects the G1 sessions/hours metric, probe: grep week.ts + test
+- [x] ISC-304: setting rpe recomputes the load series on next read (no stale cache), probe: test edit-then-read
+- [x] ISC-305: MCP edit_activity accepts rpe, probe: tool schema + round-trip test
+- [x] ISC-306: pure `findDuplicateCandidates` flags pairs with start-time overlap and duration within 20% or 5 min AND same-day, distinct sources preferred, criteria documented in the module header, probe: unit tests incl. legit back-to-back non-flag
+- [x] ISC-307: back-to-back same-sport sessions (no time overlap) are NOT flagged, probe: unit test
+- [x] ISC-308: `duplicate_dismissals` table persists dismissed pairs on a stable key (min/max activity id), probe: PRAGMA + test
+- [x] ISC-309: dismissed pairs never re-flag after re-sync, probe: test dismiss-then-rescan
+- [x] ISC-310: GET /api/duplicates returns current candidate pairs with both activities' summaries, auth-gated, probe: bun test + 401 test
+- [x] ISC-311: POST /api/duplicates/dismiss marks a pair kept, probe: bun test
+- [x] ISC-312: POST /api/duplicates/merge deletes the chosen loser and keeps the richer record, requires explicit loser id, probe: bun test
+- [x] ISC-313: merge preserves user edits (notes/title/sport/rpe) from the kept row, never blends, probe: unit test
+- [x] ISC-314: Anti: merge never runs automatically anywhere (no scheduler/sync call path reaches it), probe: grep call sites
+- [x] ISC-315: merge of a Garmin-sourced loser records its garmin id in a tombstone so re-sync does not resurrect it, probe: test merge-then-resync
+- [x] ISC-316: Anti: cross-week merge cannot corrupt week summaries (recompute path covered), probe: test week totals before/after merge
+- [x] ISC-317: duplicate scan is on-demand (API call), never blocks or runs inside Garmin sync, probe: grep sync path
+- [x] ISC-318: `activity_details` table stores per-activity laps JSON, GPS polyline JSON (decimated), detail summary fields, fetched_at, via guarded migration, probe: PRAGMA
+- [x] ISC-319: GET /api/activities/:id/detail returns local row + cached detail; on first request for a Garmin activity it lazily fetches getSplits + getDetails once and caches, probe: bun test with fake client
+- [x] ISC-320: detail fetch is NEVER bulk: sync path performs zero detail calls, probe: grep sync code + test
+- [x] ISC-321: Garmin detail/splits parse defensively (unknown-typed): missing/odd fields degrade to null, never throw to the route, probe: malformed-payload tests
+- [x] ISC-322: a non-empty payload parsing to all-null logs its key set once (sleep-lesson observability), probe: unit test log hook
+- [x] ISC-323: lap rows expose per-lap duration, distance, avg/max HR, avg power when present, probe: fixture test
+- [x] ISC-324: GPS polyline decimated to <=200 points before storage, probe: unit test with 5000-point fixture
+- [x] ISC-325: manual activities (no garmin id) return local fields with detail:null and NO fetch attempt, probe: test fake-client call count 0
+- [x] ISC-326: detail refresh param forces a re-fetch and updates fetched_at, probe: bun test
+- [x] ISC-327: deleting an activity deletes its cached detail row, probe: test cascade
+- [x] ISC-328: detail fetch failure (network/rate-limit) returns the local summary with detail_error flag, HTTP 200, probe: throwing-fake test
+- [x] ISC-329: detail fetch has a timeout guard so a hung Garmin call cannot hang the route, probe: timeout race test
+- [x] ISC-330: Anti: detail fetch never triggers a Garmin LOGIN (session-restore only; unauthenticated client = detail_error, no credential dance), probe: fake asserting no login call
+- [x] ISC-331: GET /api/activities list gains has_detail/garmin-sourced hints so the UI knows what is clickable-rich, probe: shape test
+- [x] ISC-332: settings gain race_name + race_date (nullable), PATCH-editable, probe: bun test round-trip
+- [x] ISC-333: race_date validates ISO date, clearable to null, probe: validation test
+- [x] ISC-334: GET /api/metrics/g1-risk returns week-to-date sessions/hours, remaining need, days left (NY Monday-anchored via existing week logic), and projection from trailing 4-week per-weekday rhythm, probe: bun test fixed clock
+- [x] ISC-335: g1-risk verdict field: on_track | at_risk | met, thresholds documented in module, probe: unit tests all three states
+- [x] ISC-336: Anti: g1-risk math reads sessions/hours only, never the load/form series, probe: grep imports
+- [x] ISC-337: GET /api/metrics/pacing returns per-weekday historical session frequency + typical hours from trailing 8 weeks (the "usual rhythm" data), probe: bun test with seeded history
+- [x] ISC-338: pacing handles <2 weeks history with insufficient_history:true, probe: empty-DB test
+- [x] ISC-339: GET /api/metrics/yoy returns this-week vs same-ISO-week-last-year sessions/hours/distance deltas, probe: bun test seeded two years
+- [x] ISC-340: yoy returns insufficient_history per metric when the prior-year week has no data, probe: test
+- [x] ISC-341: ISO week-53 edge handled (falls back to week 52 comparison when prior year lacks 53), probe: unit test
+- [x] ISC-342: ZwiftPower critical-power fetch stores best-effort watts for 15s/1m/5m/20m with a rolling-90-day window computed at read, probe: fake-payload test
+- [x] ISC-343: GET /api/metrics/power-curve returns curve points + per-point source event, auth-gated, probe: bun test + 401
+- [x] ISC-344: power-curve fetch is part of the existing ZP sync (no new session dance) and degrades to stored data on ZP failure, probe: throwing-fake test
+- [x] ISC-345: Anti: power curve scoped to cycling only, no swim/run contamination, probe: shape test
+- [x] ISC-346: all new routes auth-gated (401 unauthenticated), probe: loop test over new endpoints
+- [x] ISC-347: all new tables/columns via guarded idempotent migrations (double-boot safe), probe: double-migrate test
+- [x] ISC-348: MCP gains get_activity_detail and get_g1_risk tools over the new APIs, probe: tool round-trip tests
 
 #### Wave 2 — detail view UI + swim library + race countdown + duplicates UI
 - [ ] ISC-349: every activity row (Activities list + dashboard surfaces that list activities) is clickable and opens a detail view, probe: Interceptor click

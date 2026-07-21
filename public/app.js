@@ -51,6 +51,75 @@
     stretch: { sport: "strength", minutes: 15, title: STRETCH_LOG_TITLE, notes: "Knees Over Toes daily plan" },
   };
 
+  // Hand-authored swim sets (ISC-361..365). Static reference content, no
+  // adaptive logic: six workouts across 30/45/60 minutes, each built on the
+  // four-phase structure (warmup, drill block, main set, cooldown). Strokes and
+  // drills vary sensibly for an intermediate fitness swimmer. Distances in
+  // metres; the stated total equals the sum of its phases. Zero dashes in copy.
+  // Sources cited in the HTML comment above the swim list in index.html.
+  const SWIM_SETS = [
+    {
+      name: "Steady Aerobic Base",
+      minutes: 30,
+      distance_m: 1500,
+      intensity: "Easy",
+      warmup: "400 m easy freestyle, breathe every three strokes",
+      drills: "4 x 50 m catch up drill, 15 seconds rest",
+      main: "8 x 100 m freestyle at a steady pace, 20 seconds rest",
+      cooldown: "100 m relaxed backstroke",
+    },
+    {
+      name: "Mixed Stroke Cruise",
+      minutes: 30,
+      distance_m: 1700,
+      intensity: "Moderate",
+      warmup: "400 m as 200 freestyle then 200 backstroke",
+      drills: "6 x 50 m fingertip drag drill, 15 seconds rest",
+      main: "6 x 100 m as 75 freestyle plus 25 backstroke, 20 seconds rest, then 4 x 50 m freestyle build, 15 seconds rest",
+      cooldown: "200 m easy choice",
+    },
+    {
+      name: "Threshold Hundreds",
+      minutes: 45,
+      distance_m: 2300,
+      intensity: "Moderate",
+      warmup: "500 m as 300 freestyle then 200 kick with a board",
+      drills: "6 x 50 m single arm drill, 20 seconds rest",
+      main: "10 x 100 m freestyle at a firm effort, 20 seconds rest, then 6 x 50 m descending one to three, 15 seconds rest",
+      cooldown: "200 m easy backstroke",
+    },
+    {
+      name: "Pyramid Builder",
+      minutes: 45,
+      distance_m: 2400,
+      intensity: "Moderate",
+      warmup: "500 m easy freestyle with every fourth length backstroke",
+      drills: "4 x 75 m catch up drill, 20 seconds rest",
+      main: "100, 200, 300, 200, 100 m freestyle steady, 25 seconds rest, then 8 x 50 m freestyle fast, 20 seconds rest",
+      cooldown: "300 m relaxed mixed strokes",
+    },
+    {
+      name: "Long Aerobic Distance",
+      minutes: 60,
+      distance_m: 3000,
+      intensity: "Endurance",
+      warmup: "600 m as 400 freestyle then 200 kick",
+      drills: "6 x 50 m fingertip drag drill, 15 seconds rest",
+      main: "3 x 500 m freestyle at a relaxed endurance pace, 40 seconds rest, then 6 x 50 m freestyle build, 15 seconds rest",
+      cooldown: "300 m easy backstroke",
+    },
+    {
+      name: "Broken Distance Intervals",
+      minutes: 60,
+      distance_m: 3200,
+      intensity: "Hard",
+      warmup: "600 m as 300 freestyle, 200 backstroke, 100 kick",
+      drills: "8 x 50 m single arm and catch up mixed, 20 seconds rest",
+      main: "4 x 300 m freestyle firm, 30 seconds rest, then 8 x 75 m freestyle fast, 20 seconds rest",
+      cooldown: "400 m easy choice",
+    },
+  ];
+
   // Escapes user-controlled text before it is ever interpolated into
   // innerHTML (ISC-54). Every render function below routes activity
   // title/notes through this.
@@ -92,7 +161,15 @@
     appView.hidden = false;
   }
 
+  let currentView = "dashboard";
+
   function switchTab(name) {
+    // Leaving a detail deep-link: strip the hash without firing hashchange so we
+    // do not loop back into the detail router (ISC-356 deep-link cleanup).
+    if (/^#activity\//.test(location.hash)) {
+      history.replaceState(null, "", location.pathname + location.search);
+    }
+    currentView = name;
     document.querySelectorAll(".nav-tab").forEach((btn) => {
       btn.classList.toggle("active", btn.dataset.view === name);
     });
@@ -176,6 +253,159 @@
     loadTodaySleep();
     loadRecords();
     loadWeight();
+    loadRace();
+  }
+
+  // --- Race countdown (dashboard side column) --------------------------
+  //
+  // When a race date is set, a countdown card shows in the right column with a
+  // static taper checklist inside the final week (ISC-366). A past date shows a
+  // graceful "raced N days ago" with a clear control (ISC-367). With nothing
+  // set there is no card at all, only a quiet "Set a race goal" link at the
+  // bottom of the column that expands an inline form (ISC-368, ISC-369).
+
+  const TAPER_CHECKLIST = [
+    "Cut your training volume, keep a little intensity",
+    "Sleep well and stay hydrated all week",
+    "Eat familiar meals, nothing new the day before",
+    "Lay out your gear and bottles the night before",
+    "Arrive early and warm up easy",
+    "Trust the work you already did and stay relaxed",
+  ];
+
+  // Whole days from today (local midnight) to the race date (a YYYY-MM-DD
+  // calendar day). Positive is future, zero is today, negative is past.
+  function daysUntil(ymd) {
+    const parts = ymd.split("-").map(Number);
+    if (parts.length !== 3 || parts.some((n) => !Number.isFinite(n))) return null;
+    const race = new Date(parts[0], parts[1] - 1, parts[2]);
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    return Math.round((race.getTime() - today.getTime()) / 86400000);
+  }
+
+  async function loadRace() {
+    let s;
+    try {
+      s = await api("/api/settings");
+    } catch {
+      return;
+    }
+    renderRace(s.race_name, s.race_date);
+  }
+
+  function renderRace(name, date) {
+    const cardWrap = document.getElementById("view-race-card");
+    const cardBody = document.getElementById("race-card-body");
+    const setSlot = document.getElementById("race-goal-set");
+    if (!cardWrap || !cardBody || !setSlot) return;
+
+    if (date) {
+      cardWrap.hidden = false;
+      renderRaceCard(cardBody, name, date);
+      setSlot.hidden = true;
+      setSlot.innerHTML = "";
+    } else {
+      cardWrap.hidden = true;
+      cardBody.innerHTML = "";
+      setSlot.hidden = false;
+      renderRaceGoalLink(setSlot);
+    }
+  }
+
+  function renderRaceCard(el, name, date) {
+    const d = daysUntil(date);
+    const displayName = escapeHtml(name || "Your race");
+    let inner = `<div class="race-name">${displayName}</div>`;
+
+    if (d == null) {
+      inner += `<div class="race-days-label">Date unavailable</div>`;
+    } else if (d < 0) {
+      const n = Math.abs(d);
+      inner += `<div class="race-past">Raced ${n} day${n === 1 ? "" : "s"} ago</div>`;
+    } else if (d === 0) {
+      inner += `<div class="race-past">Race day is today</div>`;
+    } else {
+      inner += `<div class="race-days">${d}</div><div class="race-days-label">day${d === 1 ? "" : "s"} to go</div>`;
+    }
+
+    if (d != null && d >= 0 && d <= 7) {
+      inner +=
+        `<div class="race-taper-title">Taper week checklist</div><ul class="race-taper">` +
+        TAPER_CHECKLIST.map((t) => `<li>${escapeHtml(t)}</li>`).join("") +
+        `</ul>`;
+    }
+
+    inner += `<div class="race-card-actions">
+      <button type="button" class="race-mini-btn" id="race-edit">Edit</button>
+      <button type="button" class="race-mini-btn" id="race-clear">Clear</button>
+    </div>`;
+    el.innerHTML = inner;
+    document.getElementById("race-edit").addEventListener("click", () => showRaceForm(name || "", date || ""));
+    document.getElementById("race-clear").addEventListener("click", clearRace);
+  }
+
+  function renderRaceGoalLink(el) {
+    el.innerHTML = `<button type="button" class="race-goal-link" id="race-goal-open">+ Set a race goal</button>`;
+    document.getElementById("race-goal-open").addEventListener("click", () => renderRaceForm(el, "", ""));
+  }
+
+  function showRaceForm(name, date) {
+    const setSlot = document.getElementById("race-goal-set");
+    setSlot.hidden = false;
+    renderRaceForm(setSlot, name, date);
+  }
+
+  function renderRaceForm(el, name, date) {
+    el.innerHTML = `
+      <div class="race-goal-form">
+        <div class="field"><label for="race-name-input">Race name</label><input type="text" id="race-name-input" value="${escapeHtml(name)}" placeholder="e.g. Spring Gran Fondo"></div>
+        <div class="field"><label for="race-date-input">Race date</label><input type="date" id="race-date-input" value="${escapeHtml(date)}"></div>
+        <div class="form-actions">
+          <button type="button" class="btn" id="race-save">Save</button>
+          <button type="button" class="btn btn-secondary" id="race-cancel">Cancel</button>
+          <span class="race-form-status" id="race-form-status"></span>
+        </div>
+      </div>`;
+    document.getElementById("race-save").addEventListener("click", saveRace);
+    document.getElementById("race-cancel").addEventListener("click", () => loadRace());
+  }
+
+  async function saveRace() {
+    const name = document.getElementById("race-name-input").value.trim();
+    const date = document.getElementById("race-date-input").value;
+    const statusEl = document.getElementById("race-form-status");
+    if (!date) {
+      statusEl.textContent = "Pick a race date.";
+      return;
+    }
+    const btn = document.getElementById("race-save");
+    btn.disabled = true;
+    try {
+      await api("/api/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ race_name: name || null, race_date: date }),
+      });
+      await loadRace();
+    } catch (err) {
+      statusEl.textContent = err.message;
+      btn.disabled = false;
+    }
+  }
+
+  async function clearRace() {
+    if (!window.confirm("Clear this race goal?")) return;
+    try {
+      await api("/api/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ race_name: null, race_date: null }),
+      });
+      await loadRace();
+    } catch (err) {
+      alert(err.message);
+    }
   }
 
   // --- Today strip (dashboard glance band) -----------------------------
@@ -320,7 +550,7 @@
         // below is capped, so say so when it is truncated to avoid implying the
         // shown rows are all of them.
         const truncated = count > MAX_WEIGHT_READINGS ? ` · newest ${MAX_WEIGHT_READINGS} shown` : "";
-        statsEl.textContent = `${count} reading${count === 1 ? "" : "s"} · range ${data.min}–${data.max} ${unit}${truncated}`;
+        statsEl.textContent = `${count} reading${count === 1 ? "" : "s"} · range ${data.min} to ${data.max} ${unit}${truncated}`;
       } else {
         statsEl.textContent = "";
       }
@@ -541,6 +771,11 @@
     return d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
   }
 
+  // The most recent activities payload, kept so the detail view can render a
+  // manual activity's local fields instantly (no fetch, ISC-354) and so
+  // returning from a detail never needs a refetch (scroll is preserved).
+  let activitiesCache = [];
+
   async function loadActivities() {
     let data;
     try {
@@ -548,15 +783,16 @@
     } catch {
       return;
     }
+    activitiesCache = data.activities || [];
     const list = document.getElementById("activity-list");
-    list.innerHTML = data.activities
+    list.innerHTML = activitiesCache
       .map((a) => {
         const icon = SPORT_ICONS[a.sport] || SPORT_ICONS.other;
         const label = SPORT_LABELS[a.sport] || a.sport;
         const sourceBadge = a.source === "garmin" ? "Garmin" : "Manual";
         const title = a.title ? escapeHtml(a.title) : label;
         return `
-        <li class="activity-item" data-id="${a.id}" data-source="${a.source}">
+        <li class="activity-item clickable" data-id="${a.id}" data-source="${a.source}" tabindex="0" role="button" aria-label="Open activity detail">
           <div class="activity-icon">${icon}</div>
           <div class="activity-main">
             <div class="activity-title">${title}</div>
@@ -566,12 +802,30 @@
           <div class="activity-actions">
             <button class="icon-btn" data-action="delete" data-id="${a.id}" data-source="${a.source}">Delete</button>
           </div>
+          <span class="activity-chevron" aria-hidden="true">&rsaquo;</span>
         </li>`;
       })
       .join("");
 
+    // Whole row clicks in to the detail view (ISC-349), except taps that land on
+    // the delete control. Keyboard: Enter/Space opens too (ISC-349 focusable).
+    list.querySelectorAll(".activity-item.clickable").forEach((li) => {
+      const open = (e) => {
+        if (e.target.closest(".activity-actions")) return;
+        goToDetail(Number(li.dataset.id));
+      };
+      li.addEventListener("click", open);
+      li.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          goToDetail(Number(li.dataset.id));
+        }
+      });
+    });
+
     list.querySelectorAll('[data-action="delete"]').forEach((btn) => {
-      btn.addEventListener("click", async () => {
+      btn.addEventListener("click", async (e) => {
+        e.stopPropagation();
         const id = btn.dataset.id;
         const source = btn.dataset.source;
         const confirmMsg =
@@ -590,6 +844,8 @@
         }
       });
     });
+
+    loadDuplicates();
   }
 
   let addInFlight = false; // double-submit guard (ISC-50)
@@ -630,6 +886,455 @@
       submitBtn.disabled = false;
     }
   });
+
+  // --- Workout detail view (hash-routed #activity/ID) ------------------
+  //
+  // The detail view is its own section that hash routing shows in place of the
+  // eight tabbed views. Opening captures where we came from (view + scroll) so
+  // the back affordance and the browser back button both restore the exact list
+  // scroll (ISC-355). A direct load of #activity/ID after reload fetches and
+  // renders straight into the detail (ISC-356). Manual activities render local
+  // fields from the cached list row with zero fetch (ISC-354); Garmin rows show
+  // a brief loading state then the cached lap/GPS detail.
+
+  let preDetail = null; // {view, scrollY} when opened from within the app, else null
+  let detailActivity = null;
+
+  function goToDetail(id) {
+    preDetail = { view: currentView, scrollY: window.scrollY };
+    location.hash = "activity/" + id;
+  }
+
+  function backFromDetail() {
+    if (preDetail) history.back();
+    else location.hash = "";
+  }
+
+  function showDetailSection() {
+    document.querySelectorAll("main.wrap > section").forEach((s) => {
+      s.hidden = s.id !== "view-activity-detail";
+    });
+    document.querySelectorAll(".nav-tab").forEach((b) => b.classList.remove("active"));
+    window.scrollTo(0, 0);
+  }
+
+  function setActiveSection(view) {
+    currentView = view;
+    document.querySelectorAll(".nav-tab").forEach((b) => b.classList.toggle("active", b.dataset.view === view));
+    document.querySelectorAll("main.wrap > section").forEach((s) => {
+      s.hidden = s.id !== `view-${view}`;
+    });
+  }
+
+  function closeActivityDetail() {
+    const detail = document.getElementById("view-activity-detail");
+    if (!detail || detail.hidden) return;
+    if (preDetail) {
+      const view = preDetail.view;
+      const scrollY = preDetail.scrollY;
+      preDetail = null;
+      setActiveSection(view); // no refetch, so the list DOM and scroll survive
+      requestAnimationFrame(() => window.scrollTo(0, scrollY));
+    } else {
+      switchTab("activities"); // deep-loaded straight into detail: fresh list
+    }
+  }
+
+  function backButtonHtml() {
+    return `<button type="button" class="detail-back" id="detail-back">&lsaquo; Back to activities</button>`;
+  }
+  function wireBack() {
+    const btn = document.getElementById("detail-back");
+    if (btn) btn.addEventListener("click", backFromDetail);
+  }
+
+  function saveActivityField(id, fields) {
+    return api(`/api/activities/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(fields),
+    });
+  }
+
+  function applyDetailUpdate(updated) {
+    detailActivity = updated;
+    const i = activitiesCache.findIndex((a) => a.id === updated.id);
+    if (i >= 0) activitiesCache[i] = updated;
+  }
+
+  function renderLapsTable(laps) {
+    const rows = laps
+      .map((lp) => {
+        const t = lp.duration_s != null ? fmtDur(lp.duration_s) : "";
+        const d = lp.distance_m != null ? `${(lp.distance_m / 1000).toFixed(2)} km` : "";
+        const ahr = lp.avg_hr != null ? String(lp.avg_hr) : "";
+        const mhr = lp.max_hr != null ? String(lp.max_hr) : "";
+        const ap = lp.avg_power != null ? String(lp.avg_power) : "";
+        return `<tr><td>${escapeHtml(String(lp.lap_index))}</td><td>${escapeHtml(t)}</td><td>${escapeHtml(d)}</td><td>${escapeHtml(ahr)}</td><td>${escapeHtml(mhr)}</td><td>${escapeHtml(ap)}</td></tr>`;
+      })
+      .join("");
+    return `<div class="detail-laps-wrap"><table class="detail-laps"><thead><tr><th>Lap</th><th>Time</th><th>Distance</th><th>Avg HR</th><th>Max HR</th><th>Avg W</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+  }
+
+  // Normalize [lat,lng] points into a fixed viewBox and stroke an inline path.
+  // No external tiles. Fewer than two points renders a clean indoor empty state
+  // rather than an empty box (ISC-353).
+  function renderMiniMap(polyline) {
+    if (!polyline || polyline.length < 2) {
+      return `<p class="detail-map-empty">Indoor session, no route.</p>`;
+    }
+    const lats = polyline.map((p) => p[0]);
+    const lngs = polyline.map((p) => p[1]);
+    const minLat = Math.min(...lats);
+    const maxLat = Math.max(...lats);
+    const minLng = Math.min(...lngs);
+    const maxLng = Math.max(...lngs);
+    const W = 320;
+    const H = 200;
+    const pad = 14;
+    const spanLat = maxLat - minLat || 1e-6;
+    const spanLng = maxLng - minLng || 1e-6;
+    const scale = Math.min((W - 2 * pad) / spanLng, (H - 2 * pad) / spanLat);
+    const offX = (W - spanLng * scale) / 2;
+    const offY = (H - spanLat * scale) / 2;
+    const x = (lng) => offX + (lng - minLng) * scale;
+    const y = (lat) => H - (offY + (lat - minLat) * scale);
+    const d = polyline.map((p, i) => `${i === 0 ? "M" : "L"}${x(p[1]).toFixed(1)},${y(p[0]).toFixed(1)}`).join(" ");
+    return `<svg class="detail-map" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Route map"><path d="${d}" fill="none" stroke="#26221B" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/></svg>`;
+  }
+
+  function renderDetailLoading(cached) {
+    const body = document.getElementById("activity-detail-body");
+    const title = cached ? escapeHtml(cached.title || SPORT_LABELS[cached.sport] || cached.sport) : "Activity";
+    body.innerHTML =
+      backButtonHtml() +
+      `<div class="detail-head"><div class="detail-title">${title}</div></div>` +
+      `<p class="detail-loading">Loading route and laps from Garmin...</p>`;
+    wireBack();
+  }
+
+  function renderActivityDetail(activity, detail, detailError) {
+    detailActivity = activity;
+    const body = document.getElementById("activity-detail-body");
+    const label = SPORT_LABELS[activity.sport] || activity.sport;
+    const title = activity.title ? escapeHtml(activity.title) : escapeHtml(label);
+    const icon = SPORT_ICONS[activity.sport] || SPORT_ICONS.other;
+    const sourceLabel = activity.source === "garmin" ? "Garmin" : "Manual";
+    const clock = fmtClock(activity.start_time);
+    const when = `${formatDate(activity.start_time)}${clock ? ` &middot; ${clock}` : ""}`;
+
+    const summary = detail && detail.summary ? detail.summary : null;
+    const stats = [];
+    stats.push(["Duration", formatDuration(activity.duration_s)]);
+    if (activity.distance_m != null) stats.push(["Distance", `${(activity.distance_m / 1000).toFixed(2)} km`]);
+    if (activity.avg_hr != null) stats.push(["Avg HR", `${activity.avg_hr} bpm`]);
+    if (summary && summary.max_hr != null) stats.push(["Max HR", `${summary.max_hr} bpm`]);
+    if (activity.avg_power != null) stats.push(["Avg power", `${activity.avg_power} W`]);
+    if (summary && summary.max_power != null) stats.push(["Max power", `${summary.max_power} W`]);
+    if (summary && summary.elevation_gain_m != null) stats.push(["Elevation", `${Math.round(summary.elevation_gain_m)} m`]);
+    if (activity.calories != null) stats.push(["Calories", `${activity.calories} kcal`]);
+    const statsHtml = stats
+      .map(([l, v]) => `<div class="detail-stat"><div class="detail-stat-label">${escapeHtml(l)}</div><div class="detail-stat-value">${escapeHtml(v)}</div></div>`)
+      .join("");
+
+    let chips = "";
+    for (let n = 1; n <= 10; n++) {
+      chips += `<button type="button" class="rpe-chip${activity.rpe === n ? " active" : ""}" data-rpe="${n}">${n}</button>`;
+    }
+    chips += `<button type="button" class="rpe-chip rpe-clear" data-rpe="clear">Clear</button>`;
+
+    let lapsHtml = "";
+    if (detail && detail.laps && detail.laps.length > 0) {
+      lapsHtml = `<div class="detail-block"><div class="detail-block-title">Laps</div>${renderLapsTable(detail.laps)}</div>`;
+    }
+    let mapHtml = "";
+    if (detail) {
+      mapHtml = `<div class="detail-block"><div class="detail-block-title">Route</div>${renderMiniMap(detail.polyline)}</div>`;
+    }
+    const refreshHtml = activity.garmin_sourced
+      ? `<div class="detail-block"><button type="button" class="detail-refresh" id="detail-refresh">Refresh from Garmin</button></div>`
+      : "";
+    const errHtml = detailError
+      ? `<p class="detail-error">Garmin detail unavailable right now. Showing the fields we have.</p>`
+      : "";
+
+    body.innerHTML =
+      backButtonHtml() +
+      `<div class="detail-head">
+         <div class="detail-title">${icon} ${title}</div>
+         <div class="detail-sub"><span>${escapeHtml(label)}</span><span>${when}</span><span class="detail-source-badge">${escapeHtml(sourceLabel)}</span></div>
+       </div>` +
+      errHtml +
+      `<div class="detail-stat-grid">${statsHtml}</div>` +
+      `<div class="detail-block">
+         <div class="detail-block-title">How hard did it feel?</div>
+         <div class="rpe-chips">${chips}</div>
+       </div>` +
+      `<div class="detail-block">
+         <div class="detail-block-title">Notes</div>
+         <textarea class="detail-notes" id="detail-notes" rows="3" placeholder="Add a note about this session">${escapeHtml(activity.notes || "")}</textarea>
+         <div class="detail-notes-actions"><button type="button" class="btn" id="detail-notes-save">Save notes</button><span class="sync-status" id="detail-notes-status"></span></div>
+       </div>` +
+      lapsHtml +
+      mapHtml +
+      refreshHtml;
+
+    wireBack();
+    wireDetailEditors(activity);
+  }
+
+  function wireDetailEditors(activity) {
+    const section = document.getElementById("activity-detail-body");
+    section.querySelectorAll(".rpe-chip").forEach((chip) => {
+      chip.addEventListener("click", async () => {
+        const raw = chip.dataset.rpe;
+        const value = raw === "clear" ? null : Number(raw);
+        section.querySelectorAll(".rpe-chip").forEach((c) => c.classList.remove("active"));
+        if (value != null) chip.classList.add("active");
+        try {
+          const res = await saveActivityField(activity.id, { rpe: value });
+          applyDetailUpdate(res.activity);
+        } catch (err) {
+          alert(err.message);
+        }
+      });
+    });
+
+    const saveBtn = document.getElementById("detail-notes-save");
+    if (saveBtn) {
+      // Explicit save button, not a blur handler (ISC-358): blur-only saves are
+      // fragile and untestable under automation.
+      saveBtn.addEventListener("click", async () => {
+        const val = document.getElementById("detail-notes").value;
+        const statusEl = document.getElementById("detail-notes-status");
+        saveBtn.disabled = true;
+        statusEl.textContent = "";
+        try {
+          const res = await saveActivityField(activity.id, { notes: val.length ? val : null });
+          applyDetailUpdate(res.activity);
+          statusEl.textContent = "Saved.";
+        } catch (err) {
+          statusEl.textContent = err.message;
+        } finally {
+          saveBtn.disabled = false;
+        }
+      });
+    }
+
+    const refreshBtn = document.getElementById("detail-refresh");
+    if (refreshBtn) {
+      refreshBtn.addEventListener("click", async () => {
+        refreshBtn.disabled = true;
+        refreshBtn.textContent = "Refreshing...";
+        try {
+          const res = await api(`/api/activities/${activity.id}/detail?refresh=1`);
+          renderActivityDetail(res.activity, res.detail, res.detail_error === true);
+        } catch (err) {
+          refreshBtn.disabled = false;
+          refreshBtn.textContent = "Refresh from Garmin";
+          alert(err.message);
+        }
+      });
+    }
+  }
+
+  async function openActivityDetail(id) {
+    showDetailSection();
+    const cached = activitiesCache.find((a) => a.id === id);
+    // Manual rows carry no Garmin detail: render instantly from the cached list
+    // row, zero fetch (ISC-354).
+    if (cached && cached.garmin_sourced === false) {
+      renderActivityDetail(cached, null, false);
+      return;
+    }
+    renderDetailLoading(cached || null);
+    try {
+      const res = await api(`/api/activities/${id}/detail`);
+      renderActivityDetail(res.activity, res.detail, res.detail_error === true);
+    } catch {
+      const body = document.getElementById("activity-detail-body");
+      body.innerHTML = backButtonHtml() + `<p class="detail-error">Could not load this activity.</p>`;
+      wireBack();
+    }
+  }
+
+  function handleRoute() {
+    const m = /^#activity\/(\d+)$/.exec(location.hash);
+    if (m) openActivityDetail(Number(m[1]));
+    else closeActivityDetail();
+  }
+  window.addEventListener("hashchange", handleRoute);
+
+  // --- Duplicates review (Activities view) -----------------------------
+  //
+  // A mustard banner over the list surfaces possible duplicate pairs (ISC-370,
+  // ISC-373). Expanding it shows each pair side by side with differing fields
+  // highlighted and three actions: keep both (dismiss), or merge keeping the
+  // left or the right record. Merge always confirms and names the record that
+  // dies, so there is no default destructive action (ISC-371). A disclosure
+  // lists dismissed pairs with an undismiss control. Zero candidates and zero
+  // dismissed shows nothing at all (ISC-372).
+
+  let dupPanelOpen = false;
+
+  async function loadDuplicates() {
+    let data;
+    try {
+      data = await api("/api/duplicates");
+    } catch {
+      return;
+    }
+    renderDuplicates(data.candidates || [], data.dismissed || []);
+  }
+
+  function dupFieldVal(sum, key) {
+    switch (key) {
+      case "sport":
+        return SPORT_LABELS[sum.sport] || sum.sport;
+      case "date": {
+        const clock = fmtClock(sum.start_time);
+        return `${formatDate(sum.start_time)}${clock ? ` ${clock}` : ""}`;
+      }
+      case "duration":
+        return formatDuration(sum.duration_s);
+      case "distance":
+        return sum.distance_m != null ? `${(sum.distance_m / 1000).toFixed(2)} km` : "none";
+      case "source":
+        return sum.source === "garmin" ? "Garmin" : "Manual";
+      case "title":
+        return sum.title || "(untitled)";
+      default:
+        return "";
+    }
+  }
+
+  function renderDupPair(pair) {
+    const fields = [
+      ["Sport", "sport"],
+      ["Date", "date"],
+      ["Duration", "duration"],
+      ["Distance", "distance"],
+      ["Source", "source"],
+      ["Title", "title"],
+    ];
+    const colA = [];
+    const colB = [];
+    fields.forEach(([label, key]) => {
+      const va = dupFieldVal(pair.a, key);
+      const vb = dupFieldVal(pair.b, key);
+      const diff = va !== vb ? " diff" : "";
+      colA.push(`<div class="dup-field${diff}"><span class="dup-k">${escapeHtml(label)}</span><span class="dup-v">${escapeHtml(va)}</span></div>`);
+      colB.push(`<div class="dup-field${diff}"><span class="dup-k">${escapeHtml(label)}</span><span class="dup-v">${escapeHtml(vb)}</span></div>`);
+    });
+    return `
+      <div class="dup-pair" data-a="${pair.a_id}" data-b="${pair.b_id}">
+        <div class="dup-cols">
+          <div class="dup-col"><div class="dup-col-title">Left, id ${pair.a_id}</div>${colA.join("")}</div>
+          <div class="dup-col"><div class="dup-col-title">Right, id ${pair.b_id}</div>${colB.join("")}</div>
+        </div>
+        <div class="dup-actions">
+          <button type="button" class="btn btn-secondary" data-dup="keepboth">Keep both</button>
+          <button type="button" class="btn" data-dup="mergeleft">Merge, keep left</button>
+          <button type="button" class="btn" data-dup="mergeright">Merge, keep right</button>
+        </div>
+      </div>`;
+  }
+
+  function renderDismissed(dismissed) {
+    const rows = dismissed
+      .map((p) => {
+        const aLabel = p.a ? `${SPORT_LABELS[p.a.sport] || p.a.sport} ${formatDate(p.a.start_time)}` : `id ${p.a_id}`;
+        const bLabel = p.b ? `${SPORT_LABELS[p.b.sport] || p.b.sport} ${formatDate(p.b.start_time)}` : `id ${p.b_id}`;
+        return `<div class="dup-dismissed-row"><span>${escapeHtml(aLabel)} and ${escapeHtml(bLabel)}</span><button type="button" class="icon-btn dup-undismiss" data-undismiss="${p.a_id},${p.b_id}">Undismiss</button></div>`;
+      })
+      .join("");
+    return `<details class="dup-dismissed"><summary>Dismissed pairs (${dismissed.length})</summary>${rows}</details>`;
+  }
+
+  function renderDuplicates(candidates, dismissed) {
+    const slot = document.getElementById("dup-slot");
+    if (!slot) return;
+    if (candidates.length === 0 && dismissed.length === 0) {
+      slot.innerHTML = "";
+      dupPanelOpen = false;
+      return;
+    }
+    const count = candidates.length;
+    // The coral count pill is the badge (ISC-373); the label carries no number so
+    // the two do not read as a run-together "11".
+    const bannerLabel = count > 0 ? `possible duplicate${count === 1 ? "" : "s"}` : "Duplicate review";
+    const countBadge = count > 0 ? `<span class="dup-count">${count}</span>` : "";
+    const caret = dupPanelOpen ? "▾" : "▸";
+
+    let html = `<button type="button" class="dup-banner" id="dup-banner">${countBadge}<span>${escapeHtml(bannerLabel)}</span><span class="dup-caret">${caret}</span></button>`;
+    if (dupPanelOpen) {
+      html += `<div class="dup-panel">`;
+      if (count === 0) {
+        html += `<p class="dup-allclear">No possible duplicates right now.</p>`;
+      } else {
+        html += candidates.map(renderDupPair).join("");
+      }
+      if (dismissed.length > 0) html += renderDismissed(dismissed);
+      html += `</div>`;
+    }
+    slot.innerHTML = html;
+
+    document.getElementById("dup-banner").addEventListener("click", () => {
+      dupPanelOpen = !dupPanelOpen;
+      renderDuplicates(candidates, dismissed);
+    });
+    if (dupPanelOpen) wireDupActions();
+  }
+
+  function wireDupActions() {
+    const slot = document.getElementById("dup-slot");
+    slot.querySelectorAll(".dup-pair").forEach((pairEl) => {
+      const aId = Number(pairEl.dataset.a);
+      const bId = Number(pairEl.dataset.b);
+      pairEl.querySelectorAll("[data-dup]").forEach((btn) => {
+        btn.addEventListener("click", async () => {
+          const kind = btn.dataset.dup;
+          try {
+            if (kind === "keepboth") {
+              await api("/api/duplicates/dismiss", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ aId, bId }),
+              });
+            } else {
+              const keepId = kind === "mergeleft" ? aId : bId;
+              const deleteId = kind === "mergeleft" ? bId : aId;
+              if (!window.confirm(`Merge will permanently delete activity id ${deleteId} and keep id ${keepId}. This cannot be undone. Continue?`)) return;
+              await api("/api/duplicates/merge", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ keepId, deleteId }),
+              });
+            }
+            await loadActivities(); // refreshes the list and re-runs the scan
+          } catch (err) {
+            alert(err.message);
+          }
+        });
+      });
+    });
+
+    slot.querySelectorAll("[data-undismiss]").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        const ids = btn.dataset.undismiss.split(",").map(Number);
+        try {
+          await api("/api/duplicates/undismiss", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ aId: ids[0], bId: ids[1] }),
+          });
+          await loadDuplicates();
+        } catch (err) {
+          alert(err.message);
+        }
+      });
+    });
+  }
 
   // --- Nutrition -------------------------------------------------------
   //
@@ -1295,7 +2000,70 @@
 
   async function loadStretch() {
     renderStretchCards();
+    renderSwimSets();
     await refreshStretchLogState();
+  }
+
+  // --- Swim sets -------------------------------------------------------
+
+  function renderSwimSets() {
+    const list = document.getElementById("swim-list");
+    if (!list) return;
+    list.innerHTML = SWIM_SETS.map((s, i) => {
+      const phase = (label, text) =>
+        `<div class="swim-phase"><span class="swim-phase-label">${escapeHtml(label)}</span>${escapeHtml(text)}</div>`;
+      return `
+      <div class="swim-card">
+        <div class="swim-head">
+          <div class="swim-name">${escapeHtml(s.name)}</div>
+          <div class="swim-meta">
+            <span class="swim-tag">${escapeHtml(String(s.minutes))} min</span>
+            <span class="swim-tag">${escapeHtml(String(s.distance_m))} m</span>
+            <span class="swim-tag">${escapeHtml(s.intensity)}</span>
+          </div>
+        </div>
+        ${phase("Warmup", s.warmup)}
+        ${phase("Drills", s.drills)}
+        ${phase("Main set", s.main)}
+        ${phase("Cooldown", s.cooldown)}
+        <div class="swim-actions">
+          <button type="button" class="btn swim-log-btn" data-swim="${i}">Log this set</button>
+        </div>
+      </div>`;
+    }).join("");
+
+    list.querySelectorAll("[data-swim]").forEach((btn) => {
+      btn.addEventListener("click", () => logSwimSet(btn));
+    });
+  }
+
+  // Logs a swim set as a swimming activity with the card's duration, through the
+  // same POST + undo-toast path the quick-log presets use (ISC-362, ISC-363).
+  async function logSwimSet(btn) {
+    if (btn.disabled) return;
+    const set = SWIM_SETS[Number(btn.dataset.swim)];
+    if (!set) return;
+    btn.disabled = true;
+    try {
+      const res = await api("/api/activities", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sport: "swimming",
+          start_time: new Date().toISOString(),
+          duration_s: set.minutes * 60,
+          distance_m: set.distance_m,
+          title: set.name,
+          notes: `Swim set: ${set.name}`,
+        }),
+      });
+      const activity = res.activity;
+      showToast(`Logged ${set.name}.`, activity ? activity.id : null);
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      btn.disabled = false;
+    }
   }
 
   let stretchLogInFlight = false; // double-submit guard, same pattern as add-activity
@@ -1408,7 +2176,10 @@
     try {
       await api("/api/week");
       showApp();
-      switchTab("dashboard");
+      // A direct load of #activity/ID renders straight into the detail (ISC-356);
+      // any other (or no) hash lands on the dashboard.
+      if (/^#activity\/\d+$/.test(location.hash)) handleRoute();
+      else switchTab("dashboard");
     } catch {
       showLogin("");
     }

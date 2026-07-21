@@ -55,7 +55,13 @@ function serveStatic(relativePath: string): Response {
     const fullPath = join(PUBLIC_DIR, relativePath);
     const bytes = readFileSync(fullPath);
     const type = MIME_TYPES[extname(fullPath)] ?? "application/octet-stream";
-    return new Response(bytes, { headers: { "Content-Type": type } });
+    // no-cache forces revalidation on every load. Without it Chrome's
+    // heuristic caching kept serving stale app.js/styles.css after deploys
+    // (observed 2026-07-21: a deployed CSS fix stayed invisible until a
+    // cache-busted fetch). One user, small files: correctness beats 304s.
+    return new Response(bytes, {
+      headers: { "Content-Type": type, "Cache-Control": "no-cache" },
+    });
   } catch {
     return new Response("Not found", { status: 404 });
   }

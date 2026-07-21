@@ -560,3 +560,153 @@ input.nutri-col-num{text-align:right;}
   .nutri-macros{gap:16px;}
   .login-card{box-shadow:5px 5px 0 var(--ink);}
 }
+
+/* ===================================================================
+   Wave 2 UI: workout detail, swim sets, race countdown, duplicates
+   =================================================================== */
+
+/* --- Activity row: whole row is a click-in to the detail view --- */
+.activity-item.clickable{cursor:pointer;border-radius:10px;transition:background 80ms ease;}
+.activity-item.clickable:hover{background:var(--tint);}
+.activity-item.clickable:focus-visible{outline:3px solid var(--cobalt);outline-offset:2px;}
+.activity-chevron{flex:none;color:var(--muted-text);font-size:1.1rem;font-weight:700;padding-left:2px;}
+
+/* --- Workout detail view --- */
+.detail-back{
+  display:inline-flex;align-items:center;gap:8px;
+  font-family:var(--font-head);font-weight:700;font-size:0.9rem;
+  color:var(--ink);background:var(--paper);
+  border:2px solid var(--ink);border-radius:999px;
+  padding:9px 18px;min-height:44px;cursor:pointer;
+  box-shadow:3px 3px 0 var(--ink);margin-bottom:18px;
+}
+.detail-back:hover{background:var(--mustard);}
+.detail-head{margin-bottom:6px;}
+.detail-title{font-family:var(--font-head);font-weight:700;font-size:1.6rem;color:var(--ink);line-height:1.15;}
+.detail-sub{color:var(--muted-text);font-size:0.92rem;margin-top:4px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+.detail-source-badge{
+  font-family:var(--font-head);font-size:0.66rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;
+  color:var(--ink);background:var(--mustard);border:2px solid var(--ink);border-radius:999px;padding:2px 8px;
+}
+.detail-loading,.detail-error{color:var(--muted-text);font-size:0.9rem;margin:10px 0;}
+.detail-error{color:var(--soft-text);}
+.detail-stat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:12px;margin:18px 0;}
+.detail-stat{background:var(--paper);border:2px solid var(--ink);border-radius:12px;padding:12px 14px;box-shadow:3px 3px 0 var(--ink);}
+.detail-stat:nth-child(4n+1){box-shadow:3px 3px 0 var(--coral);}
+.detail-stat:nth-child(4n+2){box-shadow:3px 3px 0 var(--teal);}
+.detail-stat:nth-child(4n+3){box-shadow:3px 3px 0 var(--cobalt);}
+.detail-stat:nth-child(4n+4){box-shadow:3px 3px 0 var(--mustard);}
+.detail-stat-label{font-family:var(--font-head);font-weight:700;font-size:0.68rem;text-transform:uppercase;letter-spacing:0.05em;color:var(--soft-text);margin-bottom:5px;}
+.detail-stat-value{font-family:var(--font-head);font-weight:700;font-size:clamp(1rem,1.9vw,1.35rem);color:var(--ink);white-space:nowrap;}
+
+/* RPE chips */
+.detail-block{margin:22px 0;}
+.detail-block-title{font-family:var(--font-head);font-weight:700;font-size:1.05rem;margin-bottom:10px;}
+.rpe-chips{display:flex;gap:8px;flex-wrap:wrap;}
+.rpe-chip{
+  min-width:44px;min-height:44px;padding:0 12px;
+  font-family:var(--font-head);font-weight:700;font-size:0.95rem;
+  color:var(--ink);background:var(--paper);
+  border:2px solid var(--ink);border-radius:10px;cursor:pointer;
+}
+.rpe-chip:hover{background:var(--tint);}
+.rpe-chip.active{background:var(--coral);box-shadow:2px 2px 0 var(--ink);}
+.rpe-chip.rpe-clear{background:var(--paper);color:var(--soft-text);}
+.rpe-chip.rpe-clear:hover{background:var(--tint);}
+
+/* Notes editor */
+.detail-notes{width:100%;padding:10px 12px;border:2px solid var(--ink);border-radius:10px;background:var(--paper);color:var(--ink);min-height:70px;}
+.detail-notes:focus{outline:3px solid var(--cobalt);outline-offset:1px;}
+.detail-notes-actions{display:flex;gap:12px;align-items:center;margin-top:10px;}
+
+/* Laps table */
+.detail-laps-wrap{overflow-x:auto;border:2px solid var(--ink);border-radius:12px;box-shadow:4px 4px 0 var(--ink);background:var(--paper);}
+.detail-laps{border-collapse:collapse;width:100%;min-width:420px;font-size:0.88rem;}
+.detail-laps th,.detail-laps td{padding:8px 12px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap;}
+.detail-laps th:first-child,.detail-laps td:first-child{text-align:left;}
+.detail-laps th{font-family:var(--font-head);font-weight:700;font-size:0.7rem;text-transform:uppercase;letter-spacing:0.04em;color:var(--soft-text);background:var(--cream);}
+.detail-laps tr:last-child td{border-bottom:0;}
+
+/* GPS mini-map */
+.detail-map{width:100%;max-width:340px;height:auto;background:var(--paper);border:2px solid var(--ink);border-radius:12px;box-shadow:4px 4px 0 var(--teal);display:block;}
+.detail-map-empty{color:var(--muted-text);font-size:0.9rem;background:var(--paper);border:2px dashed rgba(38,34,27,0.3);border-radius:12px;padding:16px;text-align:center;}
+.detail-refresh{
+  font-family:var(--font-head);font-weight:700;font-size:0.82rem;
+  color:var(--ink);background:var(--paper);border:2px solid var(--ink);
+  border-radius:999px;padding:8px 16px;min-height:44px;cursor:pointer;
+}
+.detail-refresh:hover{background:var(--mustard);}
+.detail-refresh:disabled{opacity:0.55;cursor:not-allowed;}
+
+/* --- Swim sets --- */
+.swim-intro{margin:-6px 0 16px;}
+.swim-list{display:flex;flex-direction:column;gap:16px;}
+.swim-card{background:var(--paper);border:2px solid var(--ink);border-radius:14px;padding:18px;box-shadow:4px 4px 0 var(--cobalt);}
+.swim-card:nth-child(3n+2){box-shadow:4px 4px 0 var(--teal);}
+.swim-card:nth-child(3n+3){box-shadow:4px 4px 0 var(--grape);}
+.swim-head{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px;}
+.swim-name{font-family:var(--font-head);font-weight:700;font-size:1.15rem;color:var(--ink);flex:1 1 auto;min-width:0;}
+.swim-meta{display:flex;gap:8px;flex-wrap:wrap;}
+.swim-tag{white-space:nowrap;font-family:var(--font-head);font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:var(--ink);background:var(--tint);border:2px solid var(--ink);border-radius:999px;padding:2px 9px;}
+.swim-phase{margin:7px 0;font-size:0.92rem;color:var(--ink);}
+.swim-phase-label{font-family:var(--font-head);font-weight:700;font-size:0.7rem;text-transform:uppercase;letter-spacing:0.04em;color:var(--link);margin-right:6px;}
+.swim-actions{margin-top:14px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;}
+.swim-log-btn{min-height:44px;}
+
+/* --- Race countdown --- */
+.race-card{box-shadow:4px 4px 0 var(--coral);}
+.race-name{font-family:var(--font-head);font-weight:700;font-size:1.15rem;color:var(--ink);margin-bottom:6px;overflow-wrap:break-word;}
+.race-days{font-family:var(--font-head);font-weight:700;font-size:2.6rem;color:var(--coral);line-height:1;}
+.race-days-label{font-size:0.9rem;color:var(--muted-text);margin-top:2px;}
+.race-past{font-family:var(--font-head);font-weight:700;font-size:1.2rem;color:var(--ink);}
+.race-taper{list-style:none;margin:14px 0 0;padding:0;}
+.race-taper li{position:relative;padding:5px 0 5px 22px;font-size:0.9rem;color:var(--ink);}
+.race-taper li::before{content:"\2713";position:absolute;left:0;color:var(--teal);font-weight:700;}
+.race-taper-title{font-family:var(--font-head);font-weight:700;font-size:0.72rem;text-transform:uppercase;letter-spacing:0.05em;color:var(--soft-text);margin-top:14px;}
+.race-card-actions{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap;}
+.race-mini-btn{font-family:var(--font-head);font-weight:700;font-size:0.78rem;color:var(--ink);background:var(--paper);border:2px solid var(--ink);border-radius:999px;padding:7px 14px;min-height:44px;cursor:pointer;}
+.race-mini-btn:hover{background:var(--mustard);}
+.race-goal-set{margin-top:8px;}
+.race-goal-link{
+  display:inline-flex;align-items:center;gap:6px;
+  font-family:var(--font-head);font-weight:700;font-size:0.85rem;color:var(--link);
+  background:transparent;border:0;cursor:pointer;padding:8px 0;min-height:44px;text-decoration:underline;
+}
+.race-goal-form{background:var(--paper);border:2px solid var(--ink);border-radius:12px;padding:16px;box-shadow:3px 3px 0 var(--ink);margin-top:8px;}
+.race-goal-form .field{margin-bottom:12px;}
+.race-goal-form .form-actions{margin-top:8px;}
+.race-form-status{font-size:0.82rem;color:var(--muted-text);}
+
+/* --- Duplicates review --- */
+.dup-banner{
+  display:flex;align-items:center;gap:10px;width:100%;text-align:left;
+  font-family:var(--font-head);font-weight:700;font-size:0.95rem;color:var(--ink);
+  background:var(--tint);border:2px solid var(--ink);border-radius:12px;
+  padding:12px 16px;min-height:44px;cursor:pointer;box-shadow:3px 3px 0 var(--mustard);margin-bottom:16px;
+}
+.dup-banner:hover{background:rgba(239,169,40,0.26);}
+.dup-count{background:var(--coral);border:2px solid var(--ink);border-radius:999px;padding:1px 9px;font-size:0.8rem;}
+.dup-caret{margin-left:auto;}
+.dup-panel{margin-bottom:20px;}
+.dup-allclear{color:var(--muted-text);font-size:0.9rem;padding:6px 0 14px;}
+.dup-pair{background:var(--paper);border:2px solid var(--ink);border-radius:14px;padding:16px;box-shadow:4px 4px 0 var(--ink);margin-bottom:16px;}
+.dup-cols{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.dup-col{border:2px solid var(--line);border-radius:10px;padding:12px;background:var(--cream);}
+.dup-col-title{font-family:var(--font-head);font-weight:700;font-size:0.72rem;text-transform:uppercase;letter-spacing:0.04em;color:var(--soft-text);margin-bottom:8px;}
+.dup-field{font-size:0.85rem;color:var(--ink);padding:3px 0;display:flex;justify-content:space-between;gap:10px;}
+.dup-field .dup-k{color:var(--muted-text);}
+.dup-field.diff .dup-v{background:rgba(232,95,65,0.16);border-radius:5px;padding:0 5px;font-weight:700;}
+.dup-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;}
+.dup-actions .btn{min-height:44px;}
+.dup-dismissed{margin-top:8px;}
+.dup-dismissed > summary{cursor:pointer;font-family:var(--font-head);font-weight:700;font-size:0.85rem;color:var(--soft-text);padding:6px 0;}
+.dup-dismissed-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid var(--line);font-size:0.85rem;}
+.dup-dismissed-row:last-child{border-bottom:0;}
+.dup-undismiss{min-height:44px;}
+
+@media (max-width:480px){
+  .detail-title{font-size:1.35rem;}
+  .detail-stat-grid{grid-template-columns:1fr 1fr;}
+  .dup-cols{grid-template-columns:1fr;}
+  .race-days{font-size:2.2rem;}
+}

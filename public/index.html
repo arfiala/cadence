@@ -67,7 +67,7 @@
         <button class="nav-tab" data-view="nutrition">Nutrition</button>
         <button class="nav-tab" data-view="trends">Trends</button>
         <button class="nav-tab" data-view="races">Races</button>
-        <button class="nav-tab" data-view="stretch">Stretch</button>
+        <button class="nav-tab" data-view="stretch">Train</button>
         <button class="nav-tab" data-view="sleep">Sleep</button>
         <button class="nav-tab" data-view="sync">Sync</button>
       </nav>
@@ -125,6 +125,12 @@
         </div>
 
         <div class="dash-col dash-col-side">
+          <div id="view-race-card" hidden>
+            <h2 class="section-title">Race countdown</h2>
+            <div class="card race-card" id="race-card-body"></div>
+            <hr class="rule dash-rule">
+          </div>
+
           <div id="view-weight-card" hidden>
             <h2 class="section-title">Weight progress</h2>
             <div class="card weight-card">
@@ -143,12 +149,15 @@
           <h2 class="section-title">Personal records</h2>
           <div class="pr-board" id="pr-board"></div>
           <div class="streak-row" id="streak-row"></div>
+
+          <div id="race-goal-set" class="race-goal-set" hidden></div>
         </div>
       </div>
     </section>
 
     <section id="view-activities" class="section" hidden>
       <h2 class="section-title">Recent activities</h2>
+      <div id="dup-slot"></div>
       <ul class="activity-list" id="activity-list"></ul>
 
       <details class="add-activity-details">
@@ -334,6 +343,17 @@
       </div>
       <div class="stretch-list" id="stretch-list"></div>
       <p class="muted stretch-footnote">Based on Ben Patrick's ATG standards. Longer holds (up to 2 min) are better; once a day is enough to progress. Not medical advice. Ease into range and stop anything that hurts.</p>
+
+      <!--
+        Swim sets: hand-authored static reference workouts (ISC-361..365), no
+        adaptive logic. The four-phase structure (warmup, drill block, main set,
+        cooldown) follows the workout-writing guidance from:
+        https://www.usms.org/fitness-and-training/articles-and-videos/articles/how-to-write-a-swimming-workout
+        https://www.aquaplan.fit/blog/four-phase-swim-workout-method
+      -->
+      <h2 class="section-title">Swim sets</h2>
+      <p class="muted swim-intro">Six ready to swim workouts for fitness. Pick one that fits your time, then log it when you finish.</p>
+      <div class="swim-list" id="swim-list"></div>
     </section>
 
     <section id="view-sleep" class="section" hidden>
@@ -373,6 +393,10 @@
         <button class="btn btn-secondary" id="csv-import-btn">Import</button>
         <p id="csv-result" class="muted"></p>
       </div>
+    </section>
+
+    <section id="view-activity-detail" class="section" hidden>
+      <div id="activity-detail-body"></div>
     </section>
 
   </main>
