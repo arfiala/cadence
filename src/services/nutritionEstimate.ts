@@ -51,7 +51,9 @@ const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";
 // manual entry. GEMINI_API_KEY wins over ANTHROPIC_API_KEY when both exist
 // (the free path is the one Austin asked for).
 const GEMINI_URL_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
-const DEFAULT_GEMINI_MODEL = "gemini-2.5-flash";
+// gemini-flash-latest: Google retires pinned versions for NEW keys (live 404
+// "no longer available to new users", 2026-07-23); the alias tracks current.
+const DEFAULT_GEMINI_MODEL = "gemini-flash-latest";
 
 // Upper bound on a single estimation call. Estimation is interactive (a user is
 // waiting on the entry), so a slow call should fail fast to the manual-entry
