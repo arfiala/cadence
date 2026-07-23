@@ -576,6 +576,26 @@ export function runMigrations(database: Database): void {
   addColumnIfMissing(database, "activities", "golf_score", "INTEGER");
   remapGolfRows(database);
 
+  // Garmin Golf scorecards (ISC-423), synced best-effort from the Garmin Golf
+  // backend. Keyed on Garmin's own scorecard id (UNIQUE) so re-sync is
+  // idempotent. round_date is the America/New_York calendar day derived from
+  // start_time, used to match scorecards to golf activities. Entirely separate
+  // from activities; never feeds G1 or the load engine (ISC-434).
+  database.exec(`
+    CREATE TABLE IF NOT EXISTS golf_scorecards (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      scorecard_id TEXT NOT NULL UNIQUE,
+      course_name TEXT,
+      start_time TEXT,
+      round_date TEXT,
+      strokes INTEGER,
+      holes_played INTEGER,
+      round_type TEXT,
+      created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+      updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+    );
+  `);
+
   // Power columns on activities (ISC-135), added via the guarded ALTER so an
   // existing production DB gains them without a rebuild and a fresh DB is
   // unaffected by the double run (ISC-10).

@@ -4,6 +4,7 @@
 // SINGLE implementation the "Sync now" HTTP route, the 6h scheduler, and the
 // MCP trigger_sync tool (via the HTTP API) all call through — ISC-30.
 
+import { nyDateString } from "../week";
 import { db } from "../db";
 import type { ActivityRow, SleepRow } from "../db";
 import type { GarminClient, GarminActivity, GarminSleep } from "./types";
@@ -211,6 +212,84 @@ async function syncSleep(client: GarminClient): Promise<{ seen: number; new: num
   }
 }
 
+// Garmin Golf scorecards ride the same run, best-effort like sleep (ISC-424):
+// a throw or a hang can never fail the sync, activities always commit first.
+// Defensive parse (ISC-425): the payload is unknown-typed; missing fields
+// degrade to null; a non-empty payload parsing to zero usable scorecards logs
+// its key set once (ISC-426, the sleep lesson).
+const GOLF_FETCH_TIMEOUT_MS = 30_000;
+let golfShapeWarned = false;
+
+export function toScorecard(raw: Record<string, unknown>): { scorecardId: string; courseName: string | null; startTime: string | null; strokes: number | null; holesPlayed: number | null; roundType: string | null } | null {
+  const id = raw.id;
+  if (id === undefined || id === null) return null;
+  const num = (v: unknown): number | null =>
+    typeof v === "number" && Number.isFinite(v) ? v : null;
+  const str = (v: unknown): string | null => (typeof v === "string" && v.length > 0 ? v : null);
+  return {
+    scorecardId: String(id),
+    courseName: str(raw.courseName),
+    startTime: str(raw.startTime),
+    strokes: num(raw.strokes) ?? num(raw.scoreWithoutHandicap),
+    holesPlayed: num(raw.holesCompleted),
+    roundType: str(raw.roundType),
+  };
+}
+
+export async function syncGolf(client: GarminClient): Promise<{ seen: number; new: number }> {
+  if (client.listGolfScorecards === undefined) return { seen: 0, new: 0 };
+  try {
+    const payload = await Promise.race([
+      client.listGolfScorecards(),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new GarminSyncError("golf fetch timed out")), GOLF_FETCH_TIMEOUT_MS).unref(),
+      ),
+    ]);
+    const root = (payload ?? {}) as Record<string, unknown>;
+    const list = Array.isArray(root.scorecardSummaries)
+      ? (root.scorecardSummaries as Record<string, unknown>[])
+      : Array.isArray(payload)
+        ? (payload as Record<string, unknown>[])
+        : [];
+    const cards = list.map(toScorecard).filter((c): c is NonNullable<ReturnType<typeof toScorecard>> => c !== null);
+    if (list.length > 0 && cards.length === 0 && !golfShapeWarned) {
+      golfShapeWarned = true;
+      console.warn(
+        `[cadence] Garmin Golf returned ${list.length} scorecard(s) but none parsed. ` +
+          `First item keys: [${Object.keys(list[0] ?? {}).join(", ")}]`,
+      );
+    }
+    let newCount = 0;
+    const upsert = db.query(
+      `INSERT INTO golf_scorecards (scorecard_id, course_name, start_time, round_date, strokes, holes_played, round_type)
+       VALUES (?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT(scorecard_id) DO UPDATE SET
+         course_name = excluded.course_name,
+         start_time = excluded.start_time,
+         round_date = excluded.round_date,
+         strokes = excluded.strokes,
+         holes_played = excluded.holes_played,
+         round_type = excluded.round_type,
+         updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now')
+       WHERE course_name IS NOT excluded.course_name
+          OR strokes IS NOT excluded.strokes
+          OR holes_played IS NOT excluded.holes_played`,
+    );
+    for (const c of cards) {
+      const existed =
+        db.query("SELECT 1 x FROM golf_scorecards WHERE scorecard_id = ?").get(c.scorecardId) !==
+        null;
+      const roundDate = c.startTime ? nyDateString(new Date(c.startTime)) : null;
+      upsert.run(c.scorecardId, c.courseName, c.startTime, roundDate, c.strokes, c.holesPlayed, c.roundType);
+      if (!existed) newCount += 1;
+    }
+    return { seen: cards.length, new: newCount };
+  } catch {
+    // Swallow: same contract as sleep. The next run retries.
+    return { seen: 0, new: 0 };
+  }
+}
+
 // Runs one sync attempt against the given client and records the result in
 // sync_runs, whether it succeeds or fails (ISC-28: a sync failure must never
 // crash the server, and must leave a queryable record).
@@ -234,6 +313,9 @@ export async function runSyncOnce(client: GarminClient): Promise<SyncOutcome> {
 
     // Sleep rides in the same run (one Garmin session), but never breaks it.
     const sleep = await syncSleep(client);
+
+    // Golf scorecards likewise: best-effort, never break the run (ISC-424).
+    await syncGolf(client);
 
     db.query(
       "UPDATE sync_runs SET finished_at = ?, status = 'success', activities_seen = ?, activities_new = ?, sleep_seen = ?, sleep_new = ? WHERE id = ?",

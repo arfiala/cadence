@@ -61,7 +61,25 @@ export interface GarminClient {
   // (ISC-330).
   getSplits?(garminId: string): Promise<unknown>;
   getDetails?(garminId: string): Promise<unknown>;
+
+  // Garmin Golf scorecard summaries (ISC-421..427). OPTIONAL, same fake-safe
+  // precedent as sleep/detail. The endpoint is outside the SDK; the real
+  // client rides the SDK's own captured session headers. Returns `unknown`:
+  // parsed defensively at the sync boundary.
+  listGolfScorecards?(): Promise<unknown>;
 }
+
+// Normalized Garmin Golf scorecard, parsed defensively from the live shape
+// (probed 2026-07-23: id, courseName, startTime, strokes, scoreWithoutHandicap,
+// holesCompleted, roundType among 16 keys).
+export type GolfScorecard = {
+  scorecardId: string;
+  courseName: string | null;
+  startTime: string | null; // as Garmin sent it
+  strokes: number | null;
+  holesPlayed: number | null;
+  roundType: string | null;
+};
 
 // Thrown by a GarminClient implementation on any failure (bad creds,
 // network, rate limit, MFA required but not available non-interactively).

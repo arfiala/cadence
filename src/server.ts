@@ -18,6 +18,7 @@ import { getSleep } from "./routes/sleep";
 import { importCsv } from "./routes/csv";
 import { postZwiftPowerSync, getZwiftPowerResults, getZwiftPowerStatus } from "./routes/zwiftpower";
 import { getTrainingLoad, getConsistency, getRecords, getDigest, getWeight, getG1Risk, getPacing, getYoy, getPowerCurveRoute } from "./routes/metrics";
+import { handleGolfRounds } from "./routes/golf";
 import { getActivityDetail } from "./routes/activityDetail";
 import { getDuplicates, postDismissDuplicate, postUndismissDuplicate, postMergeDuplicate } from "./routes/duplicates";
 import {
@@ -112,6 +113,7 @@ async function handleApi(req: Request, url: URL): Promise<Response> {
   if (path === "/api/zwiftpower/results" && method === "GET") return getZwiftPowerResults();
   if (path === "/api/zwiftpower/status" && method === "GET") return getZwiftPowerStatus();
 
+  if (path === "/api/golf/rounds" && method === "GET") return handleGolfRounds();
   if (path === "/api/metrics/training-load" && method === "GET") return getTrainingLoad(url);
   if (path === "/api/metrics/consistency" && method === "GET") return getConsistency();
   if (path === "/api/metrics/records" && method === "GET") return getRecords();

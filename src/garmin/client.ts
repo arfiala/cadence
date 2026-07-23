@@ -55,10 +55,29 @@ const SLEEP_TIMESTAMP_FIELDS = [
   "sleepEndTimestampGMT",
 ];
 
+// Latest auth headers seen on SDK traffic to connectapi.garmin.com. The SDK
+// hides its HttpClient, but Garmin Golf scorecards live on an endpoint the SDK
+// does not wrap (/gcs-golfcommunity/, path verified against the
+// python-garminconnect community library AND a live 200 probe from this box,
+// 2026-07-23). Capturing the headers the SDK itself just used lets the golf
+// fetch ride the exact same session with zero extra logins. Never persisted,
+// never logged.
+let lastConnectApiHeaders: Record<string, string> | null = null;
+
+function captureAuthHeaders(url: string, init?: RequestInit): void {
+  if (!url.includes("connectapi.garmin.com") || !init?.headers) return;
+  const h: Record<string, string> = {};
+  const src = init.headers;
+  if (src instanceof Headers) src.forEach((v, k) => (h[k] = v));
+  else Object.assign(h, src as Record<string, string>);
+  if (h.Authorization || h.authorization) lastConnectApiHeaders = h;
+}
+
 const sleepCoercingFetch = async (
   input: string | URL | Request,
   init?: RequestInit,
 ): Promise<Response> => {
+  captureAuthHeaders(input instanceof Request ? input.url : String(input), init);
   const res = await fetch(input, init);
   const url = input instanceof Request ? input.url : String(input);
   if (!url.includes("/wellness/dailySleepData/")) return res;
@@ -375,6 +394,37 @@ export function createRealGarminClient(): GarminClient {
         if (err instanceof GarminSyncError) throw err;
         throw new GarminSyncError(
           `Garmin Connect sleep request failed: ${err instanceof Error ? err.message : String(err)}`,
+          { cause: err },
+        );
+      }
+    },
+
+    // Garmin Golf scorecard summaries (ISC-421..427). The SDK wraps no golf
+    // endpoint, so this rides the auth headers the SDK itself just used
+    // (captured by the fetch seam above). authenticate() + a 1-item activities
+    // list guarantees fresh headers exist before the golf call. Best-effort by
+    // contract: callers treat a throw as "no scorecards this run".
+    async listGolfScorecards(): Promise<unknown> {
+      try {
+        const garmin = await authenticate();
+        if (!lastConnectApiHeaders) {
+          await garmin.activities.list({ limit: 1 });
+        }
+        if (!lastConnectApiHeaders) {
+          throw new GarminSyncError("No Garmin session headers available for the golf fetch.");
+        }
+        const res = await fetch(
+          "https://connectapi.garmin.com/gcs-golfcommunity/api/v2/scorecard/summary?per-page=200",
+          { headers: lastConnectApiHeaders, signal: AbortSignal.timeout(15_000) },
+        );
+        if (!res.ok) {
+          throw new GarminSyncError(`Garmin Golf scorecard request returned ${res.status}.`);
+        }
+        return await res.json();
+      } catch (err) {
+        if (err instanceof GarminSyncError) throw err;
+        throw new GarminSyncError(
+          `Garmin Golf request failed: ${err instanceof Error ? err.message : String(err)}`,
           { cause: err },
         );
       }

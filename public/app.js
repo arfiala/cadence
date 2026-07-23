@@ -2054,9 +2054,8 @@
     if (!statsEl || !listEl || !emptyEl) return;
     let rounds = [];
     try {
-      const data = await api("/api/activities");
-      activitiesCache = data.activities || [];
-      rounds = activitiesCache.filter((a) => a.sport === "golf");
+      const data = await api("/api/golf/rounds");
+      rounds = data.rounds || [];
     } catch {
       return;
     }
@@ -2067,12 +2066,12 @@
       return;
     }
     emptyEl.hidden = true;
-    const year = new Date().getFullYear();
-    const thisYear = rounds.filter((r) => new Date(r.start_time).getFullYear() === year);
-    const scores = rounds.map((r) => r.golf_score).filter((v) => v != null);
+    const year = String(new Date().getFullYear());
+    const thisYear = rounds.filter((r) => (r.date || "").startsWith(year));
+    const scores = rounds.map((r) => r.display_score).filter((v) => v != null);
     const best = scores.length ? Math.min(...scores) : null;
     const avg = scores.length ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : null;
-    const last = rounds[0] ? formatDate(rounds[0].start_time) : "--";
+    const last = rounds[0] && rounds[0].start_time ? formatDate(rounds[0].start_time) : "--";
     const chip = (label, value) =>
       `<div class="golf-chip"><div class="golf-chip-label">${label}</div><div class="golf-chip-value">${value}</div></div>`;
     statsEl.innerHTML =
@@ -2082,32 +2081,43 @@
       chip("Last round", last);
     listEl.innerHTML = rounds
       .map((r) => {
-        const km = r.distance_m != null ? ` &middot; ${(r.distance_m / 1000).toFixed(1)} km walked` : "";
-        const hr = r.avg_hr != null ? ` &middot; ${r.avg_hr} bpm` : "";
-        const score =
-          r.golf_score != null
-            ? `<button type="button" class="golf-score-chip" data-golf-id="${r.id}">${r.golf_score}</button>`
-            : `<button type="button" class="golf-score-chip golf-score-none" data-golf-id="${r.id}">Add score</button>`;
-        const title = r.title ? escapeHtml(r.title) : "Round of golf";
+        const a = r.activity;
+        const dur = a ? ` &middot; ${formatDuration(a.duration_s)}` : "";
+        const km = a && a.distance_m != null ? ` &middot; ${(a.distance_m / 1000).toFixed(1)} km walked` : "";
+        const holes = r.holes_played != null ? ` &middot; ${r.holes_played} holes` : "";
+        const title = escapeHtml(r.course_name || (a && a.title) || "Round of golf");
+        const when = r.start_time ? formatDate(r.start_time) : (r.date || "");
+        let scoreHtml;
+        if (r.display_score != null) {
+          const src = r.score_source === "garmin" ? " title=\"Synced from Garmin Golf\"" : "";
+          const editable = a ? ` data-golf-id="${a.id}"` : "";
+          scoreHtml = `<button type="button" class="golf-score-chip"${editable}${src}${a ? "" : " disabled"}>${r.display_score}</button>`;
+        } else if (a) {
+          scoreHtml = `<button type="button" class="golf-score-chip golf-score-none" data-golf-id="${a.id}">Add score</button>`;
+        } else {
+          scoreHtml = "";
+        }
+        const clickable = a ? " clickable" : "";
+        const chevron = a ? `<span class="activity-chevron" aria-hidden="true">&rsaquo;</span>` : "";
         return `
-        <li class="activity-item clickable golf-row" data-activity-id="${r.id}" tabindex="0" role="button" aria-label="Open round detail">
+        <li class="activity-item golf-row${clickable}"${a ? ` data-activity-id="${a.id}" tabindex="0" role="button" aria-label="Open round detail"` : ""}>
           <div class="activity-icon">\u{26F3}</div>
           <div class="activity-main">
             <div class="activity-title">${title}</div>
-            <div class="activity-meta">${formatDate(r.start_time)} &middot; ${formatDuration(r.duration_s)}${km}${hr}</div>
+            <div class="activity-meta">${when}${holes}${dur}${km}</div>
           </div>
-          <div class="activity-actions">${score}</div>
-          <span class="activity-chevron" aria-hidden="true">&rsaquo;</span>
+          <div class="activity-actions">${scoreHtml}</div>
+          ${chevron}
         </li>`;
       })
       .join("");
-    listEl.querySelectorAll(".golf-score-chip").forEach((btn) => {
+    listEl.querySelectorAll(".golf-score-chip[data-golf-id]").forEach((btn) => {
       btn.addEventListener("click", (e) => {
         e.stopPropagation();
         startGolfScoreEdit(btn);
       });
     });
-    listEl.querySelectorAll(".golf-row").forEach((row) => {
+    listEl.querySelectorAll(".golf-row.clickable").forEach((row) => {
       const open = (e) => {
         if (e.target.closest(".activity-actions")) return;
         location.hash = `#activity/${row.dataset.activityId}`;
