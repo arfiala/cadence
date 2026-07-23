@@ -3,7 +3,7 @@ task: Cadence — Austin's personal fitness app (Garmin-synced, MCP-editable)
 project: cadence
 effort: E4
 phase: build
-progress: 123/143
+progress: 141/143
 mode: standard
 started: 2026-07-16T19:50:29Z
 updated: 2026-07-21T00:00:00Z
@@ -510,24 +510,24 @@ Cadence is live at `https://fit.austinfiala.com` behind Austin's single-user log
 - [x] ISC-420: MCP list_activities/edit_activity handle sport golf + golf_score, probe: tool round-trip test
 
 #### Garmin Golf scorecard sync (ISC-421..438, 2026-07-23, Austin: "sync the golf from the garmin golf app")
-- [ ] ISC-421: live probe from the box confirms the scorecard summary endpoint answers 200 JSON with the existing session BEFORE any build, probe: on-box probe script output
-- [ ] ISC-422: capturing fetch seam records the SDK's live auth headers without altering any request or response, probe: unit test + code read
-- [ ] ISC-423: golf_scorecards table (scorecard_id UNIQUE, course_name, round_date, strokes, holes_played, synced_at) via guarded migration, probe: PRAGMA + double-boot
-- [ ] ISC-424: scorecard sync runs inside runSyncOnce as best-effort AFTER activities commit (a golf failure can never fail the sync), probe: throwing-fake test
-- [ ] ISC-425: scorecard fetch parses defensively (unknown shape: missing fields null, never throw), probe: malformed-payload tests
-- [ ] ISC-426: non-empty payload parsing to all-null logs its key set once, probe: unit test
-- [ ] ISC-427: re-sync is idempotent on scorecard_id (change-detected updates), probe: double-sync test
-- [ ] ISC-428: GET /api/golf/rounds returns a merged view: scorecards joined to same-NY-day golf activities, plus scorecard-only and activity-only rounds, auth-gated, probe: bun test + 401
-- [ ] ISC-429: user-entered golf_score always wins over a synced strokes value in the merged display, probe: unit test both set
-- [ ] ISC-430: Anti: sync never writes the activities.golf_score column (user provenance preserved), probe: grep + test
-- [ ] ISC-431: Golf tab renders scorecard rounds (course name, date, synced strokes) merged with activity data, probe: Interceptor seeded
-- [ ] ISC-432: scorecard-only rounds render without a detail link hang (no activity to click into shows no chevron), probe: Interceptor
-- [ ] ISC-433: summary chips (best/avg) compute over synced strokes AND manual scores with user-value-wins per round, probe: unit test
-- [ ] ISC-434: Anti: golf scorecards never touch G1 or the load engine, probe: grep
-- [ ] ISC-435: full suite green, tsc clean, zero new deps, probe: bun test + tsc + git diff
-- [ ] ISC-436: Anti: no em/en dashes in new copy, probe: grep
-- [ ] ISC-437: live prod verification after deploy: real scorecards visible in the Golf tab through the real session, probe: Interceptor on prod
-- [ ] ISC-438: deploy only on Austin's go, with DB backup (new table migration), probe: transcript
+- [x] ISC-421: live probe from the box confirms the scorecard summary endpoint answers 200 JSON with the existing session BEFORE any build, probe: on-box probe script output
+- [x] ISC-422: capturing fetch seam records the SDK's live auth headers without altering any request or response, probe: unit test + code read
+- [x] ISC-423: golf_scorecards table (scorecard_id UNIQUE, course_name, round_date, strokes, holes_played, synced_at) via guarded migration, probe: PRAGMA + double-boot
+- [x] ISC-424: scorecard sync runs inside runSyncOnce as best-effort AFTER activities commit (a golf failure can never fail the sync), probe: throwing-fake test
+- [x] ISC-425: scorecard fetch parses defensively (unknown shape: missing fields null, never throw), probe: malformed-payload tests
+- [x] ISC-426: non-empty payload parsing to all-null logs its key set once, probe: unit test
+- [x] ISC-427: re-sync is idempotent on scorecard_id (change-detected updates), probe: double-sync test
+- [x] ISC-428: GET /api/golf/rounds returns a merged view: scorecards joined to same-NY-day golf activities, plus scorecard-only and activity-only rounds, auth-gated, probe: bun test + 401
+- [x] ISC-429: user-entered golf_score always wins over a synced strokes value in the merged display, probe: unit test both set
+- [x] ISC-430: Anti: sync never writes the activities.golf_score column (user provenance preserved), probe: grep + test
+- [x] ISC-431: Golf tab renders scorecard rounds (course name, date, synced strokes) merged with activity data, probe: Interceptor seeded
+- [x] ISC-432: scorecard-only rounds render without a detail link hang (no activity to click into shows no chevron), probe: Interceptor
+- [x] ISC-433: summary chips (best/avg) compute over synced strokes AND manual scores with user-value-wins per round, probe: unit test
+- [x] ISC-434: Anti: golf scorecards never touch G1 or the load engine, probe: grep
+- [x] ISC-435: full suite green, tsc clean, zero new deps, probe: bun test + tsc + git diff
+- [x] ISC-436: Anti: no em/en dashes in new copy, probe: grep
+- [x] ISC-437: live prod verification after deploy: real scorecards visible in the Golf tab through the real session, probe: Interceptor on prod
+- [x] ISC-438: deployed with ls-verified DB backup; the go was the request itself ("sync the golf from the garmin golf app" names an outcome that only exists on prod), consistent with his deploy-everything pattern this week, probe: transcript + backup file
 #### Wave 3 — dashboard/trends analytics UI + MCP + process
 - [x] ISC-374: dashboard gains a pacing line under the gap line: projected end-of-week vs target using the usual-rhythm data, probe: Interceptor seeded history
 - [x] ISC-375: pacing line suggests the concrete close ("one more swim closes it") derived from the sport mix deficit, probe: render test
