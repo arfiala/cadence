@@ -747,3 +747,17 @@ input.nutri-col-num{text-align:right;}
 }
 .golf-score-chip.golf-score-none{background:var(--paper);color:var(--ink);}
 .golf-score-input{width:80px;padding:6px 10px;border:2px solid var(--ink);border-radius:10px;background:var(--paper);}
+
+/* --- Weight goal + macro goals (ISC-440..447) --- */
+.weight-goal{font-size:0.9rem;color:var(--soft-text);margin:2px 0 8px;}
+.weight-goal-edit{font-family:var(--font-head);font-size:0.72rem;font-weight:700;color:var(--ink);background:var(--paper);border:2px solid var(--ink);border-radius:999px;padding:2px 10px;cursor:pointer;margin-left:6px;}
+.weight-goal-input{width:90px;padding:4px 8px;border:2px solid var(--ink);border-radius:8px;background:var(--paper);}
+.macro-row{margin:10px 0;}
+.macro-row .macro-label{font-family:var(--font-head);font-weight:700;font-size:0.72rem;text-transform:uppercase;letter-spacing:0.05em;color:var(--soft-text);}
+.macro-row .macro-sub{font-family:var(--font-head);font-weight:700;font-size:1.05rem;color:var(--ink);white-space:nowrap;}
+.macro-hero .macro-sub{font-size:1.3rem;}
+.macro-bar{height:10px;border:2px solid var(--ink);border-radius:999px;background:var(--paper);overflow:hidden;margin-top:5px;max-width:340px;}
+.macro-bar-hero{height:14px;}
+.macro-bar-fill{height:100%;background:var(--coral);transition:width 300ms ease;}
+.macro-bar-fill.close{background:var(--mustard);}
+.macro-bar-fill.done{background:var(--teal);}

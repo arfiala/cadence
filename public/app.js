@@ -479,7 +479,7 @@
       if (!pacing || pacing.insufficient_history) {
         line.hidden = true;
       } else {
-        let text = `Usual rhythm lands you at ${Math.round(risk.projectedSessions)} sessions, ${Number(risk.projectedHours).toFixed(1)} h by Sunday.`;
+        let text = (() => { const n = Math.round(risk.projectedSessions); return `Usual rhythm lands you at ${n} ${n === 1 ? "session" : "sessions"}, ${Number(risk.projectedHours).toFixed(1)} h by Sunday.`; })();
         if (risk.verdict !== "met" && week.gap_sessions > 0) {
           text += ` ${suggestClose(week)}`;
         }
@@ -602,6 +602,47 @@
       }
     }
 
+    // Weight goal (ISC-440/442): a goal line with kg-to-goal, plus an inline
+    // set/edit/clear affordance. Renders only on the dashboard card (els.goal
+    // present); absent goal keeps the widget byte-identical (ISC-441).
+    const goalEl = els.goal ? document.getElementById(els.goal) : null;
+    if (goalEl) {
+      const g = data.weight_goal_kg;
+      if (g != null && data.current != null) {
+        const diff = Math.round((data.current - g) * 10) / 10;
+        const dir = diff > 0 ? `${diff} ${unit} above goal` : diff < 0 ? `${Math.abs(diff)} ${unit} below goal` : "at goal";
+        goalEl.innerHTML = `Goal ${g} ${unit} &middot; ${dir} <button type="button" class="weight-goal-edit" id="${els.goal}-edit">Edit</button>`;
+        goalEl.hidden = false;
+      } else {
+        goalEl.innerHTML = `<button type="button" class="weight-goal-edit" id="${els.goal}-edit">Set a weight goal</button>`;
+        goalEl.hidden = false;
+      }
+      const editBtn = document.getElementById(`${els.goal}-edit`);
+      if (editBtn) {
+        editBtn.addEventListener("click", () => {
+          goalEl.innerHTML = `<input type="number" step="0.1" min="30" max="200" class="weight-goal-input" id="${els.goal}-input" placeholder="kg" value="${data.weight_goal_kg ?? ""}"> <button type="button" class="weight-goal-edit" id="${els.goal}-save">Save</button> <button type="button" class="weight-goal-edit" id="${els.goal}-clear">Clear</button>`;
+          const save = async (value) => {
+            try {
+              await api("/api/settings", {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ weight_goal_kg: value }),
+              });
+            } catch (err) {
+              showToast(err && err.message ? err.message : "Could not save goal");
+            }
+            loadWeight();
+            if (typeof loadNutrition === "function") loadNutrition();
+          };
+          document.getElementById(`${els.goal}-save`).addEventListener("click", () => {
+            const v = document.getElementById(`${els.goal}-input`).value.trim();
+            save(v === "" ? null : Number(v));
+          });
+          document.getElementById(`${els.goal}-clear`).addEventListener("click", () => save(null));
+        });
+      }
+    }
+
     if (els.svg) renderWeightSparkline(points, els.svg);
 
     const statsEl = els.stats ? document.getElementById(els.stats) : null;
@@ -629,6 +670,7 @@
     svg: "weight-svg",
     stats: "weight-stats",
     readings: "weight-readings",
+    goal: "weight-goal",
   };
   const NUTRITION_WEIGHT_ELS = {
     section: "nutri-weight-card",
@@ -1585,16 +1627,23 @@
     const totals = data.totals || { kcal: 0, protein_g: 0, carbs_g: 0, fat_g: 0 };
     renderNutriRing(totals.kcal, data.target_kcal || 0);
 
-    document.getElementById("nutri-macros").innerHTML = [
-      ["Protein", `${totals.protein_g} g`, `of ${data.target_protein_g} g`],
-      ["Carbs", `${totals.carbs_g} g`, ""],
-      ["Fat", `${totals.fat_g} g`, ""],
-    ]
-      .map(
-        (m) =>
-          `<div class="load-metric"><div class="load-metric-label">${escapeHtml(m[0])}</div><div class="load-metric-value">${escapeHtml(m[1])}</div><div class="stat-target">${escapeHtml(m[2])}</div></div>`,
-      )
-      .join("");
+    // Protein leads and carries a progress bar (ISC-445): the high-protein
+    // goal is the one being chased, so it gets the visual weight. Carbs/fat
+    // bars appear only when their targets are set (ISC-446).
+    const macroBar = (label, got, target, emphasize) => {
+      const pct = target ? Math.min(100, Math.round((got / target) * 100)) : null;
+      const cls = pct == null ? "" : pct >= 100 ? " done" : pct >= 70 ? " close" : "";
+      const bar =
+        target != null
+          ? `<div class="macro-bar${emphasize ? " macro-bar-hero" : ""}"><div class="macro-bar-fill${cls}" style="width:${pct}%"></div></div>`
+          : "";
+      const sub = target != null ? `${got} of ${target} g` : `${got} g`;
+      return `<div class="macro-row${emphasize ? " macro-hero" : ""}"><div class="macro-label">${escapeHtml(label)}</div><div class="macro-sub">${escapeHtml(sub)}</div>${bar}</div>`;
+    };
+    document.getElementById("nutri-macros").innerHTML =
+      macroBar("Protein", totals.protein_g, data.target_protein_g, true) +
+      macroBar("Carbs", totals.carbs_g, data.target_carbs_g, false) +
+      macroBar("Fat", totals.fat_g, data.target_fat_g, false);
 
     const entries = data.entries || [];
     document.getElementById("nutri-empty").hidden = entries.length > 0;
@@ -1641,7 +1690,54 @@
     document.getElementById("nutri-estimate-status").textContent = "";
     await loadNutritionDay();
     loadNutritionWeight();
+    loadMacroGoalForm();
   }
+
+  // Macro goals form (ISC-447): prefills from settings, saves via PATCH.
+  // Carbs/fat empty = cleared (null); kcal/protein always have a value.
+  async function loadMacroGoalForm() {
+    try {
+      const st = await api("/api/settings");
+      document.getElementById("goal-kcal").value = st.nutrition_target_kcal ?? "";
+      document.getElementById("goal-protein").value = st.nutrition_target_protein_g ?? "";
+      document.getElementById("goal-carbs").value = st.nutrition_target_carbs_g ?? "";
+      document.getElementById("goal-fat").value = st.nutrition_target_fat_g ?? "";
+    } catch {}
+  }
+
+  document.getElementById("macro-goal-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const status = document.getElementById("macro-goal-status");
+    const num = (id) => {
+      const v = document.getElementById(id).value.trim();
+      return v === "" ? null : Number(v);
+    };
+    const body = {
+      nutrition_target_carbs_g: num("goal-carbs"),
+      nutrition_target_fat_g: num("goal-fat"),
+    };
+    const kcal = num("goal-kcal");
+    const protein = num("goal-protein");
+    if (kcal != null) body.nutrition_target_kcal = kcal;
+    if (protein != null) body.nutrition_target_protein_g = protein;
+    const btn = document.getElementById("macro-goal-submit");
+    btn.disabled = true;
+    status.textContent = "Saving...";
+    try {
+      await api("/api/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      status.textContent = "Saved.";
+      loadNutritionDay();
+      loadMacroGoalForm();
+    } catch (err) {
+      status.textContent = err && err.message ? err.message : "Could not save";
+    } finally {
+      btn.disabled = false;
+    }
+  });
 
   // --- Trends ------------------------------------------------------
 

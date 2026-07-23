@@ -187,8 +187,11 @@ describe("GET/PATCH /api/settings (ISC-42)", () => {
       lthr_bpm: null,
       nutrition_target_kcal: 2200,
       nutrition_target_protein_g: 150,
+      nutrition_target_carbs_g: null,
+      nutrition_target_fat_g: null,
       race_name: null,
       race_date: null,
+      weight_goal_kg: null,
     });
 
     const patch = await apiRequest("PATCH", "/api/settings", { token, body: { target_sessions: 6, target_hours: 10 } });
@@ -200,8 +203,11 @@ describe("GET/PATCH /api/settings (ISC-42)", () => {
       lthr_bpm: null,
       nutrition_target_kcal: 2200,
       nutrition_target_protein_g: 150,
+      nutrition_target_carbs_g: null,
+      nutrition_target_fat_g: null,
       race_name: null,
       race_date: null,
+      weight_goal_kg: null,
     });
 
     const bad = await apiRequest("PATCH", "/api/settings", { token, body: { target_sessions: -1 } });

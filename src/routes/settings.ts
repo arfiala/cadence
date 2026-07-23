@@ -11,10 +11,15 @@ import { getSettings } from "../services/weekSummary";
 const DEFAULT_NUTRITION_TARGET_KCAL = 2200;
 const DEFAULT_NUTRITION_TARGET_PROTEIN_G = 150;
 
-function nutritionTargets(): { nutrition_target_kcal: number; nutrition_target_protein_g: number } {
+function nutritionTargets(): {
+  nutrition_target_kcal: number;
+  nutrition_target_protein_g: number;
+  nutrition_target_carbs_g: number | null;
+  nutrition_target_fat_g: number | null;
+} {
   const rows = db
     .query(
-      "SELECT key, value FROM settings WHERE key IN ('nutrition_target_kcal','nutrition_target_protein_g')",
+      "SELECT key, value FROM settings WHERE key IN ('nutrition_target_kcal','nutrition_target_protein_g','nutrition_target_carbs_g','nutrition_target_fat_g')",
     )
     .all() as { key: string; value: string }[];
   const map = new Map(rows.map((r) => [r.key, r.value]));
@@ -22,12 +27,32 @@ function nutritionTargets(): { nutrition_target_kcal: number; nutrition_target_p
   const protein = Number(
     map.get("nutrition_target_protein_g") ?? String(DEFAULT_NUTRITION_TARGET_PROTEIN_G),
   );
+  const optional = (key: string): number | null => {
+    const raw = map.get(key);
+    if (raw === undefined) return null;
+    const n = Number(raw);
+    return Number.isFinite(n) ? n : null;
+  };
   return {
     nutrition_target_kcal: Number.isFinite(kcal) ? kcal : DEFAULT_NUTRITION_TARGET_KCAL,
     nutrition_target_protein_g: Number.isFinite(protein)
       ? protein
       : DEFAULT_NUTRITION_TARGET_PROTEIN_G,
+    nutrition_target_carbs_g: optional("nutrition_target_carbs_g"),
+    nutrition_target_fat_g: optional("nutrition_target_fat_g"),
   };
+}
+
+// Weight goal (ISC-439): a target body weight in kg, nullable (absent = no
+// goal). Read directly, same discipline as the race target: getSettings in
+// weekSummary.ts stays a pure load-engine shape.
+export function weightGoal(): { weight_goal_kg: number | null } {
+  const row = db.query("SELECT value FROM settings WHERE key = 'weight_goal_kg'").get() as {
+    value: string;
+  } | null;
+  if (!row) return { weight_goal_kg: null };
+  const n = Number(row.value);
+  return { weight_goal_kg: Number.isFinite(n) ? n : null };
 }
 
 // Race target (ISC-332): a race name and ISO date the user is training toward.
@@ -58,7 +83,7 @@ function isValidIsoDateOnly(value: unknown): value is string {
 }
 
 export function getSettingsRoute(): Response {
-  return Response.json({ ...getSettings(), ...nutritionTargets(), ...raceTarget() });
+  return Response.json({ ...getSettings(), ...nutritionTargets(), ...raceTarget(), ...weightGoal() });
 }
 
 export async function patchSettingsRoute(req: Request): Promise<Response> {
@@ -116,6 +141,32 @@ export async function patchSettingsRoute(req: Request): Promise<Response> {
     updates.push(["nutrition_target_protein_g", String(v)]);
   }
 
+  // Optional macro targets (ISC-443): positive grams, or null to clear.
+  for (const key of ["nutrition_target_carbs_g", "nutrition_target_fat_g"] as const) {
+    if (key in body) {
+      const v = body[key];
+      if (v === null) {
+        clears.push(key);
+      } else if (typeof v !== "number" || !Number.isFinite(v) || v <= 0) {
+        return jsonError(`${key} must be a positive number or null`, 400);
+      } else {
+        updates.push([key, String(v)]);
+      }
+    }
+  }
+
+  // Weight goal (ISC-439): kg between 30 and 200 (sanity), or null to clear.
+  if ("weight_goal_kg" in body) {
+    const v = body.weight_goal_kg;
+    if (v === null) {
+      clears.push("weight_goal_kg");
+    } else if (typeof v !== "number" || !Number.isFinite(v) || v < 30 || v > 200) {
+      return jsonError("weight_goal_kg must be a number between 30 and 200, or null", 400);
+    } else {
+      updates.push(["weight_goal_kg", String(v)]);
+    }
+  }
+
   // Race target (ISC-332, ISC-333). race_name: a non-empty string or null to
   // clear. race_date: a valid YYYY-MM-DD or null to clear.
   if ("race_name" in body) {
@@ -154,5 +205,5 @@ export async function patchSettingsRoute(req: Request): Promise<Response> {
     del.run(key);
   }
 
-  return Response.json({ ...getSettings(), ...nutritionTargets(), ...raceTarget() });
+  return Response.json({ ...getSettings(), ...nutritionTargets(), ...raceTarget(), ...weightGoal() });
 }

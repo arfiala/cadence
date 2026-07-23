@@ -140,6 +140,7 @@
                 <div class="weight-current" id="weight-current">--</div>
                 <div class="weight-delta flat" id="weight-delta"></div>
               </div>
+              <div class="weight-goal" id="weight-goal" hidden></div>
               <svg id="weight-svg" class="weight-spark" viewBox="0 0 320 64" preserveAspectRatio="xMidYMid meet"></svg>
               <div class="weight-stats" id="weight-stats"></div>
               <ul class="weight-readings" id="weight-readings"></ul>
@@ -245,6 +246,35 @@
           <div class="nutri-macros" id="nutri-macros"></div>
         </div>
       </div>
+      <h2 class="section-title">Macro goals</h2>
+      <div class="card">
+        <p class="muted">Daily targets. Protein is the one to chase; carbs and fat are optional.</p>
+        <form id="macro-goal-form">
+          <div class="form-grid">
+            <div class="field">
+              <label for="goal-kcal">Calories (kcal)</label>
+              <input type="number" id="goal-kcal" min="1" step="1">
+            </div>
+            <div class="field">
+              <label for="goal-protein">Protein (g)</label>
+              <input type="number" id="goal-protein" min="1" step="1">
+            </div>
+            <div class="field">
+              <label for="goal-carbs">Carbs (g, optional)</label>
+              <input type="number" id="goal-carbs" min="1" step="1">
+            </div>
+            <div class="field">
+              <label for="goal-fat">Fat (g, optional)</label>
+              <input type="number" id="goal-fat" min="1" step="1">
+            </div>
+          </div>
+          <div class="form-actions">
+            <button type="submit" class="btn" id="macro-goal-submit">Save goals</button>
+            <span class="sync-status" id="macro-goal-status"></span>
+          </div>
+        </form>
+      </div>
+
       <ul class="activity-list" id="nutri-entries"></ul>
       <p class="muted" id="nutri-empty" hidden>No entries logged today. Describe a meal above to get started.</p>
 

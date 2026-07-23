@@ -12,6 +12,7 @@ import { computeConsistency } from "../metrics/consistency";
 import { computeRecords } from "../metrics/records";
 import { computeDigest } from "../metrics/digest";
 import { computeWeightSeries } from "../metrics/weight";
+import { weightGoal } from "./settings";
 import { computeG1Risk, computePacing } from "../metrics/g1risk";
 import { computeYoy } from "../metrics/yoy";
 import { computePowerCurve } from "../metrics/powerCurve";
@@ -63,7 +64,9 @@ export function getRecords(): Response {
 // GET /api/metrics/weight: the weight-progress series from Zwift ride data
 // (current, first, delta, and one point per day). Pure read, recomputed fresh.
 export function getWeight(): Response {
-  return Response.json(computeWeightSeries());
+  // weight_goal_kg rides along so the shared weight widget can show goal
+  // progress (ISC-440) without a second fetch.
+  return Response.json({ ...computeWeightSeries(), ...weightGoal() });
 }
 
 // GET /api/metrics/digest (ISC-181): the last completed week's digest. Backs

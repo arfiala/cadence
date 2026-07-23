@@ -93,18 +93,31 @@ function isValidYmd(value: unknown): value is string {
   return !Number.isNaN(ms);
 }
 
-function nutritionTargets(): { target_kcal: number; target_protein_g: number } {
+function nutritionTargets(): {
+  target_kcal: number;
+  target_protein_g: number;
+  target_carbs_g: number | null;
+  target_fat_g: number | null;
+} {
   const rows = db
     .query(
-      "SELECT key, value FROM settings WHERE key IN ('nutrition_target_kcal','nutrition_target_protein_g')",
+      "SELECT key, value FROM settings WHERE key IN ('nutrition_target_kcal','nutrition_target_protein_g','nutrition_target_carbs_g','nutrition_target_fat_g')",
     )
     .all() as { key: string; value: string }[];
   const map = new Map(rows.map((r) => [r.key, r.value]));
   const kcal = Number(map.get("nutrition_target_kcal") ?? String(DEFAULT_TARGET_KCAL));
   const protein = Number(map.get("nutrition_target_protein_g") ?? String(DEFAULT_TARGET_PROTEIN_G));
+  const optional = (key: string): number | null => {
+    const raw = map.get(key);
+    if (raw === undefined) return null;
+    const n = Number(raw);
+    return Number.isFinite(n) ? n : null;
+  };
   return {
     target_kcal: Number.isFinite(kcal) ? kcal : DEFAULT_TARGET_KCAL,
     target_protein_g: Number.isFinite(protein) ? protein : DEFAULT_TARGET_PROTEIN_G,
+    target_carbs_g: optional("nutrition_target_carbs_g"),
+    target_fat_g: optional("nutrition_target_fat_g"),
   };
 }
 
@@ -340,6 +353,8 @@ export function listNutrition(url: URL): Response {
     totals,
     target_kcal: targets.target_kcal,
     target_protein_g: targets.target_protein_g,
+    target_carbs_g: targets.target_carbs_g,
+    target_fat_g: targets.target_fat_g,
   });
 }
 
