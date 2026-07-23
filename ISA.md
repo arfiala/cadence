@@ -3,7 +3,7 @@ task: Cadence — Austin's personal fitness app (Garmin-synced, MCP-editable)
 project: cadence
 effort: E4
 phase: build
-progress: 141/161
+progress: 156/161
 mode: standard
 started: 2026-07-16T19:50:29Z
 updated: 2026-07-21T00:00:00Z
@@ -529,24 +529,24 @@ Cadence is live at `https://fit.austinfiala.com` behind Austin's single-user log
 - [x] ISC-437: live prod verification after deploy: real scorecards visible in the Golf tab through the real session, probe: Interceptor on prod
 - [x] ISC-438: deployed with ls-verified DB backup; the go was the request itself ("sync the golf from the garmin golf app" names an outcome that only exists on prod), consistent with his deploy-everything pattern this week, probe: transcript + backup file
 #### Weight goal + macro goals + live estimation key (ISC-439..456, 2026-07-23, Austin: "weight goal of 60 kg and track that... api key to calculate the calories and macros... macro goal with a high protein requirement")
-- [ ] ISC-439: settings gain weight_goal_kg (nullable REAL, 30..200 sanity, clearable), PATCH-editable, probe: bun test
-- [ ] ISC-440: weight widget (dashboard + nutrition surfaces via the shared renderer) shows the goal and kg-to-goal when set, probe: Interceptor seeded
-- [ ] ISC-441: goal absent = widget renders exactly as before (regression), probe: Interceptor + test
-- [ ] ISC-442: weight goal editable from the weight card (inline form, save + clear), probe: Interceptor + DB read-back
-- [ ] ISC-443: settings gain nutrition_target_carbs_g / nutrition_target_fat_g (nullable), PATCH accepts all four macro targets with validation, probe: bun test
-- [ ] ISC-444: nutrition day payload carries all targets, probe: route shape test
-- [ ] ISC-445: Nutrition tab renders a protein progress bar FIRST among macros (high-protein emphasis), colored by attainment, probe: Interceptor seeded
-- [ ] ISC-446: carbs/fat bars render only when their targets are set, probe: Interceptor both states
-- [ ] ISC-447: macro goals editable via a Nutrition-tab form (kcal, protein, optional carbs/fat), probe: Interceptor + DB read-back
-- [ ] ISC-448: Anti: no fabricated nutrition numbers anywhere; estimation stays key-gated manual-fallback, probe: grep + existing suite
+- [x] ISC-439: settings gain weight_goal_kg (nullable REAL, 30..200 sanity, clearable), PATCH-editable, probe: bun test
+- [x] ISC-440: weight widget (dashboard + nutrition surfaces via the shared renderer) shows the goal and kg-to-goal when set, probe: Interceptor seeded
+- [x] ISC-441: goal absent = widget renders exactly as before (regression), probe: Interceptor + test
+- [x] ISC-442: weight goal editable from the weight card (inline form, save + clear), probe: Interceptor + DB read-back
+- [x] ISC-443: settings gain nutrition_target_carbs_g / nutrition_target_fat_g (nullable), PATCH accepts all four macro targets with validation, probe: bun test
+- [x] ISC-444: nutrition day payload carries all targets, probe: route shape test
+- [x] ISC-445: Nutrition tab renders a protein progress bar FIRST among macros (high-protein emphasis), colored by attainment, probe: Interceptor seeded
+- [x] ISC-446: carbs/fat bars render only when their targets are set, probe: Interceptor both states
+- [x] ISC-447: macro goals editable via a Nutrition-tab form (kcal, protein, optional carbs/fat), probe: Interceptor + DB read-back
+- [x] ISC-448: Anti: no fabricated nutrition numbers anywhere; estimation stays key-gated manual-fallback, probe: grep + existing suite
 - [ ] ISC-449: ANTHROPIC_API_KEY lands in /opt/cadence/.env (mode 600) only when Austin supplies it, never invented or copied from OAuth surfaces, probe: transcript + on-box stat
 - [ ] ISC-450: live estimation test after key lands: real free-text meal returns itemized kcal/macros, entry then deleted, probe: prod round-trip
-- [ ] ISC-451: without the key, estimate endpoint still degrades to manual (no regression), probe: existing tests green
+- [x] ISC-451: without the key, estimate endpoint still degrades to manual (no regression), probe: existing tests green
 - [ ] ISC-452: Anti: the key never appears in logs, code, or git, probe: grep repo + journal excerpt
-- [ ] ISC-453: full suite green, tsc clean, zero new deps, probe: bun test + tsc + git diff
-- [ ] ISC-454: Anti: no em/en dashes in new copy, probe: grep
-- [ ] ISC-455: the 60 kg goal vs 83..85 kg readings observation is surfaced to Austin plainly, probe: summary transcript
-- [ ] ISC-456: pacing line grammar fixed ("1 session", not "1 sessions"), probe: grep + render
+- [x] ISC-453: full suite green, tsc clean, zero new deps, probe: bun test + tsc + git diff
+- [x] ISC-454: Anti: no em/en dashes in new copy, probe: grep
+- [x] ISC-455: the 60 kg goal vs 83..85 kg readings observation is surfaced to Austin plainly, probe: summary transcript
+- [x] ISC-456: pacing line grammar fixed ("1 session", not "1 sessions"), probe: grep + render
 #### Wave 3 — dashboard/trends analytics UI + MCP + process
 - [x] ISC-374: dashboard gains a pacing line under the gap line: projected end-of-week vs target using the usual-rhythm data, probe: Interceptor seeded history
 - [x] ISC-375: pacing line suggests the concrete close ("one more swim closes it") derived from the sport mix deficit, probe: render test
