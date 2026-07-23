@@ -205,7 +205,11 @@ export async function estimateNutrition(
         },
         body: JSON.stringify({
           contents: [{ parts: [{ text: buildPrompt(description) }] }],
-          generationConfig: { temperature: 0.2, maxOutputTokens: 1024 },
+          // 8192, not 1024: current flash models think before answering and
+          // the thought consumes the output budget; 1024 truncated the JSON
+          // mid-array (live repro 2026-07-23). thinkingBudget: 0 is a 400 on
+          // this model, so headroom is the fix, not disabling thought.
+          generationConfig: { temperature: 0.2, maxOutputTokens: 8192 },
         }),
         signal: AbortSignal.timeout(ESTIMATE_TIMEOUT_MS),
       });
