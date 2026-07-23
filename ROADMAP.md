@@ -44,38 +44,38 @@ Ten new features, zero overlap with round 1 or anything built. Tiered by effort 
 
 ## Quick wins
 
-## 11. Swim sets library (S)
+## 11. Swim sets library (S) [SHIPPED 2026-07-23]
 Swimming is half of G1 and completely featureless in the app today. Hand-authored swim workout cards following the proven Stretch tab pattern: 30 and 45 minute sets with drills and pacing notes, one tap logs the session. No new data collection, pure content plus an existing mechanic.
 
-## 12. Duplicate activity detector (S/M)
+## 12. Duplicate activity detector (S/M) [SHIPPED 2026-07-23]
 A real correctness risk hiding as a feature: a Zwift ride auto-uploads to Garmin Connect while a watch also records it, and both land as activities, double-counting G1 sessions and hours. The detector flags pairs that overlap in time with matching duration and distance tolerance; Austin confirms merge or keep per pair. Match criteria defined up front, never auto-merges.
 
-## 13. RPE logging and honest swim/strength load (S)
+## 13. RPE logging and honest swim/strength load (S) [SHIPPED 2026-07-23]
 A one-tap "how hard was that" chip (1 to 10) on any activity. The load engine gains an sRPE tier for sessions with no power or heart rate, mapped onto the existing TSS-point scale rather than raw Foster units so the Fitness/Fatigue/Form series stays continuous. Fixes the blind spot where swims barely register training load.
 
-## 14. Week pacing forecast (S)
+## 14. Week pacing forecast (S) [SHIPPED 2026-07-23]
 Arithmetic on the G1 metric itself, deliberately not the load model: "at your usual Tue/Thu/Sat rhythm you land at 4 sessions and 7.1 hours; one more swim closes the week." Uses historical session start times to suggest which days realistically have windows. Prerequisite: a few weeks of history, which already exists.
 
-## 15. Year-over-year comparison chips (S)
+## 15. Year-over-year comparison chips (S) [SHIPPED 2026-07-23]
 "This week vs the same week last year" deltas on the Trends tab. The Garmin backfill already pulled a full year of history. Shows an honest "not enough history" state per metric until 12 months exist.
 
 ## Bigger builds
 
-## 16. Activity detail view with laps (M)
+## 16. Activity detail view with laps (M) [SHIPPED 2026-07-23]
 Tap an activity to see a per-lap and per-split breakdown with average and max heart rate and power per lap. Garmin provides lap data; the sync would start storing it. Turns the activity list from a log into a review tool.
 
-## 17. Critical power curve, cycling only (M)
+## 17. Critical power curve, cycling only (M) [SHIPPED 2026-07-23, data pending: ZP endpoint auth follow-up]
 Best 5 second, 1 minute, 5 minute, and 20 minute power from ZwiftPower data over a rolling 90 days, drawn as an inline SVG curve. Explicitly scoped to cycling. Shows a sparse-data state when few max efforts exist, since the curve is only as honest as the efforts behind it.
 
-## 18. GPS trace mini-maps (M)
+## 18. GPS trace mini-maps (M) [SHIPPED 2026-07-23]
 Outdoor rides and runs render their GPS track as a small inline SVG path. No map tiles, no external calls, fully private by construction. Indoor activities show a clean empty state; long tracks get point decimation so the SVG stays small.
 
-## 19. Race countdown card (M)
+## 19. Race countdown card (M) [SHIPPED 2026-07-23]
 Set a target event date and the dashboard shows days-out with a static, deliberately generic taper checklist for the final week. Manual date entry, no ZwiftPower event-calendar dependency, and no adaptive coaching logic (which stays excluded).
 
 ## Automation
 
-## 20. G1 risk alert through the DA (S, opt-in)
+## 20. G1 risk alert through the DA (S, opt-in) [SHIPPED 2026-07-23 as endpoint + MCP tool; the opt-in cron stays unbuilt until Austin enables]
 An opt-in scheduled check: if by Thursday evening the week projects short on plain sessions-and-hours arithmetic, Ardee pings once, snoozeable. The MCP plumbing already exists; this is one cron job and one threshold check. Off by default.
 
 ## Round 2 suggested order

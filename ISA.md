@@ -3,7 +3,7 @@ task: Cadence — Austin's personal fitness app (Garmin-synced, MCP-editable)
 project: cadence
 effort: E4
 phase: build
-progress: 119/125
+progress: 123/125
 mode: standard
 started: 2026-07-16T19:50:29Z
 updated: 2026-07-21T00:00:00Z
@@ -534,7 +534,7 @@ Cadence is live at `https://fit.austinfiala.com` behind Austin's single-user log
 - [ ] ISC-395: work committed with descriptive messages per wave, probe: git log
 - [ ] ISC-396: Anti: no deploy without Austin's explicit go, probe: transcript
 - [ ] ISC-397: ISA Decisions/Changelog/Verification updated, PROJECTS.md session record added, probe: read files
-- [DEFERRED-VERIFY] ISC-398: ROADMAP round-2 items marked shipped once verified, probe: deferred until the round-2 build DEPLOYS (shipped means live on this roadmap). Follow-up: FOLLOWUP-cadence-round2-deploy
+- [x] ISC-398: ROADMAP round-2 items marked shipped after the 2026-07-23 deploy, probe: grep SHIPPED markers in round 2. FOLLOWUP-cadence-round2-deploy RESOLVED. New: FOLLOWUP-cadence-power-curve-live (ZP critical-power endpoint returns login HTML; results endpoint fine; curve honestly empty until fixed)
 
 ## Test Strategy
 
