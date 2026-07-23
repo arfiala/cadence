@@ -40,6 +40,11 @@ const EXACT_MAP: Record<string, Sport> = {
   // Strength
   strength_training: "strength",
   indoor_cardio: "strength",
+
+  // Golf: Garmin Connect typeKey for rounds recorded by watch or the
+  // Garmin Golf app sync. Deliberately narrow: disc_golf is NOT a round of
+  // golf and stays other.
+  golf: "golf",
 };
 
 export function mapGarminTypeToSport(typeKey: string): Sport {

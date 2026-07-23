@@ -727,3 +727,23 @@ input.nutri-col-num{text-align:right;}
 .yoy-na{font-size:0.9rem;color:var(--muted-text);}
 .pc-watts{font-family:var(--font-head);font-weight:700;font-size:13px;fill:var(--ink);}
 .pc-label{font-family:var(--font-head);font-size:12px;fill:#6E6657;}
+
+/* --- Golf (ISC-409..415) --- */
+/* Fairway green darkened for AA with paper text: #3F6B2A on #FFFCF4 = 6.1:1 (computed) */
+.nav-tab.active[data-view="golf"]{background:#3F6B2A;color:var(--paper);}
+.golf-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;}
+.golf-chip{background:var(--paper);border:2px solid var(--ink);border-radius:12px;padding:12px 14px;box-shadow:3px 3px 0 var(--ink);}
+.golf-chip:nth-child(1){box-shadow:3px 3px 0 #3F6B2A;}
+.golf-chip:nth-child(2){box-shadow:3px 3px 0 var(--coral);}
+.golf-chip:nth-child(3){box-shadow:3px 3px 0 var(--mustard);}
+.golf-chip:nth-child(4){box-shadow:3px 3px 0 var(--cobalt);}
+.golf-chip-label{font-family:var(--font-head);font-weight:700;font-size:0.68rem;text-transform:uppercase;letter-spacing:0.05em;color:var(--soft-text);margin-bottom:5px;}
+.golf-chip-value{font-family:var(--font-head);font-weight:700;font-size:1.3rem;white-space:nowrap;}
+.golf-row{cursor:pointer;}
+.golf-score-chip{
+  font-family:var(--font-head);font-weight:700;font-size:0.9rem;
+  color:var(--paper);background:#3F6B2A;border:2px solid var(--ink);
+  border-radius:999px;padding:6px 14px;cursor:pointer;min-height:38px;
+}
+.golf-score-chip.golf-score-none{background:var(--paper);color:var(--ink);}
+.golf-score-input{width:80px;padding:6px 10px;border:2px solid var(--ink);border-radius:10px;background:var(--paper);}

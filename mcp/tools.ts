@@ -142,7 +142,7 @@ export const TOOLS: ToolDefinition[] = [
   {
     name: "edit_activity",
     description:
-      "Edit an existing activity in Austin's REAL training log. Provide the activity id and a 'fields' object with any of: sport, title, notes, start_time (ISO), duration_s, distance_m. Editing sport/title/notes on a Garmin-sourced activity is preserved across future syncs.",
+      "Edit an existing activity in Austin's REAL training log. Provide the activity id and a 'fields' object with any of: sport (cycling/virtual_cycling/swimming/running/strength/other/golf), title, notes, start_time (ISO), duration_s, distance_m, rpe (1..10 perceived effort), golf_score (18..200, golf activities only). Edits on a Garmin-sourced activity are preserved across future syncs.",
     inputSchema: {
       type: "object",
       properties: {

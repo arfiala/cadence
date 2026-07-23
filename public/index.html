@@ -69,6 +69,7 @@
         <button class="nav-tab" data-view="races">Races</button>
         <button class="nav-tab" data-view="stretch">Train</button>
         <button class="nav-tab" data-view="sleep">Sleep</button>
+        <button class="nav-tab" data-view="golf">Golf</button>
         <button class="nav-tab" data-view="sync">Sync</button>
       </nav>
       <button class="logout-btn" id="logout-btn">Log out</button>
@@ -174,6 +175,7 @@
                   <option value="swimming">Swimming</option>
                   <option value="running">Running</option>
                   <option value="strength">Strength</option>
+                  <option value="golf">Golf</option>
                   <option value="other">Other</option>
                 </select>
               </div>
@@ -386,6 +388,15 @@
       <h2 class="section-title">Recent nights</h2>
       <ul class="activity-list" id="sleep-list"></ul>
       <p class="muted" id="sleep-empty" hidden>No sleep synced yet. Run a Garmin sync to pull your recent nights.</p>
+    </section>
+
+    <section id="view-golf" class="section" hidden>
+      <h2 class="section-title">Golf</h2>
+      <div class="golf-stats" id="golf-stats"></div>
+
+      <h2 class="section-title">Rounds</h2>
+      <ul class="activity-list" id="golf-rounds"></ul>
+      <p class="muted" id="golf-empty" hidden>No rounds yet. Rounds recorded on your watch sync in from Garmin, or add one manually from the Activities tab with sport Golf.</p>
     </section>
 
     <section id="view-sync" class="section" hidden>

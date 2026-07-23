@@ -35,6 +35,7 @@ export const SPORTS = [
   "running",
   "strength",
   "other",
+  "golf",
 ] as const;
 export type Sport = (typeof SPORTS)[number];
 export function isValidSport(value: unknown): value is Sport {
@@ -68,6 +69,7 @@ export type ActivityRow = {
   // preservation-by-construction that protects `notes`. Feeds the training-load
   // engine's sRPE tier only when no power/HR-based load applies (ISC-299).
   rpe: number | null;
+  golf_score: number | null;
   title: string | null;
   notes: string | null;
   // Field-level edit flags (ISC-27): once a user edits one of these fields on
@@ -257,13 +259,102 @@ function addColumnIfMissing(
   database.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition};`);
 }
 
+// Adds 'golf' to the activities sport CHECK constraint on databases created
+// before 2026-07-23. SQLite cannot ALTER a CHECK, so this is a guarded table
+// rebuild. Discipline per the advisor pass (ISA Decisions 2026-07-23):
+// - PRAGMA foreign_keys is a NO-OP inside a transaction, so it is toggled
+//   OUTSIDE the txn and restored in finally on every exit path. Without this
+//   the DROP would cascade-delete every activity_details row.
+// - The new DDL is the REAL DDL read from sqlite_master with only the CHECK
+//   fragment modified, never hand-retyped.
+// - Every dependent object (indexes, triggers, views) is captured from
+//   sqlite_master and re-executed after the rename.
+// - Row counts of activities AND activity_details are asserted unchanged.
+function rebuildActivitiesForGolf(database: Database): void {
+  const row = database
+    .query("SELECT sql FROM sqlite_master WHERE type='table' AND name='activities'")
+    .get() as { sql: string } | null;
+  if (!row) return; // fresh DB: CREATE below already carries golf
+  if (row.sql.includes("'golf'")) return; // already rebuilt
+  const oldCheck = "CHECK (sport IN ('cycling','virtual_cycling','swimming','running','strength','other'))";
+  if (!row.sql.includes(oldCheck)) {
+    throw new Error("golf rebuild: activities CHECK fragment not found; refusing to guess at DDL");
+  }
+  // activity_details may not exist yet on DBs older than Wave 1 (prod at the
+  // time this ships): count it only when present.
+  const hasDetails =
+    database
+      .query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='activity_details'")
+      .get() !== null;
+  const countDetails = () =>
+    hasDetails
+      ? (database.query("SELECT COUNT(*) c FROM activity_details").get() as { c: number }).c
+      : 0;
+  const before = {
+    activities: (database.query("SELECT COUNT(*) c FROM activities").get() as { c: number }).c,
+    details: countDetails(),
+  };
+  const dependents = database
+    .query(
+      "SELECT sql FROM sqlite_master WHERE tbl_name='activities' AND type IN ('index','trigger','view') AND sql IS NOT NULL",
+    )
+    .all() as { sql: string }[];
+  const newDdl = row.sql
+    .replace(oldCheck, oldCheck.replace(",'other')", ",'other','golf')"))
+    .replace(/CREATE TABLE "?activities"?/, "CREATE TABLE activities_new");
+  database.exec("PRAGMA foreign_keys=OFF");
+  try {
+    database.exec("BEGIN");
+    const cols = (database.query("PRAGMA table_info(activities)").all() as { name: string }[])
+      .map((c) => `"${c.name}"`)
+      .join(", ");
+    database.exec(newDdl);
+    database.exec(`INSERT INTO activities_new (${cols}) SELECT ${cols} FROM activities`);
+    database.exec("DROP TABLE activities");
+    database.exec("ALTER TABLE activities_new RENAME TO activities");
+    for (const dep of dependents) database.exec(dep.sql);
+    database.exec("COMMIT");
+  } catch (err) {
+    database.exec("ROLLBACK");
+    throw err;
+  } finally {
+    database.exec("PRAGMA foreign_keys=ON");
+  }
+  const fkErrors = database.query("PRAGMA foreign_key_check").all();
+  if (fkErrors.length > 0) {
+    throw new Error(`golf rebuild: foreign_key_check reported ${fkErrors.length} violations`);
+  }
+  const after = {
+    activities: (database.query("SELECT COUNT(*) c FROM activities").get() as { c: number }).c,
+    details: countDetails(),
+  };
+  if (after.activities !== before.activities || after.details !== before.details) {
+    throw new Error(
+      `golf rebuild: row count changed (activities ${before.activities}->${after.activities}, details ${before.details}->${after.details})`,
+    );
+  }
+}
+
+// Garmin typeKeys that mean a round of golf. Kept separate from the schema
+// rebuild so a rollback of one is never entangled with the other
+// (advisor-raised provenance discipline). Idempotent: once remapped, no
+// sport='other' golf rows remain.
+const GOLF_TYPE_KEYS = ["golf"];
+function remapGolfRows(database: Database): void {
+  const placeholders = GOLF_TYPE_KEYS.map(() => "?").join(",");
+  database
+    .query(`UPDATE activities SET sport='golf' WHERE sport='other' AND raw_type IN (${placeholders})`)
+    .run(...GOLF_TYPE_KEYS);
+}
+
 export function runMigrations(database: Database): void {
+  rebuildActivitiesForGolf(database);
   database.exec(`
     CREATE TABLE IF NOT EXISTS activities (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       source TEXT NOT NULL CHECK (source IN ('garmin','manual')),
       garmin_id TEXT UNIQUE,
-      sport TEXT NOT NULL CHECK (sport IN ('cycling','virtual_cycling','swimming','running','strength','other')),
+      sport TEXT NOT NULL CHECK (sport IN ('cycling','virtual_cycling','swimming','running','strength','other','golf')),
       raw_type TEXT,
       start_time TEXT NOT NULL,
       duration_s INTEGER NOT NULL,
@@ -478,6 +569,12 @@ export function runMigrations(database: Database): void {
   // (ISC-347). Range 1..10 is enforced at the route/MCP layer, not by a DB
   // CHECK, so the ALTER cannot fail on any existing row.
   addColumnIfMissing(database, "activities", "rpe", "INTEGER");
+
+  // Golf score on activities (ISC-405), guarded ALTER. Sanity range 18..200
+  // enforced at the route/MCP layer. The remap of pre-golf rows whose
+  // raw_type is a golf typeKey runs right after, as its own step (ISC-401).
+  addColumnIfMissing(database, "activities", "golf_score", "INTEGER");
+  remapGolfRows(database);
 
   // Power columns on activities (ISC-135), added via the guarded ALTER so an
   // existing production DB gains them without a rebuild and a fresh DB is

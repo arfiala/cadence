@@ -15,8 +15,10 @@
     running: "\u{1F3C3}",
     strength: "\u{1F3CB}",
     other: "★",
+    golf: "\u{26F3}",
   };
   const SPORT_LABELS = {
+    golf: "Golf",
     cycling: "Cycling",
     virtual_cycling: "Virtual ride",
     swimming: "Swimming",
@@ -183,6 +185,7 @@
     if (name === "races") loadRaces();
     if (name === "stretch") loadStretch();
     if (name === "sleep") loadSleep();
+    if (name === "golf") loadGolf();
     if (name === "sync") loadSyncStatus();
   }
 
@@ -1104,7 +1107,8 @@
 
     let lapsHtml = "";
     if (detail && detail.laps && detail.laps.length > 0) {
-      lapsHtml = `<div class="detail-block"><div class="detail-block-title">Laps</div>${renderLapsTable(detail.laps)}</div>`;
+      const lapsTitle = activity.sport === "golf" ? "Holes" : "Laps";
+      lapsHtml = `<div class="detail-block"><div class="detail-block-title">${lapsTitle}</div>${renderLapsTable(detail.laps)}</div>`;
     }
     let mapHtml = "";
     if (detail) {
@@ -2036,6 +2040,114 @@
         </li>`;
       })
       .join("");
+  }
+
+  // --- Golf (ISC-411..415) ---------------------------------------------
+  //
+  // Rounds are plain activities with sport golf, synced from Garmin or added
+  // manually. The score is user-entered (the Garmin SDK exposes no golf API,
+  // probed 2026-07-23) and edits inline via a number input + PATCH.
+  async function loadGolf() {
+    const statsEl = document.getElementById("golf-stats");
+    const listEl = document.getElementById("golf-rounds");
+    const emptyEl = document.getElementById("golf-empty");
+    if (!statsEl || !listEl || !emptyEl) return;
+    let rounds = [];
+    try {
+      const data = await api("/api/activities");
+      activitiesCache = data.activities || [];
+      rounds = activitiesCache.filter((a) => a.sport === "golf");
+    } catch {
+      return;
+    }
+    if (rounds.length === 0) {
+      statsEl.innerHTML = "";
+      listEl.innerHTML = "";
+      emptyEl.hidden = false;
+      return;
+    }
+    emptyEl.hidden = true;
+    const year = new Date().getFullYear();
+    const thisYear = rounds.filter((r) => new Date(r.start_time).getFullYear() === year);
+    const scores = rounds.map((r) => r.golf_score).filter((v) => v != null);
+    const best = scores.length ? Math.min(...scores) : null;
+    const avg = scores.length ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : null;
+    const last = rounds[0] ? formatDate(rounds[0].start_time) : "--";
+    const chip = (label, value) =>
+      `<div class="golf-chip"><div class="golf-chip-label">${label}</div><div class="golf-chip-value">${value}</div></div>`;
+    statsEl.innerHTML =
+      chip("Rounds this year", String(thisYear.length)) +
+      chip("Best score", best == null ? "--" : String(best)) +
+      chip("Average score", avg == null ? "--" : String(avg)) +
+      chip("Last round", last);
+    listEl.innerHTML = rounds
+      .map((r) => {
+        const km = r.distance_m != null ? ` &middot; ${(r.distance_m / 1000).toFixed(1)} km walked` : "";
+        const hr = r.avg_hr != null ? ` &middot; ${r.avg_hr} bpm` : "";
+        const score =
+          r.golf_score != null
+            ? `<button type="button" class="golf-score-chip" data-golf-id="${r.id}">${r.golf_score}</button>`
+            : `<button type="button" class="golf-score-chip golf-score-none" data-golf-id="${r.id}">Add score</button>`;
+        const title = r.title ? escapeHtml(r.title) : "Round of golf";
+        return `
+        <li class="activity-item clickable golf-row" data-activity-id="${r.id}" tabindex="0" role="button" aria-label="Open round detail">
+          <div class="activity-icon">\u{26F3}</div>
+          <div class="activity-main">
+            <div class="activity-title">${title}</div>
+            <div class="activity-meta">${formatDate(r.start_time)} &middot; ${formatDuration(r.duration_s)}${km}${hr}</div>
+          </div>
+          <div class="activity-actions">${score}</div>
+          <span class="activity-chevron" aria-hidden="true">&rsaquo;</span>
+        </li>`;
+      })
+      .join("");
+    listEl.querySelectorAll(".golf-score-chip").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        startGolfScoreEdit(btn);
+      });
+    });
+    listEl.querySelectorAll(".golf-row").forEach((row) => {
+      const open = (e) => {
+        if (e.target.closest(".activity-actions")) return;
+        location.hash = `#activity/${row.dataset.activityId}`;
+      };
+      row.addEventListener("click", open);
+      row.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") open(e);
+      });
+    });
+  }
+
+  function startGolfScoreEdit(btn) {
+    const id = btn.dataset.golfId;
+    const input = document.createElement("input");
+    input.type = "number";
+    input.min = "18";
+    input.max = "200";
+    input.className = "golf-score-input";
+    input.value = /^\d+$/.test(btn.textContent) ? btn.textContent : "";
+    btn.replaceWith(input);
+    input.focus();
+    const save = async () => {
+      const v = input.value.trim();
+      const score = v === "" ? null : Number(v);
+      try {
+        await api(`/api/activities/${id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ golf_score: score }),
+        });
+      } catch (err) {
+        showToast(err && err.message ? err.message : "Could not save score");
+      }
+      loadGolf();
+    };
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") save();
+      if (e.key === "Escape") loadGolf();
+    });
+    input.addEventListener("blur", save);
   }
 
   async function loadSleep() {

@@ -34,6 +34,7 @@ export function serializeActivity(row: ActivityRow, hasDetail?: boolean) {
     avg_power: row.avg_power,
     norm_power: row.norm_power,
     rpe: row.rpe,
+    golf_score: row.golf_score,
     title: row.title,
     notes: row.notes,
     // Hints for the UI (ISC-331): whether this row is Garmin-sourced (so a
@@ -272,6 +273,28 @@ export async function updateActivity(req: Request, idParam: string): Promise<Res
     }
     sets.push("rpe = ?");
     params.push(r as number | null);
+  }
+  // Golf score (ISC-406): integer 18..200 or null, and only meaningful on a
+  // round of golf. The governing sport is whatever this PATCH leaves in
+  // place: an incoming sport edit wins, otherwise the stored sport. Like rpe,
+  // golf_score has no *_edited flag: Garmin never supplies a score, the sync
+  // never writes the column, so it survives re-sync by construction (ISC-407).
+  if ("golf_score" in body) {
+    const g = body.golf_score;
+    if (g !== null && (typeof g !== "number" || !Number.isInteger(g) || g < 18 || g > 200)) {
+      return jsonError("golf_score must be an integer from 18 to 200, or null", 400);
+    }
+    const targetSport = "sport" in body ? body.sport : existing.sport;
+    if (g !== null && targetSport !== "golf") {
+      return jsonError("golf_score only applies to golf activities", 422);
+    }
+    sets.push("golf_score = ?");
+    params.push(g as number | null);
+  }
+  // Editing sport away from golf clears any stored score, so a stale score
+  // can never describe a non-golf session (ISA premortem 2026-07-23).
+  if ("sport" in body && body.sport !== "golf" && existing.sport === "golf" && !("golf_score" in body)) {
+    sets.push("golf_score = NULL");
   }
 
   if (sets.length === 0) return jsonError("No editable fields provided", 400);

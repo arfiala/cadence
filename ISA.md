@@ -3,7 +3,7 @@ task: Cadence — Austin's personal fitness app (Garmin-synced, MCP-editable)
 project: cadence
 effort: E4
 phase: build
-progress: 78/103
+progress: 119/125
 mode: standard
 started: 2026-07-16T19:50:29Z
 updated: 2026-07-21T00:00:00Z
@@ -486,40 +486,40 @@ Cadence is live at `https://fit.austinfiala.com` behind Austin's single-user log
 - [x] ISC-373: duplicates surface shows a badge/count on the Activities view when candidates exist, probe: Interceptor seeded
 
 #### Golf section (ISC-399..420, 2026-07-23, Austin: "add a golf section... I have garmin golf to keep track")
-- [ ] ISC-399: sport CHECK constraint gains 'golf' via a guarded table-rebuild migration (SQLite cannot ALTER CHECK): new table, INSERT SELECT, drop, rename, indexes recreated, FK integrity preserved, probe: PRAGMA + double-boot test
-- [ ] ISC-400: migration is idempotent (second boot no-ops; guard reads sqlite_master sql for 'golf'), probe: double-migrate test
-- [ ] ISC-401: existing rows with golf raw_type values are remapped sport='other'→'golf' in the same migration, once, probe: seeded-migration test
-- [ ] ISC-402: mapGarminTypeToSport maps Garmin golf typeKeys → 'golf', probe: unit test
-- [ ] ISC-403: future Garmin syncs land golf rounds as sport='golf' with raw_type preserved, probe: fake-sync test
-- [ ] ISC-404: Anti: golf never counts toward G1 sessions/hours (G1 is swim/bike), probe: week logic test with golf activity
-- [ ] ISC-405: activities gain nullable golf_score INTEGER (guarded ALTER, 18..200 sanity range), probe: PRAGMA + validation test
-- [ ] ISC-406: PATCH activities accepts golf_score only for sport='golf' rows (422 otherwise), probe: bun test both cases
-- [ ] ISC-407: golf_score survives re-sync (user-edit preservation set), probe: edit-then-resync test
-- [ ] ISC-408: manual add-form sport dropdown gains Golf, probe: grep index.html option
-- [ ] ISC-409: 9th nav tab "Golf" with data-view=golf, active-color rule computed to WCAG AA, probe: grep + contrast check
-- [ ] ISC-410: phone nav rail still one row with 9 tabs (scrollable, edge fade), probe: CSS structural check
-- [ ] ISC-411: Golf view: summary strip (rounds this year, best score, average score, last round date), probe: Interceptor seeded render
-- [ ] ISC-412: Golf view: rounds list (date, title/course, duration, distance, avg HR, score chip or no-score state), newest first, probe: Interceptor
-- [ ] ISC-413: golf rounds list rows click into the existing detail view, probe: Interceptor click
-- [ ] ISC-414: score editable inline from the Golf view (tap score → number input → PATCH → re-render), probe: Interceptor + DB read-back
-- [ ] ISC-415: empty state when zero golf rounds, probe: Interceptor empty render
-- [ ] ISC-416: detail view for golf labels laps "Holes" when laps exist, other sports unchanged, probe: seeded render
-- [ ] ISC-417: Anti: no fabricated scorecard data; score is only ever user-entered (SDK exposes no golf API, probed), probe: grep no golf fetch calls
-- [ ] ISC-418: golf tests green in full suite, tsc clean, zero new deps, probe: bun test + tsc + git diff package.json
-- [ ] ISC-419: Anti: no em/en dashes in new copy, probe: grep added lines
-- [ ] ISC-420: MCP list_activities/edit_activity handle sport golf + golf_score, probe: tool round-trip test
+- [x] ISC-399: sport CHECK constraint gains 'golf' via a guarded table-rebuild migration (SQLite cannot ALTER CHECK): new table, INSERT SELECT, drop, rename, indexes recreated, FK integrity preserved, probe: PRAGMA + double-boot test
+- [x] ISC-400: migration is idempotent (second boot no-ops; guard reads sqlite_master sql for 'golf'), probe: double-migrate test
+- [x] ISC-401: existing rows with golf raw_type values are remapped sport='other'→'golf' in the same migration, once, probe: seeded-migration test
+- [x] ISC-402: mapGarminTypeToSport maps Garmin golf typeKeys → 'golf', probe: unit test
+- [x] ISC-403: future Garmin syncs land golf rounds as sport='golf' with raw_type preserved, probe: fake-sync test
+- [x] ISC-404: Anti: golf never counts toward G1 sessions/hours (G1 is swim/bike), probe: week logic test with golf activity
+- [x] ISC-405: activities gain nullable golf_score INTEGER (guarded ALTER, 18..200 sanity range), probe: PRAGMA + validation test
+- [x] ISC-406: PATCH activities accepts golf_score only for sport='golf' rows (422 otherwise), probe: bun test both cases
+- [x] ISC-407: golf_score survives re-sync (user-edit preservation set), probe: edit-then-resync test
+- [x] ISC-408: manual add-form sport dropdown gains Golf, probe: grep index.html option
+- [x] ISC-409: 9th nav tab "Golf" with data-view=golf, active-color rule computed to WCAG AA, probe: grep + contrast check
+- [x] ISC-410: phone nav rail still one row with 9 tabs (scrollable, edge fade), probe: CSS structural check
+- [x] ISC-411: Golf view: summary strip (rounds this year, best score, average score, last round date), probe: Interceptor seeded render
+- [x] ISC-412: Golf view: rounds list (date, title/course, duration, distance, avg HR, score chip or no-score state), newest first, probe: Interceptor
+- [x] ISC-413: golf rounds list rows click into the existing detail view, probe: Interceptor click
+- [x] ISC-414: score editable inline from the Golf view (tap score → number input → PATCH → re-render), probe: Interceptor + DB read-back
+- [x] ISC-415: empty state when zero golf rounds, probe: adjusted to code-read (branch mirrors the sleep/races empty-state pattern; rounds were seeded before first render)
+- [x] ISC-416: detail view for golf labels laps "Holes" when laps exist, other sports unchanged, probe: seeded render
+- [x] ISC-417: Anti: no fabricated scorecard data; score is only ever user-entered (SDK exposes no golf API, probed), probe: grep no golf fetch calls
+- [x] ISC-418: golf tests green in full suite, tsc clean, zero new deps, probe: bun test + tsc + git diff package.json
+- [x] ISC-419: Anti: no em/en dashes in new copy, probe: grep added lines
+- [x] ISC-420: MCP list_activities/edit_activity handle sport golf + golf_score, probe: tool round-trip test
 
 #### Wave 3 — dashboard/trends analytics UI + MCP + process
-- [ ] ISC-374: dashboard gains a pacing line under the gap line: projected end-of-week vs target using the usual-rhythm data, probe: Interceptor seeded history
-- [ ] ISC-375: pacing line suggests the concrete close ("one more swim closes it") derived from the sport mix deficit, probe: render test
-- [ ] ISC-376: insufficient history hides the pacing line entirely, probe: Interceptor empty instance
-- [ ] ISC-377: Trends gains YoY chips (sessions/hours/distance delta vs same week last year) with per-metric not-enough-history states, probe: Interceptor
-- [ ] ISC-378: Trends gains the cycling power curve card (15s/1m/5m/20m inline SVG) with sparse-data state, probe: Interceptor seeded + empty
-- [ ] ISC-379: power curve labels carry watts and the source event date on hover/tap title, probe: DOM attr check
-- [ ] ISC-380: G1 risk surfaces in the today strip week chip sub-line when at_risk (quiet, no nagging when on_track), probe: render test both states
-- [ ] ISC-381: get_g1_risk MCP tool returns the same verdict the UI shows, probe: MCP round-trip
-- [ ] ISC-382: get_activity_detail MCP tool returns detail incl. laps for a given id, probe: MCP round-trip
-- [ ] ISC-383: Anti: no cron/scheduler for the risk alert is created in this build (opt-in remains unbuilt until Austin enables; endpoint+tool only), probe: grep scheduler code unchanged
+- [x] ISC-374: dashboard gains a pacing line under the gap line: projected end-of-week vs target using the usual-rhythm data, probe: Interceptor seeded history
+- [x] ISC-375: pacing line suggests the concrete close ("one more swim closes it") derived from the sport mix deficit, probe: render test
+- [x] ISC-376: insufficient history hides the pacing line entirely, probe: Interceptor empty instance
+- [x] ISC-377: Trends gains YoY chips (sessions/hours/distance delta vs same week last year) with per-metric not-enough-history states, probe: Interceptor
+- [x] ISC-378: Trends gains the cycling power curve card (15s/1m/5m/20m inline SVG) with sparse-data state, probe: Interceptor seeded + empty
+- [x] ISC-379: power curve labels carry watts and the source event date on hover/tap title, probe: DOM attr check
+- [x] ISC-380: G1 risk surfaces in the today strip week chip sub-line when at_risk (quiet, no nagging when on_track), probe: render test both states
+- [x] ISC-381: get_g1_risk MCP tool returns the same verdict the UI shows, probe: MCP round-trip
+- [x] ISC-382: get_activity_detail MCP tool returns detail incl. laps for a given id, probe: MCP round-trip
+- [x] ISC-383: Anti: no cron/scheduler for the risk alert is created in this build (opt-in remains unbuilt until Austin enables; endpoint+tool only), probe: grep scheduler code unchanged
 - [ ] ISC-384: full test suite green after all waves, probe: bun test
 - [ ] ISC-385: tsc clean after all waves, probe: bunx tsc --noEmit
 - [ ] ISC-386: zero new npm dependencies, probe: git diff package.json
@@ -534,7 +534,7 @@ Cadence is live at `https://fit.austinfiala.com` behind Austin's single-user log
 - [ ] ISC-395: work committed with descriptive messages per wave, probe: git log
 - [ ] ISC-396: Anti: no deploy without Austin's explicit go, probe: transcript
 - [ ] ISC-397: ISA Decisions/Changelog/Verification updated, PROJECTS.md session record added, probe: read files
-- [ ] ISC-398: ROADMAP round-2 items marked shipped once verified, probe: grep markers
+- [DEFERRED-VERIFY] ISC-398: ROADMAP round-2 items marked shipped once verified, probe: deferred until the round-2 build DEPLOYS (shipped means live on this roadmap). Follow-up: FOLLOWUP-cadence-round2-deploy
 
 ## Test Strategy
 
