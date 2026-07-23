@@ -249,6 +249,7 @@
       .join("");
     document.getElementById("day-dots").innerHTML = dotsHtml;
     renderTodayWeekChip(week);
+    loadPacing(week);
     loadTodayForm();
     loadTodaySleep();
     loadRecords();
@@ -450,6 +451,64 @@
     } catch {
       el.textContent = "--";
     }
+  }
+
+  // --- Pacing line + G1 risk flag (dashboard) --------------------------
+  //
+  // Both read plain sessions/hours arithmetic endpoints, never the load
+  // series. The pacing line hides entirely on insufficient history
+  // (ISC-376); the risk flag only appears when the week projects short
+  // (ISC-380), so on-track weeks stay quiet.
+  async function loadPacing(week) {
+    const line = document.getElementById("pacing-line");
+    if (!line) return;
+    try {
+      const [risk, pacing] = await Promise.all([
+        api("/api/metrics/g1-risk"),
+        api("/api/metrics/pacing"),
+      ]);
+      if (activitiesCache.length === 0) {
+        try {
+          const d = await api("/api/activities");
+          activitiesCache = d.activities || [];
+        } catch {}
+      }
+      if (!pacing || pacing.insufficient_history) {
+        line.hidden = true;
+      } else {
+        let text = `Usual rhythm lands you at ${Math.round(risk.projectedSessions)} sessions, ${Number(risk.projectedHours).toFixed(1)} h by Sunday.`;
+        if (risk.verdict !== "met" && week.gap_sessions > 0) {
+          text += ` ${suggestClose(week)}`;
+        }
+        line.textContent = text;
+        line.hidden = false;
+      }
+      const sub = document.getElementById("today-week-sub");
+      if (sub && !sub.querySelector(".risk-flag") && risk.verdict === "at_risk") {
+        sub.insertAdjacentHTML("beforeend", `<span class="risk-flag"> at risk</span>`);
+      }
+    } catch {
+      line.hidden = true;
+    }
+  }
+
+  // Concrete close suggestion from this week's swim/ride mix (ISC-375).
+  function suggestClose(week) {
+    const one = week.gap_sessions === 1;
+    const acts = activitiesCache.filter(
+      (a) => a.start_time >= `${week.week_start}T00:00:00`,
+    );
+    const swims = acts.filter((a) => a.sport === "swimming").length;
+    const rides = acts.filter(
+      (a) => a.sport === "cycling" || a.sport === "virtual_cycling",
+    ).length;
+    if (swims < rides) {
+      return one ? "One more swim closes it." : "A swim would balance the week.";
+    }
+    if (rides < swims) {
+      return one ? "One more ride closes it." : "A ride would balance the week.";
+    }
+    return one ? "One more swim or ride closes it." : "Any mix of swims and rides closes it.";
   }
 
   // --- Weight progress (from Zwift ride data) --------------------------
@@ -1592,6 +1651,84 @@
     renderTrendChart(data.weeks);
     loadHeatmap();
     loadTrainingLoad();
+    loadYoy();
+    loadPowerCurve();
+  }
+
+  // --- Year over year chips (ISC-377) ----------------------------------
+  async function loadYoy() {
+    const row = document.getElementById("yoy-row");
+    if (!row) return;
+    let data;
+    try {
+      data = await api("/api/metrics/yoy");
+    } catch {
+      row.innerHTML = "";
+      return;
+    }
+    const chip = (label, m, fmt) => {
+      if (!m || m.insufficient_history) {
+        return `<div class="yoy-chip"><div class="yoy-label">${label}</div><div class="yoy-na">Not enough history yet</div></div>`;
+      }
+      const delta = m.current - m.prior;
+      const arrow = delta > 0 ? "&#9650;" : delta < 0 ? "&#9660;" : "&#8226;";
+      const cls = delta > 0 ? "up" : delta < 0 ? "down" : "flat";
+      return `<div class="yoy-chip"><div class="yoy-label">${label}</div><div class="yoy-value">${fmt(m.current)}</div><div class="yoy-delta ${cls}">${arrow} ${fmt(Math.abs(delta))} vs last year (${fmt(m.prior)})</div></div>`;
+    };
+    row.innerHTML =
+      chip("Sessions", data.sessions, (v) => String(Math.round(v))) +
+      chip("Hours", data.hours, (v) => v.toFixed(1)) +
+      chip("Distance", data.distance, (v) => `${(v / 1000).toFixed(1)} km`);
+  }
+
+  // --- Cycling power curve (ISC-378/379) -------------------------------
+  async function loadPowerCurve() {
+    const svg = document.getElementById("power-curve-svg");
+    const empty = document.getElementById("power-curve-empty");
+    if (!svg || !empty) return;
+    let data;
+    try {
+      data = await api("/api/metrics/power-curve");
+    } catch {
+      return;
+    }
+    const show = (msg) => {
+      svg.innerHTML = "";
+      svg.setAttribute("hidden", "");
+      empty.textContent = msg;
+      empty.hidden = false;
+    };
+    const points = (data.points || []).filter((p) => p.watts != null);
+    if (points.length === 0) {
+      show(
+        data.configured
+          ? "No max efforts recorded in the last 90 days yet."
+          : "Connect ZwiftPower to see your power curve.",
+      );
+      return;
+    }
+    svg.removeAttribute("hidden");
+    empty.hidden = true;
+    const width = 640;
+    const height = 200;
+    const padL = 40;
+    const padR = 24;
+    const padY = 30;
+    const labels = { 15: "15s", 60: "1m", 300: "5m", 1200: "20m" };
+    const ordered = [...points].sort((a, b) => a.duration_s - b.duration_s);
+    const maxW = Math.max(...ordered.map((p) => p.watts));
+    const x = (i) => padL + (i * (width - padL - padR)) / Math.max(1, ordered.length - 1);
+    const y = (w) => height - padY - (w / maxW) * (height - padY * 2);
+    const path = ordered.map((p, i) => `${i === 0 ? "M" : "L"}${x(i).toFixed(1)},${y(p.watts).toFixed(1)}`).join(" ");
+    let out = `<path d="${path}" fill="none" stroke="#26221B" stroke-width="2.5" stroke-linejoin="round"/>`;
+    ordered.forEach((p, i) => {
+      const when = p.event_date ? ` on ${formatDate(p.event_date)}` : "";
+      out += `<g><title>Best ${labels[p.duration_s] || p.duration_s + "s"}: ${p.watts} W${when}</title>`;
+      out += `<circle cx="${x(i).toFixed(1)}" cy="${y(p.watts).toFixed(1)}" r="5" fill="#E85F41" stroke="#26221B" stroke-width="2"/>`;
+      out += `<text x="${x(i).toFixed(1)}" y="${(y(p.watts) - 12).toFixed(1)}" text-anchor="middle" class="pc-watts">${p.watts} W</text>`;
+      out += `<text x="${x(i).toFixed(1)}" y="${height - 8}" text-anchor="middle" class="pc-label">${labels[p.duration_s] || p.duration_s + "s"}</text></g>`;
+    });
+    svg.innerHTML = out;
   }
 
   // --- Training load (fitness / fatigue / form) ------------------------

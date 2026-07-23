@@ -120,6 +120,7 @@
             </div>
           </div>
           <div class="gap-line" id="gap-line">Loading...</div>
+          <div class="pacing-line" id="pacing-line" hidden></div>
           <div class="day-dots" id="day-dots"></div>
           <hr class="rule dash-rule">
         </div>
@@ -261,6 +262,11 @@
     </section>
 
     <section id="view-trends" class="section" hidden>
+      <h2 class="section-title">This week vs last year</h2>
+      <div class="card">
+        <div class="yoy-row" id="yoy-row"></div>
+      </div>
+
       <h2 class="section-title">Consistency (52 weeks)</h2>
       <div class="card">
         <div class="heatmap-wrap"><svg id="heatmap-svg" class="heatmap" preserveAspectRatio="xMinYMin meet"></svg></div>
@@ -292,6 +298,12 @@
           <div><span class="legend-swatch" style="background:#EFA928"></span>Form</div>
         </div>
         <p class="muted" id="load-empty" hidden>No activities yet. Load builds as you log or sync training.</p>
+      </div>
+
+      <h2 class="section-title">Cycling power curve (90 days)</h2>
+      <div class="card">
+        <svg id="power-curve-svg" class="trend-chart" viewBox="0 0 640 200" preserveAspectRatio="xMidYMid meet"></svg>
+        <p class="muted" id="power-curve-empty" hidden></p>
       </div>
 
       <h2 class="section-title">Thresholds</h2>

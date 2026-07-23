@@ -710,3 +710,20 @@ input.nutri-col-num{text-align:right;}
   .dup-cols{grid-template-columns:1fr;}
   .race-days{font-size:2.2rem;}
 }
+
+/* --- Wave 3: pacing line, risk flag, YoY chips, power curve --- */
+.pacing-line{margin:10px 0 0;font-size:0.92rem;color:var(--muted-text);}
+.risk-flag{color:var(--danger);font-weight:700;}
+.yoy-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;}
+.yoy-chip{background:var(--paper);border:2px solid var(--ink);border-radius:12px;padding:12px 14px;box-shadow:3px 3px 0 var(--ink);}
+.yoy-chip:nth-child(1){box-shadow:3px 3px 0 var(--coral);}
+.yoy-chip:nth-child(2){box-shadow:3px 3px 0 var(--teal);}
+.yoy-chip:nth-child(3){box-shadow:3px 3px 0 var(--cobalt);}
+.yoy-label{font-family:var(--font-head);font-weight:700;font-size:0.68rem;text-transform:uppercase;letter-spacing:0.05em;color:var(--soft-text);margin-bottom:5px;}
+.yoy-value{font-family:var(--font-head);font-weight:700;font-size:1.3rem;}
+.yoy-delta{font-size:0.82rem;color:var(--muted-text);margin-top:3px;}
+.yoy-delta.up{color:var(--teal);}
+.yoy-delta.down{color:var(--danger);}
+.yoy-na{font-size:0.9rem;color:var(--muted-text);}
+.pc-watts{font-family:var(--font-head);font-weight:700;font-size:13px;fill:var(--ink);}
+.pc-label{font-family:var(--font-head);font-size:12px;fill:#6E6657;}
