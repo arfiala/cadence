@@ -3,7 +3,7 @@ task: Cadence — Austin's personal fitness app (Garmin-synced, MCP-editable)
 project: cadence
 effort: E4
 phase: build
-progress: 156/161
+progress: 159/161
 mode: standard
 started: 2026-07-16T19:50:29Z
 updated: 2026-07-21T00:00:00Z
@@ -539,10 +539,10 @@ Cadence is live at `https://fit.austinfiala.com` behind Austin's single-user log
 - [x] ISC-446: carbs/fat bars render only when their targets are set, probe: Interceptor both states
 - [x] ISC-447: macro goals editable via a Nutrition-tab form (kcal, protein, optional carbs/fat), probe: Interceptor + DB read-back
 - [x] ISC-448: Anti: no fabricated nutrition numbers anywhere; estimation stays key-gated manual-fallback, probe: grep + existing suite
-- [ ] ISC-449: ANTHROPIC_API_KEY lands in /opt/cadence/.env (mode 600) only when Austin supplies it, never invented or copied from OAuth surfaces, probe: transcript + on-box stat
-- [ ] ISC-450: live estimation test after key lands: real free-text meal returns itemized kcal/macros, entry then deleted, probe: prod round-trip
+- [x] ISC-449: refined: Austin chose the FREE path, so GEMINI_API_KEY (his, pasted) landed in /opt/cadence/.env mode 600; never invented, never from OAuth surfaces, probe: on-box stat 600 + transcript
+- [x] ISC-450: live prod estimate: eggs/toast/butter/coffee → 4 items, 260 kcal / 16 g protein; endpoint side-effect free so nothing to delete, probe: prod round-trip through the real session
 - [x] ISC-451: without the key, estimate endpoint still degrades to manual (no regression), probe: existing tests green
-- [ ] ISC-452: Anti: the key never appears in logs, code, or git, probe: grep repo + journal excerpt
+- [x] ISC-452: Anti: key absent from journal (grep 0), absent from repo (env only), header-auth never URL, probe: journalctl grep + repo grep
 - [x] ISC-453: full suite green, tsc clean, zero new deps, probe: bun test + tsc + git diff
 - [x] ISC-454: Anti: no em/en dashes in new copy, probe: grep
 - [x] ISC-455: the 60 kg goal vs 83..85 kg readings observation is surfaced to Austin plainly, probe: summary transcript
