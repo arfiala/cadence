@@ -141,3 +141,63 @@ describe("llm error (ISC-196)", () => {
     if (!result.ok) expect(result.reason).toBe("llm_error");
   });
 });
+
+// --- Gemini provider (free tier, 2026-07-23) ---------------------------
+import { describe as gDescribe, test as gTest, expect as gExpect } from "bun:test";
+
+const GEMINI_OK = {
+  candidates: [
+    {
+      content: {
+        parts: [
+          { text: '[{"food":"two eggs","quantity":"2 large","kcal":140,"protein_g":12,"carbs_g":1,"fat_g":10}]' },
+        ],
+      },
+    },
+  ],
+};
+
+gDescribe("gemini provider", () => {
+  gTest("gemini key routes to generateContent with header auth, never URL key", async () => {
+    let seenUrl = "";
+    let seenHeaders: Record<string, string> = {};
+    const fetchImpl = (async (url: string, init: RequestInit) => {
+      seenUrl = String(url);
+      seenHeaders = init.headers as Record<string, string>;
+      return new Response(JSON.stringify(GEMINI_OK), { status: 200 });
+    }) as unknown as typeof fetch;
+    const r = await estimateNutrition("two eggs", { geminiKey: "g-key", apiKey: "", fetchImpl });
+    gExpect(r.ok).toBe(true);
+    if (r.ok) gExpect(r.items[0]!.kcal).toBe(140);
+    gExpect(seenUrl).toContain(":generateContent");
+    gExpect(seenUrl.includes("key=")).toBe(false);
+    gExpect(seenHeaders["x-goog-api-key"]).toBe("g-key");
+  });
+  gTest("gemini wins over anthropic when both keys exist", async () => {
+    let seenUrl = "";
+    const fetchImpl = (async (url: string) => {
+      seenUrl = String(url);
+      return new Response(JSON.stringify(GEMINI_OK), { status: 200 });
+    }) as unknown as typeof fetch;
+    await estimateNutrition("toast", { geminiKey: "g", apiKey: "a", fetchImpl });
+    gExpect(seenUrl).toContain("generativelanguage.googleapis.com");
+  });
+  gTest("no keys still degrades to manual (no_key), no fetch made", async () => {
+    let called = false;
+    const fetchImpl = (async () => {
+      called = true;
+      return new Response("{}", { status: 200 });
+    }) as unknown as typeof fetch;
+    const r = await estimateNutrition("toast", { geminiKey: "", apiKey: "", fetchImpl });
+    gExpect(r).toEqual({ ok: false, reason: "no_key" });
+    gExpect(called).toBe(false);
+  });
+  gTest("malformed gemini payload degrades to bad_response, never fabricates", async () => {
+    const fetchImpl = (async () =>
+      new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: "not json" }] } }] }), {
+        status: 200,
+      })) as unknown as typeof fetch;
+    const r = await estimateNutrition("mystery", { geminiKey: "g", fetchImpl });
+    gExpect(r).toEqual({ ok: false, reason: "bad_response" });
+  });
+});

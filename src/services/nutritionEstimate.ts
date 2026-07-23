@@ -33,6 +33,8 @@ export type EstimateResult =
   | { ok: false; reason: "no_key" | "llm_error" | "bad_response" };
 
 export type EstimateDeps = {
+  // Overrides GEMINI_API_KEY. An empty string or undefined means "no key".
+  geminiKey?: string;
   // Overrides ANTHROPIC_API_KEY. An empty string or undefined means "no key".
   apiKey?: string | undefined;
   // Overrides the global fetch (tests pass a stub returning a Response).
@@ -42,6 +44,14 @@ export type EstimateDeps = {
 };
 
 const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";
+// Gemini support (Austin chose the free tier, 2026-07-23). The key rides the
+// x-goog-api-key HEADER, never the ?key= query param Google's docs show:
+// tokens in URLs leak into access logs (constitutional rule). Same
+// never-fabricate contract: no key, bad response, or timeout all degrade to
+// manual entry. GEMINI_API_KEY wins over ANTHROPIC_API_KEY when both exist
+// (the free path is the one Austin asked for).
+const GEMINI_URL_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
+const DEFAULT_GEMINI_MODEL = "gemini-2.5-flash";
 
 // Upper bound on a single estimation call. Estimation is interactive (a user is
 // waiting on the entry), so a slow call should fail fast to the manual-entry
@@ -144,39 +154,79 @@ function validateItem(raw: unknown): NutritionItem | null {
   };
 }
 
+// Gemini generateContent response shape: candidates[0].content.parts[].text.
+function extractGeminiText(payload: unknown): string | null {
+  if (typeof payload !== "object" || payload === null) return null;
+  const cands = (payload as Record<string, unknown>).candidates;
+  if (!Array.isArray(cands) || cands.length === 0) return null;
+  const content = (cands[0] as Record<string, unknown>)?.content as
+    | Record<string, unknown>
+    | undefined;
+  const parts = content?.parts;
+  if (!Array.isArray(parts)) return null;
+  const text = parts
+    .map((p) => (typeof (p as Record<string, unknown>)?.text === "string" ? (p as Record<string, unknown>).text : ""))
+    .join("");
+  return text.length > 0 ? text : null;
+}
+
 export async function estimateNutrition(
   description: string,
   deps: EstimateDeps = {},
 ): Promise<EstimateResult> {
-  const apiKey = deps.apiKey !== undefined ? deps.apiKey : process.env.ANTHROPIC_API_KEY;
-  // No key: return the typed unavailable result WITHOUT ever calling out and
-  // without fabricating numbers, so the caller falls back to manual entry.
-  if (apiKey === undefined || apiKey.length === 0) {
+  const geminiKey = deps.geminiKey !== undefined ? deps.geminiKey : process.env.GEMINI_API_KEY;
+  const anthropicKey = deps.apiKey !== undefined ? deps.apiKey : process.env.ANTHROPIC_API_KEY;
+  const provider =
+    geminiKey !== undefined && geminiKey.length > 0
+      ? ("gemini" as const)
+      : anthropicKey !== undefined && anthropicKey.length > 0
+        ? ("anthropic" as const)
+        : null;
+  // No key on either provider: the typed unavailable result, no call, no
+  // fabricated numbers; the caller falls back to manual entry.
+  if (provider === null) {
     return { ok: false, reason: "no_key" };
   }
 
   const fetchImpl = deps.fetchImpl ?? fetch;
-  const model = deps.model ?? process.env.NUTRITION_MODEL ?? DEFAULT_MODEL;
 
   let res: Response;
   try {
-    res = await fetchImpl(ANTHROPIC_URL, {
-      method: "POST",
-      headers: {
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
-        "content-type": "application/json",
-      },
-      body: JSON.stringify({
-        model,
-        max_tokens: 1024,
-        messages: [{ role: "user", content: buildPrompt(description) }],
-      }),
-      // Hard timeout so a hung Anthropic connection fails to llm_error (which
-      // the caller turns into a manual-entry fallback) rather than stalling the
-      // request. Single attempt, no retry, so a 429/5xx cannot storm the API.
-      signal: AbortSignal.timeout(ESTIMATE_TIMEOUT_MS),
-    });
+    if (provider === "gemini") {
+      const model = deps.model ?? process.env.NUTRITION_MODEL ?? DEFAULT_GEMINI_MODEL;
+      res = await fetchImpl(`${GEMINI_URL_BASE}/${model}:generateContent`, {
+        method: "POST",
+        headers: {
+          // Header, never the ?key= query param: tokens in URLs leak to logs.
+          "x-goog-api-key": geminiKey as string,
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: buildPrompt(description) }] }],
+          generationConfig: { temperature: 0.2, maxOutputTokens: 1024 },
+        }),
+        signal: AbortSignal.timeout(ESTIMATE_TIMEOUT_MS),
+      });
+    } else {
+      const model = deps.model ?? process.env.NUTRITION_MODEL ?? DEFAULT_MODEL;
+      res = await fetchImpl(ANTHROPIC_URL, {
+        method: "POST",
+        headers: {
+          "x-api-key": anthropicKey as string,
+          "anthropic-version": "2023-06-01",
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          model,
+          max_tokens: 1024,
+          messages: [{ role: "user", content: buildPrompt(description) }],
+        }),
+        // Hard timeout so a hung connection fails to llm_error (which the
+        // caller turns into a manual-entry fallback) rather than stalling the
+        // request. Single attempt, no retry, so a 429/5xx cannot storm the API.
+        signal: AbortSignal.timeout(ESTIMATE_TIMEOUT_MS),
+      });
+    }
   } catch {
     // Transport-level failure (DNS, connection reset, timeout).
     return { ok: false, reason: "llm_error" };
@@ -194,7 +244,7 @@ export async function estimateNutrition(
     return { ok: false, reason: "bad_response" };
   }
 
-  const text = extractText(payload);
+  const text = provider === "gemini" ? extractGeminiText(payload) : extractText(payload);
   if (text === null) return { ok: false, reason: "bad_response" };
 
   const rawArray = parseJsonArray(text);
