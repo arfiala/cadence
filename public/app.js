@@ -2068,7 +2068,11 @@
     emptyEl.hidden = true;
     const year = String(new Date().getFullYear());
     const thisYear = rounds.filter((r) => (r.date || "").startsWith(year));
-    const scores = rounds.map((r) => r.display_score).filter((v) => v != null);
+    // Best/average compare like with like: full 18-hole rounds only. A
+    // 2-hole score of 10 is not a "best round", and averaging 9-hole scores
+    // into 18-hole ones understates everything.
+    const fullRounds = rounds.filter((r) => r.holes_played === 18 && r.display_score != null);
+    const scores = fullRounds.map((r) => r.display_score);
     const best = scores.length ? Math.min(...scores) : null;
     const avg = scores.length ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : null;
     const last = rounds[0] && rounds[0].start_time ? formatDate(rounds[0].start_time) : "--";
@@ -2076,8 +2080,8 @@
       `<div class="golf-chip"><div class="golf-chip-label">${label}</div><div class="golf-chip-value">${value}</div></div>`;
     statsEl.innerHTML =
       chip("Rounds this year", String(thisYear.length)) +
-      chip("Best score", best == null ? "--" : String(best)) +
-      chip("Average score", avg == null ? "--" : String(avg)) +
+      chip("Best 18-hole", best == null ? "--" : String(best)) +
+      chip("Avg 18-hole", avg == null ? "--" : String(avg)) +
       chip("Last round", last);
     listEl.innerHTML = rounds
       .map((r) => {
