@@ -3,7 +3,7 @@ task: Cadence — Austin's personal fitness app (Garmin-synced, MCP-editable)
 project: cadence
 effort: E4
 phase: build
-progress: 159/177
+progress: 175/177
 mode: standard
 started: 2026-07-16T19:50:29Z
 updated: 2026-07-21T00:00:00Z
@@ -548,22 +548,22 @@ Cadence is live at `https://fit.austinfiala.com` behind Austin's single-user log
 - [x] ISC-455: the 60 kg goal vs 83..85 kg readings observation is surfaced to Austin plainly, probe: summary transcript
 - [x] ISC-456: pacing line grammar fixed ("1 session", not "1 sessions"), probe: grep + render
 #### Daily calorie tracking, editable anytime + history (ISC-457..472, 2026-07-24, Austin: "track daily calories that you can edit at any time and track those")
-- [ ] ISC-457: quick-add logs a bare calorie number (+ optional protein) as a manual nutrition entry, no itemization required, probe: bun test route
-- [ ] ISC-458: quick-add flows through existing day totals/edit/delete (it is a normal entry), probe: test create-then-day-total
-- [ ] ISC-459: quick-add validates kcal positive integer, protein optional non-negative, probe: bun test bad inputs
-- [ ] ISC-460: Nutrition day view has prev/next day navigation so ANY day is viewable and editable, not just today, probe: Interceptor date change
-- [ ] ISC-461: editing/deleting an entry on a past day updates that day's total (edit-at-any-time), probe: Interceptor + DB
-- [ ] ISC-462: GET /api/nutrition/history?days=N returns per-day kcal + protein totals for the last N NY days incl. zero days, plus targets, auth-gated, probe: bun test + 401
-- [ ] ISC-463: history default 30 days, capped sane (max 365), probe: unit test bounds
-- [ ] ISC-464: Nutrition tab renders a calorie history chart (per-day bars vs target line), inline SVG, probe: Interceptor seeded
-- [ ] ISC-465: history chart shows a protein sub-indicator or second series toward the protein goal, probe: Interceptor
-- [ ] ISC-466: empty history (no entries) renders a clean empty state, not a broken chart, probe: Interceptor empty
-- [ ] ISC-467: quick-add UI is one field + log button at the top of the Nutrition tab, one-tap fast (nap-window), probe: Interceptor
-- [ ] ISC-468: Anti: no fabricated numbers; quick-add stores exactly what the user typed, estimation path untouched, probe: grep + test
-- [ ] ISC-469: Anti: daily calorie data never feeds G1 or the load engine, probe: grep
-- [ ] ISC-470: full suite green, tsc clean, zero new deps, probe: bun test + tsc + git diff
-- [ ] ISC-471: Anti: no em/en dashes in new copy, probe: grep
-- [ ] ISC-472: MCP get_nutrition_day already covers a day; add get_nutrition_history for the trend, probe: tool round-trip
+- [x] ISC-457: quick-add logs a bare calorie number (+ optional protein) as a manual nutrition entry, no itemization required, probe: bun test route
+- [x] ISC-458: quick-add flows through existing day totals/edit/delete (it is a normal entry), probe: test create-then-day-total
+- [x] ISC-459: quick-add validates kcal positive integer, protein optional non-negative, probe: bun test bad inputs
+- [x] ISC-460: prev/next day nav (next disabled on today) live-verified: navigated to Jul 23, title + total changed, next enabled, probe: Interceptor
+- [x] ISC-461: editing/deleting an entry on a past day updates that day's total (edit-at-any-time), probe: Interceptor + DB
+- [x] ISC-462: GET /api/nutrition/history?days=N returns per-day kcal + protein totals for the last N NY days incl. zero days, plus targets, auth-gated, probe: bun test + 401
+- [x] ISC-463: history default 30 days, capped sane (max 365), probe: unit test bounds
+- [x] ISC-464: Nutrition tab renders a calorie history chart (per-day bars vs target line), inline SVG, probe: Interceptor seeded
+- [x] ISC-465: history chart shows a protein sub-indicator or second series toward the protein goal, probe: Interceptor
+- [x] ISC-466: empty history (no entries) renders a clean empty state, not a broken chart, probe: Interceptor empty
+- [x] ISC-467: quick-add UI is one field + log button at the top of the Nutrition tab, one-tap fast (nap-window), probe: Interceptor
+- [x] ISC-468: Anti: no fabricated numbers; quick-add stores exactly what the user typed, estimation path untouched, probe: grep + test
+- [x] ISC-469: Anti: daily calorie data never feeds G1 or the load engine, probe: grep
+- [x] ISC-470: full suite green, tsc clean, zero new deps, probe: bun test + tsc + git diff
+- [x] ISC-471: Anti: no em/en dashes in new copy, probe: grep
+- [x] ISC-472: MCP get_nutrition_day already covers a day; add get_nutrition_history for the trend, probe: tool round-trip
 #### Wave 3 — dashboard/trends analytics UI + MCP + process
 - [x] ISC-374: dashboard gains a pacing line under the gap line: projected end-of-week vs target using the usual-rhythm data, probe: Interceptor seeded history
 - [x] ISC-375: pacing line suggests the concrete close ("one more swim closes it") derived from the sport mix deficit, probe: render test
