@@ -373,6 +373,22 @@ export const TOOLS: ToolDefinition[] = [
     },
   },
   {
+    name: "get_nutrition_history",
+    description:
+      "Get Austin's daily calorie and protein totals over the last N days (default 30, max 365), including zero days, plus his calorie and protein targets. Use for trends like 'how have my calories looked this week'.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        days: { type: "number", description: "How many days back (1-365, default 30)." },
+      },
+      additionalProperties: false,
+    },
+    handler: async (client, args) => {
+      const days = typeof args.days === "number" ? args.days : undefined;
+      return pretty(await client.getNutritionHistory(days));
+    },
+  },
+  {
     name: "edit_nutrition",
     description:
       "Edit an existing entry in Austin's REAL nutrition log. Provide the entry id and a 'fields' object with any of: description, notes, logged_date (YYYY-MM-DD), or items (an array of {food, quantity, kcal, protein_g, carbs_g, fat_g} that fully replaces the entry's items). Editing marks the entry as human-corrected and recomputes its totals.",

@@ -1617,10 +1617,32 @@
       `<text x="${cx}" y="${cy + 16}" text-anchor="middle" font-size="10" fill="#6E6657">of ${escapeHtml(String(Math.round(target)))} kcal</text>`;
   }
 
+  // Which day the Nutrition tab is showing. null means today; a YYYY-MM-DD
+  // string means a specific past/future day the user navigated to (ISC-460).
+  let nutriViewDate = null;
+
+  function nyToday() {
+    return new Date().toLocaleDateString("en-CA", { timeZone: "America/New_York" });
+  }
+  function shiftNutriDate(deltaDays) {
+    const base = nutriViewDate ?? nyToday();
+    const d = new Date(`${base}T12:00:00Z`);
+    d.setUTCDate(d.getUTCDate() + deltaDays);
+    const next = d.toISOString().slice(0, 10);
+    // Do not navigate into the future past today.
+    nutriViewDate = next >= nyToday() ? null : next;
+    loadNutritionDay();
+  }
+
   async function loadNutritionDay() {
+    const date = nutriViewDate;
+    const titleEl = document.getElementById("nutri-day-title");
+    if (titleEl) titleEl.textContent = date == null ? "Today" : formatDate(`${date}T12:00:00Z`);
+    const nextBtn = document.getElementById("nutri-next-day");
+    if (nextBtn) nextBtn.disabled = date == null;
     let data;
     try {
-      data = await api("/api/nutrition");
+      data = await api(`/api/nutrition${date == null ? "" : `?date=${date}`}`);
     } catch {
       return;
     }
@@ -1691,6 +1713,106 @@
     await loadNutritionDay();
     loadNutritionWeight();
     loadMacroGoalForm();
+    loadNutritionHistory();
+  }
+
+  // Quick calorie log (ISC-457/467): a bare number, optionally protein, on the
+  // day currently in view. Reuses the normal create path so it edits/deletes
+  // like any entry.
+  document.getElementById("quick-cal-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const status = document.getElementById("quick-cal-status");
+    const kcalEl = document.getElementById("quick-cal-kcal");
+    const proteinEl = document.getElementById("quick-cal-protein");
+    const kcal = Number(kcalEl.value.trim());
+    if (!Number.isInteger(kcal) || kcal <= 0) {
+      status.textContent = "Enter a calorie number.";
+      return;
+    }
+    const body = { quick: true, kcal };
+    const p = proteinEl.value.trim();
+    if (p !== "") body.protein_g = Number(p);
+    if (nutriViewDate != null) body.logged_date = nutriViewDate;
+    const btn = document.getElementById("quick-cal-btn");
+    btn.disabled = true;
+    status.textContent = "Logging...";
+    try {
+      await api("/api/nutrition", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      kcalEl.value = "";
+      proteinEl.value = "";
+      status.textContent = "Logged.";
+      await loadNutritionDay();
+      loadNutritionHistory();
+    } catch (err) {
+      status.textContent = err && err.message ? err.message : "Could not log";
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  document.getElementById("nutri-prev-day").addEventListener("click", () => shiftNutriDate(-1));
+  document.getElementById("nutri-next-day").addEventListener("click", () => shiftNutriDate(1));
+
+  // Calorie history chart (ISC-464/465): per-day bars against the calorie
+  // target line; a bar turns green on days the protein goal was also met.
+  async function loadNutritionHistory() {
+    const svg = document.getElementById("nutri-history-svg");
+    const empty = document.getElementById("nutri-history-empty");
+    if (!svg || !empty) return;
+    let data;
+    try {
+      data = await api("/api/nutrition/history?days=30");
+    } catch {
+      return;
+    }
+    const hist = data.history || [];
+    const anyLogged = hist.some((d) => d.kcal > 0);
+    if (!anyLogged) {
+      svg.innerHTML = "";
+      svg.setAttribute("hidden", "");
+      empty.hidden = false;
+      return;
+    }
+    svg.removeAttribute("hidden");
+    empty.hidden = true;
+    const W = 640;
+    const H = 200;
+    const padL = 40;
+    const padR = 16;
+    const padT = 16;
+    const padB = 24;
+    const targetKcal = data.target_kcal || 0;
+    const targetProtein = data.target_protein_g || 0;
+    const maxKcal = Math.max(targetKcal, ...hist.map((d) => d.kcal)) * 1.1 || 1;
+    const plotW = W - padL - padR;
+    const plotH = H - padT - padB;
+    const y = (v) => padT + plotH - (v / maxKcal) * plotH;
+    const bw = plotW / hist.length;
+    let out = "";
+    // Calorie target line.
+    if (targetKcal > 0) {
+      const ty = y(targetKcal).toFixed(1);
+      out += `<line x1="${padL}" y1="${ty}" x2="${W - padR}" y2="${ty}" stroke="#26221B" stroke-width="1.5" stroke-dasharray="4 3"></line>`;
+    }
+    hist.forEach((d, i) => {
+      if (d.kcal <= 0) return;
+      const x = padL + i * bw + bw * 0.15;
+      const barW = bw * 0.7;
+      const top = y(d.kcal);
+      const proteinMet = targetProtein > 0 && d.protein_g >= targetProtein;
+      const fill = proteinMet ? "#1F8A70" : "#E85F41";
+      out += `<rect x="${x.toFixed(1)}" y="${top.toFixed(1)}" width="${barW.toFixed(1)}" height="${(padT + plotH - top).toFixed(1)}" fill="${fill}" rx="1.5"><title>${d.date}: ${d.kcal} kcal, ${d.protein_g} g protein</title></rect>`;
+    });
+    // First/last date labels.
+    if (hist.length > 0) {
+      out += `<text x="${padL}" y="${H - 6}" font-size="11" fill="#6E6657">${hist[0].date.slice(5)}</text>`;
+      out += `<text x="${W - padR}" y="${H - 6}" text-anchor="end" font-size="11" fill="#6E6657">${hist[hist.length - 1].date.slice(5)}</text>`;
+    }
+    svg.innerHTML = out;
   }
 
   // Macro goals form (ISC-447): prefills from settings, saves via PATCH.

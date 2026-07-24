@@ -25,6 +25,7 @@ import {
   estimateNutritionRoute,
   createNutrition,
   listNutrition,
+  nutritionHistory,
   updateNutrition,
   deleteNutrition,
 } from "./routes/nutrition";
@@ -128,6 +129,7 @@ async function handleApi(req: Request, url: URL): Promise<Response> {
 
   // Nutrition (ISC-199..205). All behind the same /api/* auth gate above.
   if (path === "/api/nutrition/estimate" && method === "POST") return estimateNutritionRoute(req);
+  if (path === "/api/nutrition/history" && method === "GET") return nutritionHistory(url);
   if (path === "/api/nutrition" && method === "GET") return listNutrition(url);
   if (path === "/api/nutrition" && method === "POST") return createNutrition(req);
 

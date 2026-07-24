@@ -206,6 +206,17 @@
     </section>
 
     <section id="view-nutrition" class="section" hidden>
+      <h2 class="section-title">Quick calories</h2>
+      <div class="card">
+        <p class="muted">Just a number when you do not want to itemize. Protein is optional. Edit or delete it anytime below.</p>
+        <form id="quick-cal-form" class="quick-cal-row">
+          <input type="number" id="quick-cal-kcal" min="1" step="1" placeholder="Calories" inputmode="numeric">
+          <input type="number" id="quick-cal-protein" min="0" step="1" placeholder="Protein g (optional)" inputmode="numeric">
+          <button type="submit" class="btn" id="quick-cal-btn">Log</button>
+          <span class="sync-status" id="quick-cal-status"></span>
+        </form>
+      </div>
+
       <h2 class="section-title">Log a meal</h2>
       <div class="card">
         <div class="field">
@@ -237,7 +248,11 @@
         </div>
       </div>
 
-      <h2 class="section-title">Today</h2>
+      <div class="nutri-day-nav">
+        <button type="button" class="day-nav-btn" id="nutri-prev-day" aria-label="Previous day">&lsaquo;</button>
+        <h2 class="section-title nutri-day-title" id="nutri-day-title">Today</h2>
+        <button type="button" class="day-nav-btn" id="nutri-next-day" aria-label="Next day">&rsaquo;</button>
+      </div>
       <div class="card">
         <div class="nutri-day-head">
           <div class="nutri-ring-wrap">
@@ -246,6 +261,17 @@
           <div class="nutri-macros" id="nutri-macros"></div>
         </div>
       </div>
+      <h2 class="section-title">Last 30 days</h2>
+      <div class="card">
+        <svg id="nutri-history-svg" class="trend-chart" viewBox="0 0 640 200" preserveAspectRatio="xMidYMid meet"></svg>
+        <div class="trend-legend">
+          <div><span class="legend-swatch" style="background:#E85F41"></span>Calories</div>
+          <div><span class="legend-swatch" style="background:#26221B"></span>Calorie target</div>
+          <div><span class="legend-swatch" style="background:#1F8A70"></span>Protein target met</div>
+        </div>
+        <p class="muted" id="nutri-history-empty" hidden>No calories logged yet. Log some above and your trend fills in.</p>
+      </div>
+
       <h2 class="section-title">Macro goals</h2>
       <div class="card">
         <p class="muted">Daily targets. Protein is the one to chase; carbs and fat are optional.</p>

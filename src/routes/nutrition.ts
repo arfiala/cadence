@@ -283,7 +283,28 @@ export async function createNutrition(req: Request): Promise<Response> {
   let items: NutritionItem[];
   let source: "estimated" | "manual";
 
-  if (body.estimate === true) {
+  if (body.quick === true) {
+    // Quick calorie log (ISC-457): a bare number, no itemizing. Stored as a
+    // one-item manual entry so it flows through the exact same day totals,
+    // edit, and delete paths as any other entry (ISC-458). Never fabricates:
+    // carbs/fat are 0 because the user did not supply them, not guessed.
+    const kcal = body.kcal;
+    if (typeof kcal !== "number" || !Number.isInteger(kcal) || kcal <= 0) {
+      return jsonError("kcal must be a positive integer", 400);
+    }
+    let protein = 0;
+    if (body.protein_g !== undefined && body.protein_g !== null) {
+      const p = body.protein_g;
+      if (typeof p !== "number" || !Number.isFinite(p) || p < 0) {
+        return jsonError("protein_g must be a non-negative number", 400);
+      }
+      protein = Math.round(p * 10) / 10;
+    }
+    items = [
+      { food: "Quick calories", quantity: null, kcal, protein_g: protein, carbs_g: 0, fat_g: 0 },
+    ];
+    source = "manual";
+  } else if (body.estimate === true) {
     if (typeof description !== "string" || description.trim().length === 0) {
       return jsonError("description is required when estimate is true", 400);
     }
@@ -355,6 +376,48 @@ export function listNutrition(url: URL): Response {
     target_protein_g: targets.target_protein_g,
     target_carbs_g: targets.target_carbs_g,
     target_fat_g: targets.target_fat_g,
+  });
+}
+
+// GET /api/nutrition/history?days=N (ISC-462): per-day kcal and protein
+// totals over the last N New York calendar days, including zero days so the
+// chart has a continuous axis. Targets ride along for the goal lines.
+export function nutritionHistory(url: URL): Response {
+  const daysParam = Number(url.searchParams.get("days") ?? "30");
+  const days = Number.isFinite(daysParam)
+    ? Math.min(365, Math.max(1, Math.trunc(daysParam)))
+    : 30;
+
+  // One aggregate query keyed on logged_date, then fill the gaps in JS so a
+  // day with no entries still appears at zero.
+  const rows = db
+    .query(
+      `SELECT logged_date, SUM(kcal) AS kcal, SUM(protein_g) AS protein_g
+       FROM nutrition_entries
+       GROUP BY logged_date`,
+    )
+    .all() as { logged_date: string; kcal: number; protein_g: number }[];
+  const byDate = new Map(rows.map((r) => [r.logged_date, r]));
+
+  const out: { date: string; kcal: number; protein_g: number }[] = [];
+  const today = new Date();
+  for (let i = days - 1; i >= 0; i -= 1) {
+    const d = new Date(today.getTime() - i * 24 * 60 * 60 * 1000);
+    const key = nyDateString(d);
+    const hit = byDate.get(key);
+    out.push({
+      date: key,
+      kcal: hit ? Math.round(hit.kcal) : 0,
+      protein_g: hit ? round1(hit.protein_g) : 0,
+    });
+  }
+
+  const targets = nutritionTargets();
+  return Response.json({
+    days,
+    history: out,
+    target_kcal: targets.target_kcal,
+    target_protein_g: targets.target_protein_g,
   });
 }
 

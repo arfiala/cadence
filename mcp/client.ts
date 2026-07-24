@@ -165,6 +165,11 @@ export class CadenceClient {
     return this.request("GET", `/api/nutrition${qs}`);
   }
 
+  getNutritionHistory(days?: number): Promise<unknown> {
+    const qs = days !== undefined ? `?days=${days}` : "";
+    return this.request("GET", `/api/nutrition/history${qs}`);
+  }
+
   editNutrition(id: number, fields: unknown): Promise<unknown> {
     return this.request("PATCH", `/api/nutrition/${id}`, fields);
   }

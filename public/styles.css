@@ -761,3 +761,14 @@ input.nutri-col-num{text-align:right;}
 .macro-bar-fill{height:100%;background:var(--coral);transition:width 300ms ease;}
 .macro-bar-fill.close{background:var(--mustard);}
 .macro-bar-fill.done{background:var(--teal);}
+
+/* --- Daily calorie tracking (ISC-457..467) --- */
+.quick-cal-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+.quick-cal-row input{width:150px;padding:10px 12px;border:2px solid var(--ink);border-radius:10px;background:var(--paper);color:var(--ink);}
+.quick-cal-row .btn{min-height:44px;}
+.nutri-day-nav{display:flex;align-items:center;gap:12px;margin:28px 0 14px;}
+.nutri-day-nav .section-title{margin:0;}
+.nutri-day-title{min-width:150px;}
+.day-nav-btn{font-family:var(--font-head);font-weight:700;font-size:1.3rem;line-height:1;color:var(--ink);background:var(--paper);border:2px solid var(--ink);border-radius:999px;width:40px;height:40px;cursor:pointer;}
+.day-nav-btn:hover:not(:disabled){background:var(--mustard);}
+.day-nav-btn:disabled{opacity:0.35;cursor:not-allowed;}
