@@ -40,6 +40,15 @@
     { slug: "butterfly", name: "Butterfly", dose: "2 min", target: "Groin, adductors", cue: "Soles together, knees heavy; add light weight on the knees when easy." },
     { slug: "pigeon", name: "Pigeon", dose: "60s / side", target: "Glutes, hips", cue: "Front shin across, chest tall; elevate the hip if it pinches." },
     { slug: "calf-stretch", name: "Calf Stretch (step)", dose: "60s / side", target: "Calves, ankles", cue: "Straight knee, heel drives down off a step or slant." },
+    // Upper body block, added 2026-07-29. Movements from Ben Patrick's ATG
+    // upper-body work (hanging is the staple); hold doses follow the Huberman
+    // Lab flexibility protocol: 30s static holds, 2 to 4 sets, low intensity
+    // (30 to 40 percent of the point of discomfort), warm before stretching.
+    { slug: "dead-hang", name: "Dead Hang", dose: "30s x 2, build to 60s", target: "Shoulders, lats, grip, spine", cue: "Full grip, arms straight, let the shoulders shrug up to the ears and breathe slow. Any sturdy overhead bar works; no bar, do the t-spine reach twice instead." },
+    { slug: "doorway-pec", name: "Doorway Pec Stretch", dose: "30s / side x 2", target: "Chest, front shoulder", cue: "Forearm on the frame, elbow at shoulder height, step through gently. Stay near 30 to 40 percent intensity." },
+    { slug: "t-spine-reach", name: "T-Spine Reach (bench)", dose: "45s x 2", target: "Upper back, lats, triceps", cue: "Elbows on a bench or chair, hands together overhead, let the chest sink toward the floor." },
+    { slug: "cross-body-shoulder", name: "Cross-Body Shoulder Stretch", dose: "30s / side x 2", target: "Rear shoulder", cue: "Pull the arm across at chest height with the other forearm; keep the shoulder pulled down away from the ear." },
+    { slug: "wrist-stretch", name: "Wrist Stretch (floor)", dose: "30s each direction", target: "Wrists, forearms", cue: "Palms flat on the floor, fingers forward then fingers back toward you, lean gently. Preps pressing and hanging." },
   ];
 
   const STRETCH_LOG_TITLE = "ATG Daily Stretch";
@@ -119,6 +128,56 @@
       drills: "8 x 50 m single arm and catch up mixed, 20 seconds rest",
       main: "4 x 300 m freestyle firm, 30 seconds rest, then 8 x 75 m freestyle fast, 20 seconds rest",
       cooldown: "400 m easy choice",
+    },
+  ];
+
+  // Dumbbell-only strength routines (ISC-473..480). Static reference content
+  // like SWIM_SETS: no adaptive logic, dumbbells and bodyweight only. Movement
+  // selection leans on Ben Patrick's ATG standards (split squat, RDL, external
+  // rotation, cross bench pullover, trap 3 raise); set and rep schemes follow
+  // the Huberman Lab guidance: the 3x5 protocol for strength days (3 to 5
+  // reps, 3 to 5 sets, 2 to 4 min rest) and 8 to 15 reps with 60 to 90s rest
+  // for hypertrophy days, alternating focus across the week. Sources cited in
+  // the HTML comment above the dumbbell list in index.html.
+  const DUMBBELL_WORKOUTS = [
+    {
+      name: "Full Body Strength A",
+      minutes: 35,
+      focus: "Strength",
+      scheme: "Heavier, 3 to 5 sets, rest 2 to 3 min between sets",
+      exercises: [
+        { name: "ATG Split Squat", dose: "3 x 5 to 8 / side", cue: "Dumbbells at your sides, front knee travels over the toes, 3s down. ATG target: 25 percent bodyweight per hand." },
+        { name: "Floor or Incline Press", dose: "4 x 5", cue: "Elbows about 45 degrees from the ribs, pause light at the bottom, press hard." },
+        { name: "One-Arm Row", dose: "3 x 6 / side", cue: "Hand braced on a bench or knee, flat back, pull the dumbbell to the hip." },
+        { name: "Dumbbell RDL", dose: "3 x 8", cue: "Soft knees, hips back until the hamstrings load, flat back the whole way. ATG works up to 20 reps at 25 percent bodyweight per hand." },
+        { name: "External Rotation", dose: "2 x 10 / side", cue: "Light dumbbell, elbow pinned at the side or on the knee, rotate out slow. ATG standard is 5 to 10 percent bodyweight." },
+      ],
+    },
+    {
+      name: "Full Body Hypertrophy B",
+      minutes: 35,
+      focus: "Muscle",
+      scheme: "Moderate, 3 sets of 8 to 15, rest 60 to 90s, close to failure",
+      exercises: [
+        { name: "Goblet Squat", dose: "3 x 10 to 15", cue: "One dumbbell held at the chest, sit deep between the heels, chest tall." },
+        { name: "Shoulder Press", dose: "3 x 8 to 12", cue: "Standing or seated, dumbbells start at the collarbones, finish with biceps by the ears." },
+        { name: "Cross-Bench Pullover", dose: "3 x 10 to 15", cue: "Shoulders on a bench, one dumbbell over the chest, lower behind the head for a big lat and chest stretch. An ATG staple." },
+        { name: "Trap 3 Raise", dose: "2 x 10 to 12 / side", cue: "Light dumbbell, arm raised at 45 degrees from overhead, thumb up. ATG standard is 10 percent bodyweight per hand." },
+        { name: "Hammer Curl + Overhead Triceps", dose: "2 x 10 to 15 each", cue: "Superset: curl with palms facing, then press one dumbbell overhead with both hands and lower behind the head." },
+      ],
+    },
+    {
+      name: "Express 20",
+      minutes: 20,
+      focus: "Circuit",
+      scheme: "3 rounds, 8 to 12 reps each, minimal rest between moves",
+      exercises: [
+        { name: "Goblet Squat", dose: "8 to 12", cue: "Smooth tempo, full depth, no bounce." },
+        { name: "Push-Up or Floor Press", dose: "8 to 12", cue: "Pick the one that leaves 2 reps in the tank." },
+        { name: "One-Arm Row", dose: "8 to 12 / side", cue: "Brace on anything sturdy, no torso twist." },
+        { name: "Dumbbell RDL", dose: "8 to 12", cue: "Hips back, hamstrings load, stand tall." },
+        { name: "External Rotation", dose: "10 / side", cue: "Light and strict, the nap-window shoulder insurance." },
+      ],
     },
   ];
 
@@ -2480,6 +2539,7 @@
   }
 
   async function loadStretch() {
+    renderDumbbellWorkouts();
     renderStretchCards();
     renderSwimSets();
     await refreshStretchLogState();
@@ -2516,6 +2576,72 @@
     list.querySelectorAll("[data-swim]").forEach((btn) => {
       btn.addEventListener("click", () => logSwimSet(btn));
     });
+  }
+
+  // --- Dumbbell workouts ----------------------------------------------
+
+  function renderDumbbellWorkouts() {
+    const list = document.getElementById("dumbbell-list");
+    if (!list) return;
+    list.innerHTML = DUMBBELL_WORKOUTS.map((w, i) => {
+      const rows = w.exercises.map((ex) =>
+        `<div class="dumbbell-exercise">
+          <div class="dumbbell-exercise-head">
+            <span class="dumbbell-exercise-name">${escapeHtml(ex.name)}</span>
+            <span class="dumbbell-exercise-dose">${escapeHtml(ex.dose)}</span>
+          </div>
+          <div class="dumbbell-exercise-cue">${escapeHtml(ex.cue)}</div>
+        </div>`).join("");
+      return `
+      <div class="dumbbell-card">
+        <div class="swim-head">
+          <div class="swim-name">${escapeHtml(w.name)}</div>
+          <div class="swim-meta">
+            <span class="swim-tag">${escapeHtml(String(w.minutes))} min</span>
+            <span class="swim-tag">${escapeHtml(w.focus)}</span>
+          </div>
+        </div>
+        <div class="dumbbell-scheme">${escapeHtml(w.scheme)}</div>
+        ${rows}
+        <div class="swim-actions">
+          <button type="button" class="btn dumbbell-log-btn" data-dumbbell="${i}">Log this workout</button>
+        </div>
+      </div>`;
+    }).join("");
+
+    list.querySelectorAll("[data-dumbbell]").forEach((btn) => {
+      btn.addEventListener("click", () => logDumbbellWorkout(btn));
+    });
+  }
+
+  // Logs a dumbbell workout as a strength activity, same POST + toast path as
+  // swim sets. sport=strength is NOT G1-qualifying (ISC-479), so a logged
+  // workout never inflates the week's swim/bike session count.
+  async function logDumbbellWorkout(btn) {
+    if (btn.disabled) return;
+    const workout = DUMBBELL_WORKOUTS[Number(btn.dataset.dumbbell)];
+    if (!workout) return;
+    btn.disabled = true;
+    try {
+      const res = await api("/api/activities", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sport: "strength",
+          start_time: new Date().toISOString(),
+          duration_s: workout.minutes * 60,
+          title: `Dumbbells: ${workout.name}`,
+          notes: `Dumbbell workout: ${workout.name}`,
+        }),
+      });
+      const activity = res.activity;
+      showToast(`Logged ${workout.name}.`, activity ? activity.id : null);
+      loadDashboard();
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      btn.disabled = false;
+    }
   }
 
   // Logs a swim set as a swimming activity with the card's duration, through the

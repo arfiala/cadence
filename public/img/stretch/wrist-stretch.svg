@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 220" role="img" aria-labelledby="t">
+  <title id="t">Wrist stretch: on all fours with palms flat, lean gently</title>
+  <g fill="none" stroke="#0B3D2E" stroke-width="7" stroke-linecap="round" stroke-linejoin="round">
+    <!-- torso horizontal on all fours -->
+    <line x1="120" y1="102" x2="204" y2="108"/>
+    <!-- arms down to flat palms -->
+    <line x1="128" y1="104" x2="122" y2="186"/>
+    <line x1="148" y1="105" x2="144" y2="186"/>
+    <!-- flat hands on the floor -->
+    <line x1="108" y1="188" x2="134" y2="188"/>
+    <line x1="132" y1="188" x2="158" y2="188"/>
+    <!-- kneeling legs -->
+    <polyline points="204,108 226,150 226,188"/>
+    <polyline points="226,188 250,188"/>
+  </g>
+  <circle cx="112" cy="88" r="13" fill="#0B3D2E"/>
+  <!-- highlight: forearms and wrists under stretch -->
+  <g fill="none" stroke="#2BB673" stroke-width="8" stroke-linecap="round" opacity="0.85">
+    <line x1="126" y1="130" x2="122" y2="180"/>
+    <line x1="147" y1="132" x2="144" y2="180"/>
+  </g>
+  <line x1="20" y1="192" x2="300" y2="192" stroke="#9FB0A8" stroke-width="2.5" stroke-linecap="round"/>
+</svg>

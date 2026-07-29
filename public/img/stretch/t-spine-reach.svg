@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 220" role="img" aria-labelledby="t">
+  <title id="t">T-spine reach: kneel with elbows on a bench and let the chest sink</title>
+  <!-- bench -->
+  <line x1="66" y1="108" x2="140" y2="108" stroke="#9FB0A8" stroke-width="6" stroke-linecap="round"/>
+  <line x1="76" y1="108" x2="76" y2="190" stroke="#9FB0A8" stroke-width="4" stroke-linecap="round"/>
+  <line x1="130" y1="108" x2="130" y2="190" stroke="#9FB0A8" stroke-width="4" stroke-linecap="round"/>
+  <g fill="none" stroke="#0B3D2E" stroke-width="7" stroke-linecap="round" stroke-linejoin="round">
+    <!-- arms: elbows on the bench, hands folded overhead -->
+    <polyline points="112,104 96,88 116,74"/>
+    <!-- torso sloping down from elbows to hips, chest sinking -->
+    <line x1="118" y1="106" x2="190" y2="146"/>
+    <!-- kneeling legs -->
+    <polyline points="190,146 208,186 240,186"/>
+  </g>
+  <circle cx="126" cy="86" r="13" fill="#0B3D2E"/>
+  <!-- highlight: upper back and lats opening -->
+  <g fill="none" stroke="#2BB673" stroke-width="8" stroke-linecap="round" opacity="0.85">
+    <line x1="126" y1="110" x2="168" y2="134"/>
+  </g>
+  <line x1="20" y1="192" x2="300" y2="192" stroke="#9FB0A8" stroke-width="2.5" stroke-linecap="round"/>
+</svg>

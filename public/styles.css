@@ -640,10 +640,16 @@ input.nutri-col-num{text-align:right;}
 
 /* --- Swim sets --- */
 .swim-intro{margin:-6px 0 16px;}
-.swim-list{display:flex;flex-direction:column;gap:16px;}
-.swim-card{background:var(--paper);border:2px solid var(--ink);border-radius:14px;padding:18px;box-shadow:4px 4px 0 var(--cobalt);}
-.swim-card:nth-child(3n+2){box-shadow:4px 4px 0 var(--teal);}
-.swim-card:nth-child(3n+3){box-shadow:4px 4px 0 var(--grape);}
+.swim-list,.dumbbell-list{display:flex;flex-direction:column;gap:16px;}
+.swim-card,.dumbbell-card{background:var(--paper);border:2px solid var(--ink);border-radius:14px;padding:18px;box-shadow:4px 4px 0 var(--cobalt);}
+.swim-card:nth-child(3n+2),.dumbbell-card:nth-child(3n+2){box-shadow:4px 4px 0 var(--teal);}
+.swim-card:nth-child(3n+3),.dumbbell-card:nth-child(3n+3){box-shadow:4px 4px 0 var(--grape);}
+.dumbbell-scheme{font-family:var(--font-head);font-weight:700;font-size:0.78rem;text-transform:uppercase;letter-spacing:0.04em;color:var(--link);margin:0 0 10px;}
+.dumbbell-exercise{border-top:1px solid rgba(38,34,27,0.14);padding:8px 0;}
+.dumbbell-exercise-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap;}
+.dumbbell-exercise-name{font-family:var(--font-head);font-weight:700;font-size:0.95rem;color:var(--ink);}
+.dumbbell-exercise-dose{white-space:nowrap;font-size:0.85rem;color:var(--ink);opacity:0.75;}
+.dumbbell-exercise-cue{font-size:0.88rem;color:var(--ink);opacity:0.85;margin-top:2px;}
 .swim-head{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px;}
 .swim-name{font-family:var(--font-head);font-weight:700;font-size:1.15rem;color:var(--ink);flex:1 1 auto;min-width:0;}
 .swim-meta{display:flex;gap:8px;flex-wrap:wrap;}

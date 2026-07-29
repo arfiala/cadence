@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 220" role="img" aria-labelledby="t">
+  <title id="t">Cross-body shoulder stretch: pull one arm across the chest</title>
+  <g fill="none" stroke="#0B3D2E" stroke-width="7" stroke-linecap="round" stroke-linejoin="round">
+    <!-- upright torso -->
+    <line x1="160" y1="66" x2="160" y2="130"/>
+    <!-- stretched arm across the chest -->
+    <polyline points="160,84 206,92"/>
+    <!-- holding arm hooked under it -->
+    <polyline points="160,88 186,108 196,90"/>
+    <!-- legs standing -->
+    <polyline points="160,130 148,162 146,188"/>
+    <polyline points="160,130 172,162 174,188"/>
+  </g>
+  <circle cx="160" cy="52" r="13" fill="#0B3D2E"/>
+  <!-- highlight: rear shoulder of the crossed arm -->
+  <g fill="none" stroke="#2BB673" stroke-width="8" stroke-linecap="round" opacity="0.85">
+    <line x1="164" y1="84" x2="200" y2="91"/>
+  </g>
+  <line x1="20" y1="192" x2="300" y2="192" stroke="#9FB0A8" stroke-width="2.5" stroke-linecap="round"/>
+</svg>
