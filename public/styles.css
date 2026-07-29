@@ -92,6 +92,7 @@ a{color:var(--link);}
 .nav-tab:hover{transform:translate(-1px,-1px);box-shadow:2px 2px 0 var(--ink);}
 .nav-tab.active{box-shadow:3px 3px 0 var(--ink);font-weight:700;}
 .nav-tab.active[data-view="dashboard"]{background:var(--coral);color:var(--ink);}
+.nav-tab.active[data-view="plan"]{background:#1F4E79;color:var(--paper);} /* 8.45:1 on paper, AA (measured) */
 .nav-tab.active[data-view="activities"]{background:#15705A;color:var(--paper);}
 .nav-tab.active[data-view="nutrition"]{background:var(--mustard);color:var(--ink);}
 .nav-tab.active[data-view="trends"]{background:var(--cobalt);color:var(--paper);}
@@ -778,3 +779,31 @@ input.nutri-col-num{text-align:right;}
 .day-nav-btn{font-family:var(--font-head);font-weight:700;font-size:1.3rem;line-height:1;color:var(--ink);background:var(--paper);border:2px solid var(--ink);border-radius:999px;width:40px;height:40px;cursor:pointer;}
 .day-nav-btn:hover:not(:disabled){background:var(--mustard);}
 .day-nav-btn:disabled{opacity:0.35;cursor:not-allowed;}
+
+/* --- Training plan tab --- */
+.plan-header{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;margin-bottom:8px;}
+.plan-week-label{color:#5a5344;font-size:0.9rem;margin-top:4px;}
+.plan-week-nav{display:flex;gap:8px;}
+.plan-week-summary{margin:8px 0 16px;font-size:0.95rem;color:#5a5344;}
+.plan-day{margin-bottom:18px;}
+.plan-day-head{font-weight:700;margin-bottom:8px;border-bottom:2px solid var(--ink);padding-bottom:4px;}
+.plan-day-date{font-weight:400;color:#5a5344;font-size:0.85rem;margin-left:6px;}
+.plan-card{border:2px solid var(--ink);background:var(--paper);box-shadow:3px 3px 0 var(--ink);border-radius:10px;padding:12px 14px;margin-bottom:10px;}
+.plan-card-top{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;}
+.plan-card-title{font-weight:700;}
+.plan-card-meta{font-size:0.85rem;color:#5a5344;margin-top:2px;}
+.plan-card-actions{display:flex;gap:8px;flex-shrink:0;}
+.plan-toggle,.plan-skip{border:2px solid var(--ink);background:var(--paper);border-radius:8px;padding:6px 10px;cursor:pointer;font-weight:600;min-height:44px;}
+.plan-toggle:hover{background:#1F4E79;color:var(--paper);}
+.plan-done{opacity:0.75;background:#EAF3EA;}
+.plan-done .plan-toggle{background:#14532D;color:var(--paper);}
+.plan-skipped{opacity:0.6;}
+.plan-card-detail{margin-top:8px;}
+.plan-detail-text{white-space:pre-wrap;font-family:inherit;font-size:0.9rem;margin:6px 0 0;color:#3d382e;}
+.plan-empty{border:2px dashed var(--ink);border-radius:10px;padding:20px;text-align:center;color:#5a5344;}
+.plan-info{margin-top:22px;border-top:2px solid var(--ink);padding-top:12px;}
+.plan-info summary{cursor:pointer;font-weight:700;}
+.plan-road-row{margin:8px 0;}
+.plan-zones{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px;margin-top:12px;}
+.plan-zone-row{display:flex;justify-content:space-between;border-bottom:1px solid #d8d0bd;padding:4px 0;font-size:0.92rem;}
+.plan-priority{margin-top:14px;font-size:0.9rem;color:#5a5344;}

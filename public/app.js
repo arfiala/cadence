@@ -238,6 +238,7 @@
       section.hidden = section.id !== `view-${name}`;
     });
     if (name === "dashboard") loadDashboard();
+    if (name === "plan") loadPlan();
     if (name === "activities") loadActivities();
     if (name === "nutrition") loadNutrition();
     if (name === "trends") loadTrends();
@@ -251,6 +252,152 @@
   document.querySelectorAll(".nav-tab").forEach((btn) => {
     btn.addEventListener("click", () => switchTab(btn.dataset.view));
   });
+
+  // --- Training plan ---------------------------------------------------
+
+  let planMonday = null; // ISO Monday of the viewed week; null = current week
+
+  function planAddDays(iso, n) {
+    const p = iso.split("-").map(Number);
+    return new Date(Date.UTC(p[0], p[1] - 1, p[2] + n)).toISOString().slice(0, 10);
+  }
+
+  function planMinutesLabel(min) {
+    const h = Math.floor(min / 60);
+    const m = Math.round(min % 60);
+    return `${h}:${String(m).padStart(2, "0")}`;
+  }
+
+  const PLAN_DOW = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+  const PLAN_SPORT_LABEL = { bike: "Bike", run: "Run", strength: "Strength", mobility: "Mobility", rest: "Rest" };
+
+  function renderPlanSession(s) {
+    const done = s.status === "done";
+    const skipped = s.status === "skipped";
+    const meta = [
+      PLAN_SPORT_LABEL[s.sport] || s.sport,
+      s.duration_min > 0 ? `${s.duration_min} min` : null,
+      s.distance_m ? `${(s.distance_m / 1000).toFixed(1)} km` : null,
+      s.tss_planned ? `${s.tss_planned} TSS` : null,
+    ].filter(Boolean).join(" · ");
+    return `
+    <div class="plan-card${done ? " plan-done" : ""}${skipped ? " plan-skipped" : ""}" data-plan-id="${s.id}">
+      <div class="plan-card-top">
+        <div>
+          <div class="plan-card-title">${escapeHtml(s.title)}</div>
+          <div class="plan-card-meta">${escapeHtml(meta)}${s.target ? ` · ${escapeHtml(s.target)}` : ""}</div>
+        </div>
+        <div class="plan-card-actions">
+          <button type="button" class="plan-toggle" data-plan-action="${done ? "planned" : "done"}">${done ? "Done ✓" : "Mark done"}</button>
+          ${s.sport !== "rest" && !done ? `<button type="button" class="plan-skip" data-plan-action="skipped" ${skipped ? "disabled" : ""}>${skipped ? "Skipped" : "Skip"}</button>` : ""}
+        </div>
+      </div>
+      ${s.detail ? `<details class="plan-card-detail"><summary>Details</summary><pre class="plan-detail-text">${escapeHtml(s.detail)}</pre></details>` : ""}
+    </div>`;
+  }
+
+  async function loadPlan() {
+    let summary, week;
+    try {
+      summary = await api("/api/plan/summary");
+      const dateParam = planMonday ? `?date=${planMonday}` : "";
+      week = await api(`/api/plan/week${dateParam}`);
+    } catch {
+      return;
+    }
+    const empty = summary.totalSessions === 0;
+    document.getElementById("plan-empty").hidden = !empty;
+    document.getElementById("plan-days").innerHTML = "";
+    document.getElementById("plan-phase-title").textContent = `${summary.phase} training plan`;
+    if (empty) {
+      document.getElementById("plan-week-label").textContent = "";
+      document.getElementById("plan-week-summary").textContent = "";
+      return;
+    }
+    planMonday = week.weekStart;
+
+    const weekNo = Math.floor((Date.parse(week.weekStart) - Date.parse(summary.planStart)) / 604800000) + 1;
+    const inBlock = weekNo >= 1 && weekNo <= summary.totalWeeks;
+    const cutback = week.sessions.some((s) => s.title.includes("(cutback week)"));
+    const consolidation = week.sessions.some((s) => s.title.includes("(consolidation week)"));
+    const tag = cutback ? " · cutback week" : consolidation ? " · consolidation week" : "";
+    document.getElementById("plan-week-label").textContent = inBlock
+      ? `Week ${weekNo} of ${summary.totalWeeks} · ${week.weekStart}${tag}`
+      : `${week.weekStart} · outside the current block`;
+
+    const planned = week.sessions.reduce((t, s) => t + s.duration_min, 0);
+    const doneMin = week.sessions.filter((s) => s.status === "done").reduce((t, s) => t + s.duration_min, 0);
+    document.getElementById("plan-week-summary").textContent = week.sessions.length
+      ? `This week: ${planMinutesLabel(planned)} planned, ${planMinutesLabel(doneMin)} done · whole plan ${summary.completionPercent}% complete so far`
+      : "Nothing planned this week.";
+
+    const byDay = new Map();
+    for (const s of week.sessions) {
+      if (!byDay.has(s.plan_day)) byDay.set(s.plan_day, []);
+      byDay.get(s.plan_day).push(s);
+    }
+    const html = week.days.map((day, i) => {
+      const sessions = byDay.get(day) || [];
+      if (sessions.length === 0) return "";
+      return `
+      <div class="plan-day">
+        <div class="plan-day-head">${PLAN_DOW[i]} <span class="plan-day-date">${day}</span></div>
+        ${sessions.map(renderPlanSession).join("")}
+      </div>`;
+    }).join("");
+    document.getElementById("plan-days").innerHTML = html;
+
+    document.getElementById("plan-roadmap").innerHTML =
+      "<h3>Road to fall 2027</h3>" +
+      summary.macroRoadmap.map((p) => `<div class="plan-road-row"><strong>${escapeHtml(p.phase)}</strong> (${escapeHtml(p.span)}): ${escapeHtml(p.focus)}</div>`).join("");
+    document.getElementById("plan-zones-power").innerHTML =
+      "<h3>Bike power (FTP 169 W)</h3>" +
+      summary.zonesPower.map((z) => `<div class="plan-zone-row"><span>${escapeHtml(z.zone)}</span><span>${escapeHtml(z.range)}</span></div>`).join("");
+    document.getElementById("plan-zones-hr").innerHTML =
+      "<h3>Heart rate (LTHR 185)</h3>" +
+      summary.zonesHr.map((z) => `<div class="plan-zone-row"><span>${escapeHtml(z.zone)}</span><span>${escapeHtml(z.range)}</span></div>`).join("");
+    document.getElementById("plan-priority-note").textContent = summary.priorityNote;
+  }
+
+  document.getElementById("plan-prev-week").addEventListener("click", () => {
+    if (planMonday) { planMonday = planAddDays(planMonday, -7); loadPlan(); }
+  });
+  document.getElementById("plan-next-week").addEventListener("click", () => {
+    if (planMonday) { planMonday = planAddDays(planMonday, 7); loadPlan(); }
+  });
+
+  // Status toggles via delegation so re-renders never re-bind.
+  document.getElementById("plan-days").addEventListener("click", async (e) => {
+    const btn = e.target.closest("[data-plan-action]");
+    if (!btn) return;
+    const card = btn.closest("[data-plan-id]");
+    if (!card) return;
+    btn.disabled = true;
+    try {
+      await api(`/api/plan/${card.dataset.planId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: btn.dataset.planAction }),
+      });
+      loadPlan();
+    } catch {
+      btn.disabled = false;
+    }
+  });
+
+  async function loadPlanChip() {
+    const chip = document.getElementById("today-plan-chip");
+    try {
+      const summary = await api("/api/plan/summary");
+      if (!summary.nextSession) { chip.hidden = true; return; }
+      document.getElementById("today-plan").textContent = summary.nextSession.title;
+      document.getElementById("today-plan-sub").textContent =
+        `${summary.nextSession.plan_day} · ${summary.nextSession.duration_min} min`;
+      chip.hidden = false;
+    } catch {
+      chip.hidden = true;
+    }
+  }
 
   // --- Login ---------------------------------------------------------
 
@@ -290,6 +437,7 @@
   // --- Dashboard -------------------------------------------------------
 
   async function loadDashboard() {
+    loadPlanChip();
     let week;
     try {
       week = await api("/api/week");

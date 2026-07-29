@@ -63,6 +63,7 @@
       <div><span class="brand"><svg class="mascot mascot-topbar" viewBox="0 0 120 78" aria-hidden="true"><use href="#cadence-mascot"/></svg>Cadence</span><span class="brand-tag">G1 tracker</span></div>
       <nav class="nav-tabs">
         <button class="nav-tab active" data-view="dashboard">Dashboard</button>
+        <button class="nav-tab" data-view="plan">Plan</button>
         <button class="nav-tab" data-view="activities">Activities</button>
         <button class="nav-tab" data-view="nutrition">Nutrition</button>
         <button class="nav-tab" data-view="trends">Trends</button>
@@ -94,6 +95,11 @@
           <div class="today-chip-label">Last sleep</div>
           <div class="today-chip-value" id="today-sleep">--</div>
           <div class="today-chip-sub">most recent night</div>
+        </div>
+        <div class="today-chip" id="today-plan-chip" hidden>
+          <div class="today-chip-label">Next planned</div>
+          <div class="today-chip-value" id="today-plan">--</div>
+          <div class="today-chip-sub" id="today-plan-sub"></div>
         </div>
       </div>
 
@@ -156,6 +162,33 @@
           <div id="race-goal-set" class="race-goal-set" hidden></div>
         </div>
       </div>
+    </section>
+
+    <section id="view-plan" class="section" hidden>
+      <div class="plan-header">
+        <div>
+          <h2 id="plan-phase-title">Training plan</h2>
+          <div id="plan-week-label" class="plan-week-label"></div>
+        </div>
+        <div class="plan-week-nav">
+          <button type="button" class="day-nav-btn" id="plan-prev-week" aria-label="Previous week">&lsaquo;</button>
+          <button type="button" class="day-nav-btn" id="plan-next-week" aria-label="Next week">&rsaquo;</button>
+        </div>
+      </div>
+      <div id="plan-week-summary" class="plan-week-summary"></div>
+      <div id="plan-days"></div>
+      <div id="plan-empty" class="plan-empty" hidden>
+        <p>No plan is loaded yet. Seed one with bin/seed-plan.ts on the server.</p>
+      </div>
+      <details class="plan-info" id="plan-info">
+        <summary>Roadmap, zones and priorities</summary>
+        <div id="plan-roadmap"></div>
+        <div class="plan-zones">
+          <div id="plan-zones-power"></div>
+          <div id="plan-zones-hr"></div>
+        </div>
+        <p id="plan-priority-note" class="plan-priority"></p>
+      </details>
     </section>
 
     <section id="view-activities" class="section" hidden>

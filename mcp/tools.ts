@@ -53,6 +53,28 @@ export const TOOLS: ToolDefinition[] = [
     },
   },
   {
+    name: "get_plan_week",
+    description:
+      "Get the training plan for a week: the planned sessions (sport, title, duration, target, status) for the Monday-anchored week containing 'date', plus overall plan progress. Omit 'date' for the current week.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        date: {
+          type: "string",
+          description: "ISO date inside the target week (e.g. 2026-08-05). Omit for this week.",
+        },
+      },
+      additionalProperties: false,
+    },
+    handler: async (client, args) => {
+      const date = typeof args.date === "string" ? args.date : undefined;
+      const week = (await client.getPlanWeek(date)) as Record<string, unknown>;
+      const summary = (await client.getPlanSummary()) as Record<string, unknown>;
+      const head = `${summary.phase} week ${summary.weekNo} of ${summary.totalWeeks}, plan ${summary.completionPercent} percent complete so far.`;
+      return `${head}\n\n${pretty(week)}`;
+    },
+  },
+  {
     name: "get_goal_progress",
     description:
       "Get progress toward TELOS goal G1 (5 swim/bike sessions per week totaling 8 hours) for the current week: sessions and hours completed vs targets, with a plain-language gap statement.",

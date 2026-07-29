@@ -20,6 +20,7 @@ import { postZwiftPowerSync, getZwiftPowerResults, getZwiftPowerStatus } from ".
 import { getTrainingLoad, getConsistency, getRecords, getDigest, getWeight, getG1Risk, getPacing, getYoy, getPowerCurveRoute } from "./routes/metrics";
 import { handleGolfRounds } from "./routes/golf";
 import { getActivityDetail } from "./routes/activityDetail";
+import { getPlanWeek, getPlanSummary, patchPlanStatus } from "./routes/plan";
 import { getDuplicates, postDismissDuplicate, postUndismissDuplicate, postMergeDuplicate } from "./routes/duplicates";
 import {
   estimateNutritionRoute,
@@ -126,6 +127,12 @@ async function handleApi(req: Request, url: URL): Promise<Response> {
   if (path === "/api/metrics/power-curve" && method === "GET") return getPowerCurveRoute();
 
   if (path === "/api/import/csv" && method === "POST") return importCsv(req);
+
+  // Training plan (planned workouts). Read and mark-only; content is seeded.
+  if (path === "/api/plan/week" && method === "GET") return getPlanWeek(url);
+  if (path === "/api/plan/summary" && method === "GET") return getPlanSummary();
+  const planMatch = /^\/api\/plan\/(\d+)$/.exec(path);
+  if (planMatch !== null && method === "PATCH") return patchPlanStatus(req, planMatch[1] as string);
 
   // Nutrition (ISC-199..205). All behind the same /api/* auth gate above.
   if (path === "/api/nutrition/estimate" && method === "POST") return estimateNutritionRoute(req);

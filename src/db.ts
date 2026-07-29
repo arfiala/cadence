@@ -626,6 +626,31 @@ export function runMigrations(database: Database): void {
     INSERT OR IGNORE INTO settings (key, value) VALUES ('nutrition_target_kcal', '2200');
     INSERT OR IGNORE INTO settings (key, value) VALUES ('nutrition_target_protein_g', '150');
   `);
+
+  // Planned workouts (training plan feature). Guarded additive table; content
+  // arrives only via bin/seed-plan.ts, never at boot, so migrations stay
+  // data-free and a double run is a no-op. status transitions are enforced by
+  // the CHECK here plus route-layer validation. Entirely separate from
+  // activities: nothing in G1, the load engine, or sync reads this table.
+  database.exec(`
+    CREATE TABLE IF NOT EXISTS planned_workouts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      plan_day TEXT NOT NULL,
+      sport TEXT NOT NULL,
+      title TEXT NOT NULL,
+      detail TEXT NOT NULL DEFAULT '',
+      duration_min INTEGER NOT NULL DEFAULT 0,
+      distance_m INTEGER,
+      target TEXT,
+      tss_planned INTEGER,
+      week_no INTEGER NOT NULL,
+      phase TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'planned' CHECK (status IN ('planned','done','skipped')),
+      activity_id INTEGER,
+      sort INTEGER NOT NULL DEFAULT 1
+    );
+    CREATE INDEX IF NOT EXISTS idx_planned_workouts_day ON planned_workouts(plan_day);
+  `);
 }
 
 runMigrations(db);

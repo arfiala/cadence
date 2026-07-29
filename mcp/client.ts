@@ -89,6 +89,15 @@ export class CadenceClient {
     return parsed;
   }
 
+  getPlanWeek(date?: string): Promise<unknown> {
+    const qs = date !== undefined ? `?date=${encodeURIComponent(date)}` : "";
+    return this.request("GET", `/api/plan/week${qs}`);
+  }
+
+  getPlanSummary(): Promise<unknown> {
+    return this.request("GET", "/api/plan/summary");
+  }
+
   getWeek(date?: string): Promise<unknown> {
     const qs = date !== undefined ? `?date=${encodeURIComponent(date)}` : "";
     return this.request("GET", `/api/week${qs}`);
