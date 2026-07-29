@@ -3,7 +3,7 @@
 // seeds exactly one block. Plan content is deterministic (src/data/trainingPlan.ts,
 // fixed PLAN_START, no clock reads), so any two seeds produce identical rows.
 //
-// Usage: DATABASE_PATH=/path/to/cadence.db bun bin/seed-plan.ts [--force]
+// Usage: DB_PATH=/path/to/cadence.db bun bin/seed-plan.ts [--force]
 
 import { db } from "../src/db";
 import { buildPlan, PLAN_PHASE, PLAN_START } from "../src/data/trainingPlan";

@@ -58,7 +58,7 @@ describe("planned_workouts migration", () => {
 
   test("guarded DDL is a no-op on a second run against the same file", () => {
     insertPlanned();
-    const path = process.env.DATABASE_PATH as string;
+    const path = process.env.DB_PATH as string;
     const second = new Database(path);
     second.exec("CREATE TABLE IF NOT EXISTS planned_workouts (id INTEGER PRIMARY KEY AUTOINCREMENT)");
     second.close();
@@ -214,7 +214,7 @@ describe("plan content safety rails", () => {
 });
 
 describe("seed script", () => {
-  const env = { ...process.env, DATABASE_PATH: process.env.DATABASE_PATH as string };
+  const env = { ...process.env, DB_PATH: process.env.DB_PATH as string };
   const run = (args: string[] = []) =>
     Bun.spawnSync(["bun", "bin/seed-plan.ts", ...args], { env, cwd: `${import.meta.dir}/..` });
 

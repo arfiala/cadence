@@ -305,6 +305,18 @@
     } catch {
       return;
     }
+    // First open before the block begins: jump to week 1 instead of showing
+    // an empty pre-plan week (plan_start is always a Monday).
+    if (
+      planMonday === null &&
+      summary.totalSessions > 0 &&
+      week.sessions.length === 0 &&
+      week.weekStart < summary.planStart
+    ) {
+      planMonday = summary.planStart;
+      loadPlan();
+      return;
+    }
     const empty = summary.totalSessions === 0;
     document.getElementById("plan-empty").hidden = !empty;
     document.getElementById("plan-days").innerHTML = "";
