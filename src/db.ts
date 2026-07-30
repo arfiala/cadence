@@ -651,6 +651,52 @@ export function runMigrations(database: Database): void {
     );
     CREATE INDEX IF NOT EXISTS idx_planned_workouts_day ON planned_workouts(plan_day);
   `);
+
+  // Adaptive plan engine (guarded ALTERs, safe on the live seeded table).
+  addColumnIfMissing(database, "planned_workouts", "kind", "TEXT");
+  addColumnIfMissing(database, "planned_workouts", "time_hint", "TEXT");
+  addColumnIfMissing(database, "planned_workouts", "done_source", "TEXT");
+  addColumnIfMissing(database, "planned_workouts", "adjusted", "INTEGER NOT NULL DEFAULT 0");
+
+  // Kind backfill for rows seeded before the column existed. Deterministic
+  // from the stable title prefixes; WHERE kind IS NULL makes a re-run a no-op.
+  database.exec(`
+    UPDATE planned_workouts SET kind = CASE
+      WHEN title LIKE 'Zwift race%' THEN 'race'
+      WHEN title LIKE 'Long ride%' THEN 'long_ride'
+      WHEN title LIKE 'Long run%' THEN 'long_run'
+      WHEN title LIKE 'Easy run%' THEN 'easy_run'
+      WHEN title LIKE 'Easy spin%' THEN 'spin'
+      WHEN title LIKE 'Strength A%' THEN 'strength_a'
+      WHEN title LIKE 'Strength B%' THEN 'strength_b'
+      WHEN title LIKE 'Brick run%' THEN 'brick'
+      ELSE 'rest' END
+    WHERE kind IS NULL;
+  `);
+
+  // Every adaptation the engine makes, human-readable, newest-first feed.
+  database.exec(`
+    CREATE TABLE IF NOT EXISTS plan_adaptations (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+      effective_from TEXT NOT NULL,
+      kind TEXT NOT NULL,
+      description TEXT NOT NULL,
+      reason TEXT NOT NULL,
+      session_id INTEGER,
+      activity_id INTEGER
+    );
+  `);
+
+  // Durable auto-done idempotence: the same session/activity pair records one
+  // auto_done row even if the in-process guard is ever lost. (Activity
+  // start_time already carries idx_activities_start_time from the golf
+  // rebuild, so the adapt pass's trailing windows need no new index.)
+  database.exec(`
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_adapt_autodone_pair
+      ON plan_adaptations(kind, session_id, activity_id)
+      WHERE kind = 'auto_done';
+  `);
 }
 
 runMigrations(db);

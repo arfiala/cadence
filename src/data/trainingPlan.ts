@@ -112,6 +112,7 @@ export type PlannedSeed = {
   planDay: string; sport: "bike" | "run" | "strength" | "mobility" | "rest";
   title: string; detail: string; durationMin: number; distanceM: number | null;
   target: string | null; tssPlanned: number | null; weekNo: number; phase: string; sort: number;
+  kind: string;
 };
 
 const RUN_MIN_PER_KM = 7; // easy-pace planning estimate
@@ -130,26 +131,26 @@ export function buildPlan(): PlannedSeed[] {
     const day = (offset: number) => addDays(monday, offset);
     const wkLabel = w.label ? ` (${w.label} week)` : "";
     // Monday: Strength A
-    out.push({ planDay: day(0), sport: "strength", title: STRENGTH_A.title, detail: STRENGTH_A.detail, durationMin: STRENGTH_A.durationMin, distanceM: null, target: "1 to 2 reps in reserve", tssPlanned: null, weekNo: w.week, phase: PLAN_PHASE, sort: 1 });
+    out.push({ planDay: day(0), sport: "strength", title: STRENGTH_A.title, detail: STRENGTH_A.detail, durationMin: STRENGTH_A.durationMin, distanceM: null, target: "1 to 2 reps in reserve", tssPlanned: null, weekNo: w.week, phase: PLAN_PHASE, sort: 1, kind: "strength_a" });
     // Tuesday: Zwift race
-    out.push({ planDay: day(1), sport: "bike", title: "Zwift race" + wkLabel, detail: "Warm up 15 min in Z2 (95 to 127 W), then race. This is the week's intensity. Spin down 5 to 10 min easy after. No race that fits the evening? Ride 30 min with 4 x 4 min at 179 to 203 W, 3 min easy between. Same session, same box ticked.", durationMin: 75, distanceM: null, target: "Race effort after a 95 to 127 W warmup", tssPlanned: 85, weekNo: w.week, phase: PLAN_PHASE, sort: 1 });
+    out.push({ planDay: day(1), sport: "bike", title: "Zwift race" + wkLabel, detail: "Warm up 15 min in Z2 (95 to 127 W), then race. This is the week's intensity. Spin down 5 to 10 min easy after. No race that fits the evening? Ride 30 min with 4 x 4 min at 179 to 203 W, 3 min easy between. Same session, same box ticked.", durationMin: 75, distanceM: null, target: "Race effort after a 95 to 127 W warmup", tssPlanned: 85, weekNo: w.week, phase: PLAN_PHASE, sort: 1, kind: "race" });
     // Wednesday: long run
     const runMin = Math.round(w.longRunKm * RUN_MIN_PER_KM);
-    out.push({ planDay: day(2), sport: "run", title: `Long run ${w.longRunKm.toFixed(1)} km` + wkLabel, detail: "Conversational pace the whole way. Walk breaks are fine. Keep heart rate in Z2, drift into Z3 only on the final 10 minutes if feeling good.", durationMin: runMin, distanceM: Math.round(w.longRunKm * 1000), target: "HR 157 to 165 bpm (Z2)", tssPlanned: null, weekNo: w.week, phase: PLAN_PHASE, sort: 1 });
+    out.push({ planDay: day(2), sport: "run", title: `Long run ${w.longRunKm.toFixed(1)} km` + wkLabel, detail: "Conversational pace the whole way. Walk breaks are fine. Keep heart rate in Z2, drift into Z3 only on the final 10 minutes if feeling good.", durationMin: runMin, distanceM: Math.round(w.longRunKm * 1000), target: "HR 157 to 165 bpm (Z2)", tssPlanned: null, weekNo: w.week, phase: PLAN_PHASE, sort: 1, kind: "long_run" });
     // Thursday: Strength B (+ optional spin from week 5)
-    out.push({ planDay: day(3), sport: "strength", title: STRENGTH_B.title, detail: STRENGTH_B.detail, durationMin: STRENGTH_B.durationMin, distanceM: null, target: "1 to 2 reps in reserve", tssPlanned: null, weekNo: w.week, phase: PLAN_PHASE, sort: 1 });
+    out.push({ planDay: day(3), sport: "strength", title: STRENGTH_B.title, detail: STRENGTH_B.detail, durationMin: STRENGTH_B.durationMin, distanceM: null, target: "1 to 2 reps in reserve", tssPlanned: null, weekNo: w.week, phase: PLAN_PHASE, sort: 1, kind: "strength_b" });
     if (w.thuSpinMin > 0) {
-      out.push({ planDay: day(3), sport: "bike", title: `Easy spin ${w.thuSpinMin} min`, detail: "Legs-only recovery style spin after lifting. Nothing above Z2.", durationMin: w.thuSpinMin, distanceM: null, target: "95 to 127 W (Z2)", tssPlanned: z2TSS(w.thuSpinMin), weekNo: w.week, phase: PLAN_PHASE, sort: 2 });
+      out.push({ planDay: day(3), sport: "bike", title: `Easy spin ${w.thuSpinMin} min`, detail: "Legs-only recovery style spin after lifting. Nothing above Z2.", durationMin: w.thuSpinMin, distanceM: null, target: "95 to 127 W (Z2)", tssPlanned: z2TSS(w.thuSpinMin), weekNo: w.week, phase: PLAN_PHASE, sort: 2, kind: "spin" });
     }
     // Friday: easy run + strides
-    out.push({ planDay: day(4), sport: "run", title: "Easy run + strides", detail: "Easy Z1 to Z2 running, then 6 x 20s relaxed-fast strides with full recovery. Strides are quick but never straining.", durationMin: w.friRunMin, distanceM: null, target: "HR below 165 bpm, strides by feel", tssPlanned: null, weekNo: w.week, phase: PLAN_PHASE, sort: 1 });
+    out.push({ planDay: day(4), sport: "run", title: "Easy run + strides", detail: "Easy Z1 to Z2 running, then 6 x 20s relaxed-fast strides with full recovery. Strides are quick but never straining.", durationMin: w.friRunMin, distanceM: null, target: "HR below 165 bpm, strides by feel", tssPlanned: null, weekNo: w.week, phase: PLAN_PHASE, sort: 1, kind: "easy_run" });
     // Saturday: rest + ATG
-    out.push({ planDay: day(5), sport: "rest", title: "Rest + daily ATG mobility", detail: ATG_NOTE, durationMin: 0, distanceM: null, target: null, tssPlanned: null, weekNo: w.week, phase: PLAN_PHASE, sort: 1 });
+    out.push({ planDay: day(5), sport: "rest", title: "Rest + daily ATG mobility", detail: ATG_NOTE, durationMin: 0, distanceM: null, target: null, tssPlanned: null, weekNo: w.week, phase: PLAN_PHASE, sort: 1, kind: "rest" });
     // Sunday: long ride (+ brick from week 3)
     const rideH = Math.floor(w.longRideMin / 60), rideM = w.longRideMin % 60;
-    out.push({ planDay: day(6), sport: "bike", title: `Long ride ${rideH}:${String(rideM).padStart(2, "0")}` + wkLabel, detail: "Steady Z2 on Zwift, flat-ish route, stay seated and aero when you can. Eat every 45 min once rides pass 90 min.", durationMin: w.longRideMin, distanceM: null, target: "95 to 127 W (Z2)", tssPlanned: z2TSS(w.longRideMin), weekNo: w.week, phase: PLAN_PHASE, sort: 1 });
+    out.push({ planDay: day(6), sport: "bike", title: `Long ride ${rideH}:${String(rideM).padStart(2, "0")}` + wkLabel, detail: "Steady Z2 on Zwift, flat-ish route, stay seated and aero when you can. Eat every 45 min once rides pass 90 min.", durationMin: w.longRideMin, distanceM: null, target: "95 to 127 W (Z2)", tssPlanned: z2TSS(w.longRideMin), weekNo: w.week, phase: PLAN_PHASE, sort: 1, kind: "long_ride" });
     if (w.brick) {
-      out.push({ planDay: day(6), sport: "run", title: "Brick run 15 min", detail: "Straight off the bike, shoes ready by the trainer. Easy jog, let the legs come around. This is about the transition feeling, not fitness.", durationMin: 15, distanceM: 2000, target: "Easy, RPE 3 to 4", tssPlanned: null, weekNo: w.week, phase: PLAN_PHASE, sort: 2 });
+      out.push({ planDay: day(6), sport: "run", title: "Brick run 15 min", detail: "Straight off the bike, shoes ready by the trainer. Easy jog, let the legs come around. This is about the transition feeling, not fitness.", durationMin: 15, distanceM: 2000, target: "Easy, RPE 3 to 4", tssPlanned: null, weekNo: w.week, phase: PLAN_PHASE, sort: 2, kind: "brick" });
     }
   }
   return out;

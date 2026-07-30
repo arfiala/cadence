@@ -20,7 +20,7 @@ import { postZwiftPowerSync, getZwiftPowerResults, getZwiftPowerStatus } from ".
 import { getTrainingLoad, getConsistency, getRecords, getDigest, getWeight, getG1Risk, getPacing, getYoy, getPowerCurveRoute } from "./routes/metrics";
 import { handleGolfRounds } from "./routes/golf";
 import { getActivityDetail } from "./routes/activityDetail";
-import { getPlanWeek, getPlanSummary, patchPlanStatus } from "./routes/plan";
+import { getPlanWeek, getPlanSummary, patchPlanStatus, getPlanAdaptations } from "./routes/plan";
 import { getDuplicates, postDismissDuplicate, postUndismissDuplicate, postMergeDuplicate } from "./routes/duplicates";
 import {
   estimateNutritionRoute,
@@ -131,6 +131,7 @@ async function handleApi(req: Request, url: URL): Promise<Response> {
   // Training plan (planned workouts). Read and mark-only; content is seeded.
   if (path === "/api/plan/week" && method === "GET") return getPlanWeek(url);
   if (path === "/api/plan/summary" && method === "GET") return getPlanSummary();
+  if (path === "/api/plan/adaptations" && method === "GET") return getPlanAdaptations();
   const planMatch = /^\/api\/plan\/(\d+)$/.exec(path);
   if (planMatch !== null && method === "PATCH") return patchPlanStatus(req, planMatch[1] as string);
 

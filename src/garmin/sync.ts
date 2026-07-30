@@ -317,6 +317,16 @@ export async function runSyncOnce(client: GarminClient): Promise<SyncOutcome> {
     // Golf scorecards likewise: best-effort, never break the run (ISC-424).
     await syncGolf(client);
 
+    // Adaptive plan pass rides the same contract: the freshly synced
+    // activities ARE the completion events, but a pass failure never fails
+    // the sync (runAdaptPass catches internally as well).
+    try {
+      const { runAdaptPass } = await import("../services/planAdapt");
+      runAdaptPass();
+    } catch {
+      // best-effort by contract
+    }
+
     db.query(
       "UPDATE sync_runs SET finished_at = ?, status = 'success', activities_seen = ?, activities_new = ?, sleep_seen = ?, sleep_new = ? WHERE id = ?",
     ).run(nowIso(), activities.length, newCount, sleep.seen, sleep.new, runId);

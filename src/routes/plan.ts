@@ -128,9 +128,47 @@ export async function patchPlanStatus(req: Request, id: string): Promise<Respons
   if (typeof status !== "string" || !VALID_STATUS.has(status)) {
     return jsonError("status must be one of planned, done, skipped", 400);
   }
-  const row = db.query("SELECT id FROM planned_workouts WHERE id = ?").get(Number(id));
+  const row = db.query(
+    "SELECT id, title, plan_day, done_source, activity_id FROM planned_workouts WHERE id = ?",
+  ).get(Number(id)) as { id: number; title: string; plan_day: string; done_source: string | null; activity_id: number | null } | null;
   if (row === null) return jsonError("Not found", 404);
-  db.query("UPDATE planned_workouts SET status = ? WHERE id = ?").run(status, Number(id));
+
+  // Reverting an auto-done is a signal, not noise: tombstone the pair so the
+  // matcher never re-marks what he explicitly un-marked (trust guard).
+  if (status === "planned" && row.done_source === "auto" && row.activity_id !== null) {
+    db.query(
+      `INSERT INTO plan_adaptations (kind, description, reason, effective_from, session_id, activity_id)
+       VALUES ('auto_done_reverted', ?, ?, ?, ?, ?)`,
+    ).run(
+      `${row.title} on ${row.plan_day} un-marked`,
+      "You reverted an automatic match, so that activity will not re-complete this session.",
+      row.plan_day, row.id, row.activity_id,
+    );
+    db.query(
+      "UPDATE planned_workouts SET status = ?, done_source = NULL, activity_id = NULL WHERE id = ?",
+    ).run(status, row.id);
+  } else {
+    const doneSource = status === "done" ? "manual" : null;
+    db.query(
+      "UPDATE planned_workouts SET status = ?, done_source = ? WHERE id = ?",
+    ).run(status, doneSource, row.id);
+  }
+
+  // Best-effort adapt pass after every status change.
+  try {
+    const { runAdaptPass } = await import("../services/planAdapt");
+    runAdaptPass();
+  } catch {
+    // never fail the request over adaptation
+  }
+
   const updated = db.query("SELECT * FROM planned_workouts WHERE id = ?").get(Number(id));
   return Response.json({ session: updated });
+}
+
+export function getPlanAdaptations(): Response {
+  const rows = db.query(
+    "SELECT id, created_at, effective_from, kind, description, reason FROM plan_adaptations ORDER BY id DESC LIMIT 20",
+  ).all();
+  return Response.json({ adaptations: rows });
 }

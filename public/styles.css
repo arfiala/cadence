@@ -807,3 +807,12 @@ input.nutri-col-num{text-align:right;}
 .plan-zones{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px;margin-top:12px;}
 .plan-zone-row{display:flex;justify-content:space-between;border-bottom:1px solid #d8d0bd;padding:4px 0;font-size:0.92rem;}
 .plan-priority{margin-top:14px;font-size:0.9rem;color:#5a5344;}
+
+/* --- Adaptive plan --- */
+.plan-adjusted{display:inline-block;font-size:0.7rem;font-weight:700;background:var(--mustard);color:var(--ink);border:1px solid var(--ink);border-radius:999px;padding:1px 8px;vertical-align:middle;margin-left:6px;}
+.plan-card-hint{font-size:0.82rem;color:var(--muted-text);margin-top:3px;font-style:italic;}
+.plan-toggle-auto{background:#14532D;color:var(--paper);}
+.plan-change-row{border-bottom:1px solid var(--line);padding:8px 0;}
+.plan-change-head{font-weight:600;font-size:0.92rem;}
+.plan-change-reason{font-size:0.88rem;color:var(--soft-text);margin-top:2px;}
+.plan-changes-empty{color:var(--muted-text);font-size:0.9rem;}

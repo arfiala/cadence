@@ -25,14 +25,14 @@ if (force) {
 const rows = buildPlan();
 const insert = db.query(
   `INSERT INTO planned_workouts
-   (plan_day, sport, title, detail, duration_min, distance_m, target, tss_planned, week_no, phase, sort)
-   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+   (plan_day, sport, title, detail, duration_min, distance_m, target, tss_planned, week_no, phase, sort, kind)
+   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 );
 const seedAll = db.transaction((all: ReturnType<typeof buildPlan>) => {
   for (const s of all) {
     insert.run(
       s.planDay, s.sport, s.title, s.detail, s.durationMin,
-      s.distanceM, s.target, s.tssPlanned, s.weekNo, s.phase, s.sort,
+      s.distanceM, s.target, s.tssPlanned, s.weekNo, s.phase, s.sort, s.kind,
     );
   }
 });

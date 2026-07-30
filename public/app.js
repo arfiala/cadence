@@ -269,31 +269,60 @@
   }
 
   const PLAN_DOW = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+  // The adjusted chip only means something while the change is news: show it
+  // for sessions within the next 21 days, not on every card forever.
+  function planShowAdjusted(planDay) {
+    const today = new Date().toISOString().slice(0, 10);
+    const horizon = planAddDays(today, 21);
+    return planDay >= today && planDay <= horizon;
+  }
   const PLAN_SPORT_LABEL = { bike: "Bike", run: "Run", strength: "Strength", mobility: "Mobility", rest: "Rest" };
 
   function renderPlanSession(s) {
     const done = s.status === "done";
     const skipped = s.status === "skipped";
+    const auto = done && s.done_source === "auto";
     const meta = [
       PLAN_SPORT_LABEL[s.sport] || s.sport,
       s.duration_min > 0 ? `${s.duration_min} min` : null,
       s.distance_m ? `${(s.distance_m / 1000).toFixed(1)} km` : null,
       s.tss_planned ? `${s.tss_planned} TSS` : null,
     ].filter(Boolean).join(" · ");
+    const doneLabel = auto ? "Done (synced)" : "Done ✓";
     return `
     <div class="plan-card${done ? " plan-done" : ""}${skipped ? " plan-skipped" : ""}" data-plan-id="${s.id}">
       <div class="plan-card-top">
         <div>
-          <div class="plan-card-title">${escapeHtml(s.title)}</div>
+          <div class="plan-card-title">${escapeHtml(s.title)}${s.adjusted && planShowAdjusted(s.plan_day) ? ` <span class="plan-adjusted">adjusted</span>` : ""}</div>
           <div class="plan-card-meta">${escapeHtml(meta)}${s.target ? ` · ${escapeHtml(s.target)}` : ""}</div>
+          ${s.time_hint && !done ? `<div class="plan-card-hint">${escapeHtml(s.time_hint)}</div>` : ""}
         </div>
         <div class="plan-card-actions">
-          <button type="button" class="plan-toggle" data-plan-action="${done ? "planned" : "done"}">${done ? "Done ✓" : "Mark done"}</button>
+          <button type="button" class="plan-toggle${auto ? " plan-toggle-auto" : ""}" data-plan-action="${done ? "planned" : "done"}">${done ? doneLabel : "Mark done"}</button>
           ${s.sport !== "rest" && !done ? `<button type="button" class="plan-skip" data-plan-action="skipped" ${skipped ? "disabled" : ""}>${skipped ? "Skipped" : "Skip"}</button>` : ""}
         </div>
       </div>
       ${s.detail ? `<details class="plan-card-detail"><summary>Details</summary><pre class="plan-detail-text">${escapeHtml(s.detail)}</pre></details>` : ""}
     </div>`;
+  }
+
+  async function loadPlanChanges() {
+    const el = document.getElementById("plan-changes");
+    try {
+      const data = await api("/api/plan/adaptations");
+      if (!data.adaptations.length) {
+        el.innerHTML = `<p class="plan-changes-empty">No changes yet. The plan adapts as workouts sync in.</p>`;
+        return;
+      }
+      el.innerHTML = data.adaptations.map((a) => `
+        <div class="plan-change-row">
+          <div class="plan-change-head">${escapeHtml(a.created_at.slice(0, 10))} · ${escapeHtml(a.description)}</div>
+          <div class="plan-change-reason">${escapeHtml(a.reason)}</div>
+        </div>`).join("");
+    } catch {
+      el.innerHTML = "";
+    }
   }
 
   async function loadPlan() {
@@ -369,6 +398,7 @@
       "<h3>Heart rate (LTHR 185)</h3>" +
       summary.zonesHr.map((z) => `<div class="plan-zone-row"><span>${escapeHtml(z.zone)}</span><span>${escapeHtml(z.range)}</span></div>`).join("");
     document.getElementById("plan-priority-note").textContent = summary.priorityNote;
+    loadPlanChanges();
   }
 
   document.getElementById("plan-prev-week").addEventListener("click", () => {
