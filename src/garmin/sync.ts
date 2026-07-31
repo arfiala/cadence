@@ -293,6 +293,32 @@ export async function syncGolf(client: GarminClient): Promise<{ seen: number; ne
 // Runs one sync attempt against the given client and records the result in
 // sync_runs, whether it succeeds or fails (ISC-28: a sync failure must never
 // crash the server, and must leave a queryable record).
+// Best-effort Training Readiness pull for today (NY date). Garmin returns an
+// array of readings for the date; the first carrying a numeric score wins.
+// Defensive parse: a shape surprise means "no reading", never a sync failure.
+export async function syncReadiness(client: GarminClient): Promise<void> {
+  if (client.getTrainingReadiness === undefined) return;
+  try {
+    const today = new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York" }).format(new Date());
+    const raw = await client.getTrainingReadiness(today);
+    const list = Array.isArray(raw) ? raw : [raw];
+    for (const entry of list) {
+      const e = entry as { score?: unknown; level?: unknown; calendarDate?: unknown };
+      const score = Number(e?.score);
+      if (!Number.isFinite(score)) continue;
+      const date = typeof e.calendarDate === "string" ? e.calendarDate.slice(0, 10) : today;
+      const level = typeof e.level === "string" ? e.level : null;
+      db.query(
+        `INSERT INTO readiness (calendar_date, score, level) VALUES (?, ?, ?)
+         ON CONFLICT(calendar_date) DO UPDATE SET score = excluded.score, level = excluded.level, fetched_at = strftime('%Y-%m-%dT%H:%M:%fZ','now')`,
+      ).run(date, Math.round(score), level);
+      return;
+    }
+  } catch {
+    // best-effort by contract
+  }
+}
+
 export async function runSyncOnce(client: GarminClient): Promise<SyncOutcome> {
   const startedAt = nowIso();
   const runId = (
@@ -316,6 +342,9 @@ export async function runSyncOnce(client: GarminClient): Promise<SyncOutcome> {
 
     // Golf scorecards likewise: best-effort, never break the run (ISC-424).
     await syncGolf(client);
+
+    // Training Readiness likewise: today's score, upserted, display-only.
+    await syncReadiness(client);
 
     // Adaptive plan pass rides the same contract: the freshly synced
     // activities ARE the completion events, but a pass failure never fails

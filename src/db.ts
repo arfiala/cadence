@@ -688,6 +688,19 @@ export function runMigrations(database: Database): void {
     );
   `);
 
+  // Garmin Training Readiness, one row per calendar day (UNIQUE upsert).
+  // Display-only for now; the adaptive engine deliberately does not read it
+  // yet (gating is a separate, careful step).
+  database.exec(`
+    CREATE TABLE IF NOT EXISTS readiness (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      calendar_date TEXT NOT NULL UNIQUE,
+      score INTEGER NOT NULL,
+      level TEXT,
+      fetched_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+    );
+  `);
+
   // Durable auto-done idempotence: the same session/activity pair records one
   // auto_done row even if the in-process guard is ever lost. (Activity
   // start_time already carries idx_activities_start_time from the golf

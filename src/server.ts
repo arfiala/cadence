@@ -17,7 +17,7 @@ import { postSync, getSyncStatus } from "./routes/sync";
 import { getSleep } from "./routes/sleep";
 import { importCsv } from "./routes/csv";
 import { postZwiftPowerSync, getZwiftPowerResults, getZwiftPowerStatus } from "./routes/zwiftpower";
-import { getTrainingLoad, getConsistency, getRecords, getDigest, getWeight, getG1Risk, getPacing, getYoy, getPowerCurveRoute } from "./routes/metrics";
+import { getTrainingLoad, getConsistency, getRecords, getDigest, getWeight, getG1Risk, getPacing, getYoy, getPowerCurveRoute, getReadinessRoute } from "./routes/metrics";
 import { handleGolfRounds } from "./routes/golf";
 import { getActivityDetail } from "./routes/activityDetail";
 import { getPlanWeek, getPlanSummary, patchPlanStatus, getPlanAdaptations } from "./routes/plan";
@@ -125,6 +125,7 @@ async function handleApi(req: Request, url: URL): Promise<Response> {
   if (path === "/api/metrics/pacing" && method === "GET") return getPacing();
   if (path === "/api/metrics/yoy" && method === "GET") return getYoy();
   if (path === "/api/metrics/power-curve" && method === "GET") return getPowerCurveRoute();
+  if (path === "/api/metrics/readiness" && method === "GET") return getReadinessRoute();
 
   if (path === "/api/import/csv" && method === "POST") return importCsv(req);
 

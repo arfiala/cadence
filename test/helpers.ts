@@ -24,6 +24,7 @@ export function resetDb(): void {
   db.exec("DELETE FROM nutrition_entries;");
   db.exec("DELETE FROM planned_workouts;");
   db.exec("DELETE FROM plan_adaptations;");
+  db.exec("DELETE FROM readiness;");
   db.exec("DELETE FROM users;");
   db.exec("DELETE FROM settings;");
   db.exec("INSERT OR IGNORE INTO settings (key, value) VALUES ('target_sessions','5');");

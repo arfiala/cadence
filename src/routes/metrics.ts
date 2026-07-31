@@ -5,6 +5,7 @@
 // numbers are correct (ISC-139). Recomputed fresh every call, so an edit or
 // delete shows up on the next read with no stale cache (ISC-143).
 
+import { db } from "../db";
 import { jsonError } from "../lib/http";
 import { getThresholds } from "../services/weekSummary";
 import { computeDailySeries, currentWeekLoad } from "../metrics/series";
@@ -100,4 +101,13 @@ export function getPowerCurveRoute(): Response {
     configured: isZwiftPowerConfigured(),
     ...computePowerCurve(new Date()),
   });
+}
+
+// GET /api/metrics/readiness: Garmin Training Readiness, newest first.
+// Display-only surface; the adaptive engine deliberately does not read this.
+export function getReadinessRoute(): Response {
+  const rows = db.query(
+    "SELECT calendar_date, score, level FROM readiness ORDER BY calendar_date DESC LIMIT 14",
+  ).all();
+  return Response.json({ readiness: rows });
 }

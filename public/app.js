@@ -478,8 +478,24 @@
 
   // --- Dashboard -------------------------------------------------------
 
+  async function loadReadinessChip() {
+    const chip = document.getElementById("today-readiness-chip");
+    try {
+      const data = await api("/api/metrics/readiness");
+      const latest = data.readiness && data.readiness[0];
+      if (!latest) { chip.hidden = true; return; }
+      document.getElementById("today-readiness").textContent = String(latest.score);
+      document.getElementById("today-readiness-sub").textContent =
+        `${latest.level ? latest.level.toLowerCase().replace(/_/g, " ") + " · " : ""}${latest.calendar_date}`;
+      chip.hidden = false;
+    } catch {
+      chip.hidden = true;
+    }
+  }
+
   async function loadDashboard() {
     loadPlanChip();
+    loadReadinessChip();
     let week;
     try {
       week = await api("/api/week");

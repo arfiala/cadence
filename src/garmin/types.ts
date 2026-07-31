@@ -67,6 +67,10 @@ export interface GarminClient {
   // client rides the SDK's own captured session headers. Returns `unknown`:
   // parsed defensively at the sync boundary.
   listGolfScorecards?(): Promise<unknown>;
+
+  // Training Readiness for a calendar date (YYYY-MM-DD). OPTIONAL; the sync
+  // guards the call and treats absence or a throw as "no reading today".
+  getTrainingReadiness?(dateIso: string): Promise<unknown>;
 }
 
 // Normalized Garmin Golf scorecard, parsed defensively from the live shape

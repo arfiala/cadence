@@ -399,6 +399,36 @@ export function createRealGarminClient(): GarminClient {
       }
     },
 
+    // Garmin Training Readiness (score + level for a calendar date). Same
+    // captured-header seam as golf: the SDK wraps no readiness endpoint. Path
+    // follows the python-garminconnect community library; live-probed from
+    // this box before any deploy claim. Best-effort: throw means "no reading".
+    async getTrainingReadiness(dateIso: string): Promise<unknown> {
+      try {
+        const garmin = await authenticate();
+        if (!lastConnectApiHeaders) {
+          await garmin.activities.list({ limit: 1 });
+        }
+        if (!lastConnectApiHeaders) {
+          throw new GarminSyncError("No Garmin session headers available for the readiness fetch.");
+        }
+        const res = await fetch(
+          `https://connectapi.garmin.com/metrics-service/metrics/trainingreadiness/${dateIso}`,
+          { headers: lastConnectApiHeaders, signal: AbortSignal.timeout(15_000) },
+        );
+        if (!res.ok) {
+          throw new GarminSyncError(`Garmin readiness request returned ${res.status}.`);
+        }
+        return await res.json();
+      } catch (err) {
+        if (err instanceof GarminSyncError) throw err;
+        throw new GarminSyncError(
+          `Garmin readiness request failed: ${err instanceof Error ? err.message : String(err)}`,
+          { cause: err },
+        );
+      }
+    },
+
     // Garmin Golf scorecard summaries (ISC-421..427). The SDK wraps no golf
     // endpoint, so this rides the auth headers the SDK itself just used
     // (captured by the fetch seam above). authenticate() + a 1-item activities

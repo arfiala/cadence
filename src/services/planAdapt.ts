@@ -265,6 +265,137 @@ export function elapsedWeekCompletion(now: Date): { week: number; pct: number }[
     .map((r) => ({ week: r.week_no, pct: r.planned > 0 ? r.done / r.planned : 1 }));
 }
 
+// Shared HoldCeiling across completion-driven and RPE-driven holds: two holds
+// of ANY kind in the trailing 6 weeks, and the third becomes a visible
+// escalation instead (SystemsThinking R3 guard).
+function holdCeilingReached(now: Date): boolean {
+  const recentHolds = db.query(
+    "SELECT COUNT(*) n FROM plan_adaptations WHERE kind IN ('progression_hold','rpe_hold') AND created_at >= datetime('now', '-42 days')",
+  ).get() as { n: number };
+  if (recentHolds.n < 2) return false;
+  const already = db.query(
+    "SELECT COUNT(*) n FROM plan_adaptations WHERE kind = 'hold_escalation' AND created_at >= datetime('now', '-14 days')",
+  ).get() as { n: number };
+  if (already.n === 0) {
+    logAdaptation(
+      "hold_escalation",
+      "The plan has held twice and the signals are still bad",
+      "Two holds in a row is where I stop deciding for you. Life might be asking for a smaller plan, or the schedule needs a rethink. Tell Ardee what changed and the plan gets rebuilt around it.",
+      nyDateString(now),
+    );
+  }
+  return true;
+}
+
+// The one rail-safe hold: shift the ENTIRE remaining ramp back a step so every
+// step ratio is preserved verbatim. Used by both hold triggers.
+function shiftRampFrom(targetWeek: number, kind: string, description: string, reason: string, from: string): boolean {
+  const nonCutback = (db.query(
+    "SELECT DISTINCT week_no FROM planned_workouts ORDER BY week_no ASC",
+  ).all() as { week_no: number }[])
+    .map((r) => r.week_no)
+    .filter((w) => !CUTBACK_WEEKS.has(w));
+  type Vol = { id: number; duration_min: number; distance_m: number | null; title: string };
+  const original = new Map<string, Vol>();
+  for (const w of nonCutback) {
+    for (const k of ["long_run", "long_ride", "spin"]) {
+      const row = db.query(
+        "SELECT id, duration_min, distance_m, title FROM planned_workouts WHERE week_no = ? AND kind = ?",
+      ).get(w, k) as Vol | null;
+      if (row) original.set(`${w}:${k}`, row);
+    }
+  }
+  let changed = false;
+  for (const fw of nonCutback.filter((w) => w >= targetWeek)) {
+    const sourceWeek = nonCutback.filter((w) => w < fw).pop();
+    if (sourceWeek === undefined) continue;
+    for (const k of ["long_run", "long_ride", "spin"]) {
+      const src = original.get(`${sourceWeek}:${k}`);
+      const cur = original.get(`${fw}:${k}`);
+      if (!src || !cur) continue;
+      if (src.duration_min >= cur.duration_min) continue;
+      let title = cur.title;
+      if (k === "long_run" && src.distance_m !== null) {
+        title = title.replace(/[\d.]+ km/, `${(src.distance_m / 1000).toFixed(1)} km`);
+      }
+      if (k === "long_ride") {
+        const h = Math.floor(src.duration_min / 60), m = src.duration_min % 60;
+        title = title.replace(/\d+:\d{2}/, `${h}:${String(m).padStart(2, "0")}`);
+      }
+      db.query(
+        "UPDATE planned_workouts SET duration_min = ?, distance_m = ?, title = ?, adjusted = 1 WHERE id = ?",
+      ).run(src.duration_min, src.distance_m, title, cur.id);
+      changed = true;
+    }
+  }
+  if (!changed) return false;
+  const rails = railViolations();
+  if (rails.length > 0) {
+    logAdaptation("rail_abort", `hold on week ${targetWeek} aborted`, rails.join("; "), from);
+    return false;
+  }
+  logAdaptation(kind, description, reason, from);
+  return true;
+}
+
+function nextHoldTarget(now: Date): { targetWeek: number; from: string } | null {
+  // Hold spacing (Advisor 2026-07-31): one structural hold per 14 days, so a
+  // single fatigue episode cannot burn both ceiling slots across back-to-back
+  // passes before the first hold has had any chance to work.
+  const recent = db.query(
+    "SELECT COUNT(*) n FROM plan_adaptations WHERE kind IN ('progression_hold','rpe_hold') AND created_at >= datetime('now', '-14 days')",
+  ).get() as { n: number };
+  if (recent.n > 0) return null;
+  const from = nextMonday(now);
+  const target = db.query(
+    "SELECT DISTINCT week_no FROM planned_workouts WHERE plan_day >= ? ORDER BY week_no ASC",
+  ).all(from) as { week_no: number }[];
+  const targetWeek = target.map((t) => t.week_no).find((w) => !CUTBACK_WEEKS.has(w));
+  if (targetWeek === undefined || targetWeek <= 1) return null;
+  const already = db.query(
+    "SELECT COUNT(*) n FROM plan_adaptations WHERE kind IN ('progression_hold','rpe_hold') AND description LIKE ?",
+  ).get(`%week ${targetWeek}%`) as { n: number };
+  if (already.n > 0) return null;
+  return { targetWeek, from };
+}
+
+// RPE hold: sessions are being COMPLETED but consistently feel too hard.
+// Population is EASY endurance work only (Advisor 2026-07-31): RPE 9 on race
+// day is compliance, not distress, and near-failure strength is prescribed to
+// feel hard. RPE 8+ on a Z2 session is unambiguous. Trigger: in both of the
+// last two elapsed non-cutback weeks, 3 or more easy sessions carry RPE and a
+// MAJORITY of them are 8 or higher (count rule beats a median for legibility
+// and does not hide the tail).
+const EASY_RPE_KINDS = ["long_ride", "long_run", "easy_run", "spin", "brick"];
+
+export function rpeHold(now: Date): boolean {
+  const elapsed = elapsedWeekCompletion(now).filter((w) => !CUTBACK_WEEKS.has(w.week));
+  if (elapsed.length < 2) return false;
+  const lastTwo = elapsed.slice(-2).map((w) => w.week);
+  const weekStats: { high: number; total: number }[] = [];
+  for (const week of lastTwo) {
+    const rpes = (db.query(
+      `SELECT a.rpe FROM planned_workouts p JOIN activities a ON a.id = p.activity_id
+       WHERE p.week_no = ? AND p.status = 'done' AND a.rpe IS NOT NULL
+         AND p.kind IN (${EASY_RPE_KINDS.map(() => "?").join(",")})`,
+    ).all(week, ...EASY_RPE_KINDS) as { rpe: number }[]).map((r) => r.rpe);
+    if (rpes.length < 3) return false;
+    const high = rpes.filter((r) => r >= 8).length;
+    if (high * 2 <= rpes.length) return false;
+    weekStats.push({ high, total: rpes.length });
+  }
+  if (holdCeilingReached(now)) return false;
+  const t = nextHoldTarget(now);
+  if (t === null) return false;
+  const [s1, s2] = weekStats as [{ high: number; total: number }, { high: number; total: number }];
+  return shiftRampFrom(
+    t.targetWeek, "rpe_hold",
+    `Ramp shifted back one step from week ${t.targetWeek} (felt too hard)`,
+    `You finished the work, but the easy sessions stopped feeling easy: ${s1.high} of ${s1.total} rated 8 or harder two weeks ago, ${s2.high} of ${s2.total} last week. From week ${t.targetWeek} every step repeats the one before it. Same ramp, one week later.`,
+    t.from,
+  );
+}
+
 export function progressionHold(now: Date): boolean {
   const elapsed = elapsedWeekCompletion(now).filter((w) => !CUTBACK_WEEKS.has(w.week));
   if (elapsed.length < 2) return false;
@@ -284,93 +415,15 @@ export function progressionHold(now: Date): boolean {
   ).get(weekRows.a, weekRows.b) as { s: number };
   if (actual.s / 60 >= weekRows.m * CAUSE_CHECK_RATIO) return false;
 
-  // HoldCeiling (SystemsThinking R3 "deload spiral"): two consecutive holds
-  // maximum; the third becomes a visible request for a human decision.
-  const recentHolds = db.query(
-    "SELECT COUNT(*) n FROM plan_adaptations WHERE kind = 'progression_hold' AND created_at >= datetime('now', '-42 days')",
-  ).get() as { n: number };
-  if (recentHolds.n >= 2) {
-    const already = db.query(
-      "SELECT COUNT(*) n FROM plan_adaptations WHERE kind = 'hold_escalation' AND created_at >= datetime('now', '-14 days')",
-    ).get() as { n: number };
-    if (already.n === 0) {
-      logAdaptation(
-        "hold_escalation",
-        "The plan has held twice and completion is still low",
-        "Two holds in a row is where I stop deciding for you. Life might be asking for a smaller plan, or the schedule needs a rethink. Tell Ardee what changed and the plan gets rebuilt around it.",
-        nyDateString(now),
-      );
-    }
-    return false;
-  }
-
-  const from = nextMonday(now);
-  const target = db.query(
-    `SELECT DISTINCT week_no FROM planned_workouts WHERE plan_day >= ? ORDER BY week_no ASC`,
-  ).all(from) as { week_no: number }[];
-  const targetWeek = target.map((t) => t.week_no).find((w) => !CUTBACK_WEEKS.has(w));
-  if (targetWeek === undefined || targetWeek <= 1) return false;
-  const already = db.query(
-    "SELECT COUNT(*) n FROM plan_adaptations WHERE kind = 'progression_hold' AND description LIKE ?",
-  ).get(`%week ${targetWeek}%`) as { n: number };
-  if (already.n > 0) return false;
-
-  // A hold SHIFTS the whole remaining ramp back one step rather than denting
-  // a single week: every future non-cutback week takes the ORIGINAL volumes
-  // of the non-cutback week before it. Step sizes are preserved exactly, so
-  // the RUNSAFE spike rule survives by construction (a one-week dent would
-  // make the following designed step an over-10-percent jump).
-  const nonCutback = (db.query(
-    "SELECT DISTINCT week_no FROM planned_workouts ORDER BY week_no ASC",
-  ).all() as { week_no: number }[])
-    .map((r) => r.week_no)
-    .filter((w) => !CUTBACK_WEEKS.has(w));
-  type Vol = { id: number; duration_min: number; distance_m: number | null; title: string };
-  const original = new Map<string, Vol>();
-  for (const w of nonCutback) {
-    for (const kind of ["long_run", "long_ride", "spin"]) {
-      const row = db.query(
-        "SELECT id, duration_min, distance_m, title FROM planned_workouts WHERE week_no = ? AND kind = ?",
-      ).get(w, kind) as Vol | null;
-      if (row) original.set(`${w}:${kind}`, row);
-    }
-  }
-  let changed = false;
-  for (const fw of nonCutback.filter((w) => w >= targetWeek)) {
-    const sourceWeek = nonCutback.filter((w) => w < fw).pop();
-    if (sourceWeek === undefined) continue;
-    for (const kind of ["long_run", "long_ride", "spin"]) {
-      const src = original.get(`${sourceWeek}:${kind}`);
-      const cur = original.get(`${fw}:${kind}`);
-      if (!src || !cur) continue;
-      if (src.duration_min >= cur.duration_min) continue; // never raise, never churn equals
-      let title = cur.title;
-      if (kind === "long_run" && src.distance_m !== null) {
-        title = title.replace(/[\d.]+ km/, `${(src.distance_m / 1000).toFixed(1)} km`);
-      }
-      if (kind === "long_ride") {
-        const h = Math.floor(src.duration_min / 60), m = src.duration_min % 60;
-        title = title.replace(/\d+:\d{2}/, `${h}:${String(m).padStart(2, "0")}`);
-      }
-      db.query(
-        "UPDATE planned_workouts SET duration_min = ?, distance_m = ?, title = ?, adjusted = 1 WHERE id = ?",
-      ).run(src.duration_min, src.distance_m, title, cur.id);
-      changed = true;
-    }
-  }
-  if (!changed) return false;
-  const rails = railViolations();
-  if (rails.length > 0) {
-    logAdaptation("rail_abort", `hold on week ${targetWeek} aborted`, rails.join("; "), from);
-    return false;
-  }
-  logAdaptation(
-    "progression_hold",
-    `Ramp shifted back one step from week ${targetWeek}`,
-    `The last two full weeks landed at ${Math.round(w1.pct * 100)} and ${Math.round(w2.pct * 100)} percent, so from week ${targetWeek} every step repeats the one before it. Same ramp, one week later. Hit most of a week and it carries on from there.`,
-    from,
+  if (holdCeilingReached(now)) return false;
+  const t = nextHoldTarget(now);
+  if (t === null) return false;
+  return shiftRampFrom(
+    t.targetWeek, "progression_hold",
+    `Ramp shifted back one step from week ${t.targetWeek}`,
+    `The last two full weeks landed at ${Math.round(w1.pct * 100)} and ${Math.round(w2.pct * 100)} percent, so from week ${t.targetWeek} every step repeats the one before it. Same ramp, one week later. Hit most of a week and it carries on from there.`,
+    t.from,
   );
-  return true;
 }
 
 // --- R1: day-affinity swap --------------------------------------------------
@@ -467,8 +520,10 @@ export function runAdaptPass(now: Date = new Date()): void {
   try {
     matchActivities(now);
     updateTimeHints(now);
+    // One structural change per pass: completion hold, then RPE hold, then swap.
     const held = progressionHold(now);
-    if (!held) dayAffinitySwap(now);
+    const feltHeld = held ? false : rpeHold(now);
+    if (!held && !feltHeld) dayAffinitySwap(now);
   } catch (err) {
     console.error("plan adapt pass failed:", err);
   } finally {
