@@ -142,6 +142,15 @@ export async function runZpSyncOnce(client: ZwiftPowerClient): Promise<ZpSyncOut
     // Power curve rides along in the same session, never breaking the run.
     await syncPowerCurve(client);
 
+    // FTP auto-sync rides along too: mirror Zwift's FTP estimate when it
+    // changes (recalibrates zones + future plan targets). Best-effort.
+    try {
+      const { syncFtpFromZwift } = await import("../services/ftpSync");
+      await syncFtpFromZwift(client);
+    } catch {
+      // never break the results sync over a recalibration hiccup
+    }
+
     db.query(
       "UPDATE zwiftpower_sync_runs SET finished_at = ?, status = 'success', results_seen = ?, results_new = ? WHERE id = ?",
     ).run(nowIso(), results.length, newCount, runId);

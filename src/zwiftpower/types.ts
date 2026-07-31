@@ -55,6 +55,11 @@ export interface ZwiftPowerClient {
   // stored. The real client fetches it from the SAME authenticated ZwiftPower
   // session as the results (no new session dance).
   getPowerCurve?(): Promise<ZwiftPowerCurvePoint[]>;
+
+  // Returns the rider's current FTP from the Zwift profile (Zwift's own
+  // estimate, updated by Zwift as fitness changes). OPTIONAL; null on any
+  // failure. Feeds the FTP auto-sync recalibration, never the results sync.
+  getZwiftFtp?(): Promise<number | null>;
 }
 
 // Thrown by a ZwiftPowerClient implementation on any failure (auth rejected,

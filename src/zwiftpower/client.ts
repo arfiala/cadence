@@ -18,7 +18,7 @@
 // re-auth is not required every sync (ISC-130).
 
 import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { ZwiftPowerAPI } from "@codingwithspike/zwift-api-wrapper";
+import { ZwiftAPI, ZwiftPowerAPI } from "@codingwithspike/zwift-api-wrapper";
 import type { ZwiftPowerClient, ZwiftPowerResult, ZwiftPowerCurvePoint } from "./types";
 import { ZwiftPowerSyncError, POWER_CURVE_TARGETS } from "./types";
 import { getZwiftPowerConfig, zwiftCookieDir, zwiftCookiePath } from "./config";
@@ -185,6 +185,22 @@ export function createRealZwiftPowerClient(): ZwiftPowerClient {
           `ZwiftPower request failed: ${err instanceof Error ? err.message : String(err)}`,
           { cause: err },
         );
+      }
+    },
+
+    async getZwiftFtp(): Promise<number | null> {
+      const config = getZwiftPowerConfig();
+      const api = new ZwiftAPI(config.username, config.password);
+      try {
+        await api.authenticate();
+        const response = await api.getProfile("me");
+        if (response.error !== undefined || response.body === undefined) return null;
+        const raw = (response.body as { ftp?: unknown }).ftp;
+        const ftp = Number(raw);
+        return Number.isFinite(ftp) && ftp > 0 ? Math.round(ftp) : null;
+      } catch {
+        // Best-effort by contract: a profile hiccup must never break the sync.
+        return null;
       }
     },
 

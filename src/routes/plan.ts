@@ -12,9 +12,11 @@ import {
   PLAN_WEEKS,
   MACRO_ROADMAP,
   PRIORITY_NOTE,
-  ZONES_POWER,
+  FTP_W,
+  zonesPowerFor,
   ZONES_HR,
 } from "../data/trainingPlan";
+import { getThresholds } from "../services/weekSummary";
 
 type PlannedRow = {
   id: number;
@@ -116,7 +118,7 @@ export function getPlanSummary(): Response {
     nextSession: next,
     macroRoadmap: MACRO_ROADMAP,
     priorityNote: PRIORITY_NOTE,
-    zonesPower: ZONES_POWER,
+    zonesPower: zonesPowerFor(getThresholds().ftpWatts ?? FTP_W),
     zonesHr: ZONES_HR,
   });
 }

@@ -33,17 +33,34 @@ export const MACRO_ROADMAP = [
 export const PRIORITY_NOTE =
   "If a week gets tight, the order that protects the goal: Sunday long ride, then the long run, then strength A, then everything else. Informational only, the plan assumes full weeks.";
 
-// Zones from measured numbers Austin chose to roll with (2026-07-17 values).
+// Zones from measured numbers. FTP_W is the SEED-TIME default; the live value
+// lives in settings.ftp_watts and auto-syncs from Zwift. All watt strings
+// derive from these functions so recalibration regenerates from one source.
 export const FTP_W = 169;
 export const LTHR_BPM = 185;
-export const ZONES_POWER = [
-  { zone: "Z1 Recovery", range: "below 93 W" },
-  { zone: "Z2 Endurance", range: "95 to 127 W" },
-  { zone: "Z3 Tempo", range: "128 to 152 W" },
-  { zone: "Sweet spot", range: "149 to 160 W (Base 2 preview)" },
-  { zone: "Z4 Threshold", range: "154 to 177 W" },
-  { zone: "Z5 VO2max", range: "179 to 203 W" },
-];
+
+const w = (f: number, pct: number) => Math.round(f * pct);
+export const z2Range = (ftp: number) => `${w(ftp, 0.56)} to ${w(ftp, 0.75)} W`;
+export const z5Range = (ftp: number) => `${w(ftp, 1.06)} to ${w(ftp, 1.2)} W`;
+export function zonesPowerFor(ftp: number) {
+  return [
+    { zone: "Z1 Recovery", range: `below ${w(ftp, 0.55)} W` },
+    { zone: "Z2 Endurance", range: z2Range(ftp) },
+    { zone: "Z3 Tempo", range: `${w(ftp, 0.76)} to ${w(ftp, 0.9)} W` },
+    { zone: "Sweet spot", range: `${w(ftp, 0.88)} to ${w(ftp, 0.947)} W (Base 2 preview)` },
+    { zone: "Z4 Threshold", range: `${w(ftp, 0.91)} to ${w(ftp, 1.05)} W` },
+    { zone: "Z5 VO2max", range: z5Range(ftp) },
+  ];
+}
+export const ZONES_POWER = zonesPowerFor(FTP_W);
+
+// Per-kind watt-bearing strings, shared by the seed generator and the FTP
+// recalibration service (future planned rows regenerate from these).
+export const raceTarget = (ftp: number) => `Race effort after a ${z2Range(ftp)} warmup`;
+export const raceDetail = (ftp: number) =>
+  `Warm up 15 min in Z2 (${z2Range(ftp)}), then race. This is the week's intensity. Spin down 5 to 10 min easy after. No race that fits the evening? Ride 30 min with 4 x 4 min at ${z5Range(ftp)}, 3 min easy between. Same session, same box ticked.`;
+export const rideTarget = (ftp: number) => `${z2Range(ftp)} (Z2)`;
+export const spinTarget = (ftp: number) => `${z2Range(ftp)} (Z2)`;
 export const ZONES_HR = [
   { zone: "Z1", range: "below 157 bpm" },
   { zone: "Z2", range: "157 to 165 bpm" },
@@ -133,14 +150,14 @@ export function buildPlan(): PlannedSeed[] {
     // Monday: Strength A
     out.push({ planDay: day(0), sport: "strength", title: STRENGTH_A.title, detail: STRENGTH_A.detail, durationMin: STRENGTH_A.durationMin, distanceM: null, target: "1 to 2 reps in reserve", tssPlanned: null, weekNo: w.week, phase: PLAN_PHASE, sort: 1, kind: "strength_a" });
     // Tuesday: Zwift race
-    out.push({ planDay: day(1), sport: "bike", title: "Zwift race" + wkLabel, detail: "Warm up 15 min in Z2 (95 to 127 W), then race. This is the week's intensity. Spin down 5 to 10 min easy after. No race that fits the evening? Ride 30 min with 4 x 4 min at 179 to 203 W, 3 min easy between. Same session, same box ticked.", durationMin: 75, distanceM: null, target: "Race effort after a 95 to 127 W warmup", tssPlanned: 85, weekNo: w.week, phase: PLAN_PHASE, sort: 1, kind: "race" });
+    out.push({ planDay: day(1), sport: "bike", title: "Zwift race" + wkLabel, detail: raceDetail(FTP_W), durationMin: 75, distanceM: null, target: raceTarget(FTP_W), tssPlanned: 85, weekNo: w.week, phase: PLAN_PHASE, sort: 1, kind: "race" });
     // Wednesday: long run
     const runMin = Math.round(w.longRunKm * RUN_MIN_PER_KM);
     out.push({ planDay: day(2), sport: "run", title: `Long run ${w.longRunKm.toFixed(1)} km` + wkLabel, detail: "Conversational pace the whole way. Walk breaks are fine. Keep heart rate in Z2, drift into Z3 only on the final 10 minutes if feeling good.", durationMin: runMin, distanceM: Math.round(w.longRunKm * 1000), target: "HR 157 to 165 bpm (Z2)", tssPlanned: null, weekNo: w.week, phase: PLAN_PHASE, sort: 1, kind: "long_run" });
     // Thursday: Strength B (+ optional spin from week 5)
     out.push({ planDay: day(3), sport: "strength", title: STRENGTH_B.title, detail: STRENGTH_B.detail, durationMin: STRENGTH_B.durationMin, distanceM: null, target: "1 to 2 reps in reserve", tssPlanned: null, weekNo: w.week, phase: PLAN_PHASE, sort: 1, kind: "strength_b" });
     if (w.thuSpinMin > 0) {
-      out.push({ planDay: day(3), sport: "bike", title: `Easy spin ${w.thuSpinMin} min`, detail: "Legs-only recovery style spin after lifting. Nothing above Z2.", durationMin: w.thuSpinMin, distanceM: null, target: "95 to 127 W (Z2)", tssPlanned: z2TSS(w.thuSpinMin), weekNo: w.week, phase: PLAN_PHASE, sort: 2, kind: "spin" });
+      out.push({ planDay: day(3), sport: "bike", title: `Easy spin ${w.thuSpinMin} min`, detail: "Legs-only recovery style spin after lifting. Nothing above Z2.", durationMin: w.thuSpinMin, distanceM: null, target: spinTarget(FTP_W), tssPlanned: z2TSS(w.thuSpinMin), weekNo: w.week, phase: PLAN_PHASE, sort: 2, kind: "spin" });
     }
     // Friday: easy run + strides
     out.push({ planDay: day(4), sport: "run", title: "Easy run + strides", detail: "Easy Z1 to Z2 running, then 6 x 20s relaxed-fast strides with full recovery. Strides are quick but never straining.", durationMin: w.friRunMin, distanceM: null, target: "HR below 165 bpm, strides by feel", tssPlanned: null, weekNo: w.week, phase: PLAN_PHASE, sort: 1, kind: "easy_run" });
@@ -148,7 +165,7 @@ export function buildPlan(): PlannedSeed[] {
     out.push({ planDay: day(5), sport: "rest", title: "Rest + daily ATG mobility", detail: ATG_NOTE, durationMin: 0, distanceM: null, target: null, tssPlanned: null, weekNo: w.week, phase: PLAN_PHASE, sort: 1, kind: "rest" });
     // Sunday: long ride (+ brick from week 3)
     const rideH = Math.floor(w.longRideMin / 60), rideM = w.longRideMin % 60;
-    out.push({ planDay: day(6), sport: "bike", title: `Long ride ${rideH}:${String(rideM).padStart(2, "0")}` + wkLabel, detail: "Steady Z2 on Zwift, flat-ish route, stay seated and aero when you can. Eat every 45 min once rides pass 90 min.", durationMin: w.longRideMin, distanceM: null, target: "95 to 127 W (Z2)", tssPlanned: z2TSS(w.longRideMin), weekNo: w.week, phase: PLAN_PHASE, sort: 1, kind: "long_ride" });
+    out.push({ planDay: day(6), sport: "bike", title: `Long ride ${rideH}:${String(rideM).padStart(2, "0")}` + wkLabel, detail: "Steady Z2 on Zwift, flat-ish route, stay seated and aero when you can. Eat every 45 min once rides pass 90 min.", durationMin: w.longRideMin, distanceM: null, target: rideTarget(FTP_W), tssPlanned: z2TSS(w.longRideMin), weekNo: w.week, phase: PLAN_PHASE, sort: 1, kind: "long_ride" });
     if (w.brick) {
       out.push({ planDay: day(6), sport: "run", title: "Brick run 15 min", detail: "Straight off the bike, shoes ready by the trainer. Easy jog, let the legs come around. This is about the transition feeling, not fitness.", durationMin: 15, distanceM: 2000, target: "Easy, RPE 3 to 4", tssPlanned: null, weekNo: w.week, phase: PLAN_PHASE, sort: 2, kind: "brick" });
     }
