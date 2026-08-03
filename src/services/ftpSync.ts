@@ -9,6 +9,7 @@ import { db } from "../db";
 import { nyDateString } from "../week";
 import type { ZwiftPowerClient } from "../zwiftpower/types";
 import { raceTarget, raceDetail, rideTarget, spinTarget } from "../data/trainingPlan";
+import { recordFtpChange } from "../metrics/ftpHistory";
 
 const FTP_MIN = 50;
 const FTP_MAX = 400;
@@ -51,6 +52,7 @@ export async function syncFtpFromZwift(client: ZwiftPowerClient): Promise<boolea
   db.query(
     "INSERT INTO settings (key, value) VALUES ('ftp_watts', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
   ).run(String(zwiftFtp));
+  recordFtpChange(zwiftFtp, "zwift");
 
   // Regenerate watt strings on future still-planned bike sessions from the
   // shared templates. Past rows and done/skipped rows keep their history.

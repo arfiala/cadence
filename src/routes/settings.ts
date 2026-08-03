@@ -4,6 +4,7 @@
 import { db } from "../db";
 import { jsonError, readJsonBody } from "../lib/http";
 import { getSettings } from "../services/weekSummary";
+import { recordFtpChange } from "../metrics/ftpHistory";
 
 // Nutrition targets live in the same settings table but are read directly here
 // (not via getSettings, which stays in weekSummary.ts and must carry zero
@@ -110,7 +111,11 @@ export async function patchSettingsRoute(req: Request): Promise<Response> {
   // FTP / LTHR thresholds (ISC-134). A positive number sets the threshold;
   // an explicit null clears it (the row is deleted, so getSettings reports
   // null and the load engine degrades to a lower tier, ISC-144).
+  // A manual FTP edit that genuinely changes the value also lands in the same
+  // ftp_history log the Zwift auto-sync writes (dashboard trend card). Clears
+  // record nothing: history tracks set values, not the absence of one.
   const clears: string[] = [];
+  let ftpManualSet: number | null = null;
   for (const key of ["ftp_watts", "lthr_bpm"] as const) {
     if (key in body) {
       const v = body[key];
@@ -120,6 +125,7 @@ export async function patchSettingsRoute(req: Request): Promise<Response> {
         return jsonError(`${key} must be a positive integer or null`, 400);
       } else {
         updates.push([key, String(v)]);
+        if (key === "ftp_watts") ftpManualSet = v;
       }
     }
   }
@@ -194,11 +200,25 @@ export async function patchSettingsRoute(req: Request): Promise<Response> {
     return jsonError("No editable settings provided", 400);
   }
 
+  // Read the prior FTP before the write so only a genuine change is recorded
+  // (re-saving the same number in the Trends form stays silent).
+  let ftpBefore: number | null = null;
+  if (ftpManualSet !== null) {
+    const row = db.query("SELECT value FROM settings WHERE key = 'ftp_watts'").get() as {
+      value: string;
+    } | null;
+    const n = row === null ? NaN : Number(row.value);
+    ftpBefore = Number.isFinite(n) && n > 0 ? n : null;
+  }
+
   const stmt = db.query(
     "INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
   );
   for (const [key, value] of updates) {
     stmt.run(key, value);
+  }
+  if (ftpManualSet !== null && ftpManualSet !== ftpBefore) {
+    recordFtpChange(ftpManualSet, "manual");
   }
   const del = db.query("DELETE FROM settings WHERE key = ?");
   for (const key of clears) {

@@ -710,6 +710,38 @@ export function runMigrations(database: Database): void {
       ON plan_adaptations(kind, session_id, activity_id)
       WHERE kind = 'auto_done';
   `);
+
+  // FTP history: one row per accepted FTP change (Zwift auto-sync or a manual
+  // Trends edit), powering the dashboard trend card. Seeded once with the
+  // current threshold so the chart has an honest starting point; values from
+  // before the feature shipped are unknowable and never fabricated.
+  database.exec(`
+    CREATE TABLE IF NOT EXISTS ftp_history (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      recorded_on TEXT NOT NULL,
+      watts INTEGER NOT NULL,
+      source TEXT NOT NULL CHECK (source IN ('seed','zwift','manual')),
+      recorded_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+    );
+  `);
+  const ftpHistoryEmpty =
+    (database.query("SELECT COUNT(*) AS n FROM ftp_history").get() as { n: number }).n === 0;
+  if (ftpHistoryEmpty) {
+    const ftpRow = database
+      .query("SELECT value FROM settings WHERE key = 'ftp_watts'")
+      .get() as { value: string } | null;
+    const watts = ftpRow === null ? NaN : Number(ftpRow.value);
+    if (Number.isInteger(watts) && watts > 0) {
+      // en-CA yields YYYY-MM-DD; inline rather than importing week.ts so the
+      // migration module keeps zero imports beyond bun:sqlite.
+      const nyToday = new Intl.DateTimeFormat("en-CA", {
+        timeZone: "America/New_York",
+      }).format(new Date());
+      database
+        .query("INSERT INTO ftp_history (recorded_on, watts, source) VALUES (?, ?, 'seed')")
+        .run(nyToday, watts);
+    }
+  }
 }
 
 runMigrations(db);

@@ -522,6 +522,7 @@
     loadTodaySleep();
     loadRecords();
     loadWeight();
+    loadFtp();
     loadRace();
   }
 
@@ -949,6 +950,90 @@
   async function loadWeight() {
     const data = await fetchWeightData();
     if (data) renderWeightWidget(DASHBOARD_WEIGHT_ELS, data);
+  }
+
+  // --- FTP over time (dashboard card) ---------------------------------
+  // A step chart, not a line: an FTP holds until the next change, so the
+  // series draws as horizontal shelves with a vertical riser at each recorded
+  // change. Reuses the weight card's classes and geometry.
+  function renderFtpSparkline(points, svgId) {
+    const svg = document.getElementById(svgId);
+    if (!svg) return;
+    const width = 320;
+    const height = 64;
+    const pad = { x: 6, y: 8 };
+    if (points.length === 0) {
+      svg.innerHTML = "";
+      return;
+    }
+    const values = points.map((p) => p.watts);
+    const min = Math.min(...values);
+    const max = Math.max(...values);
+    const span = max - min || 1;
+    const n = points.length;
+    const xAt = (i) => pad.x + (n === 1 ? (width - 2 * pad.x) / 2 : (i * (width - 2 * pad.x)) / (n - 1));
+    const yAt = (w) => height - pad.y - ((w - min) / span) * (height - 2 * pad.y);
+    const coords = points.map((p, i) => [xAt(i), yAt(p.watts)]);
+    let path = "";
+    for (let i = 0; i < n; i++) {
+      const [x, y] = coords[i];
+      if (i === 0) path = `M${x.toFixed(1)},${y.toFixed(1)}`;
+      else path += ` H${x.toFixed(1)} V${y.toFixed(1)}`;
+    }
+    const dots = coords.map(([x, y]) => `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="2.5" fill="#7E4FC0"/>`).join("");
+    const line = n > 1 ? `<path d="${path}" fill="none" stroke="#7E4FC0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>` : "";
+    svg.innerHTML = `${line}${dots}`;
+  }
+
+  function renderFtpCard(data) {
+    const section = document.getElementById("view-ftp-card");
+    if (!section) return;
+    const points = data.points || [];
+    // Honest empty state: no threshold set and no history -> no card.
+    if (data.current == null && points.length === 0) {
+      section.hidden = true;
+      return;
+    }
+    section.hidden = false;
+
+    const cur = document.getElementById("ftp-current");
+    if (cur) cur.textContent = data.current != null ? `${data.current} W` : "not set";
+
+    const deltaEl = document.getElementById("ftp-delta");
+    if (deltaEl) {
+      if (points.length < 2 || data.delta == null) {
+        deltaEl.textContent = points.length < 2 ? "Tracking starts here" : "Threshold cleared";
+        deltaEl.className = "weight-delta flat";
+      } else if (data.delta === 0) {
+        deltaEl.textContent = `Unchanged since ${points[0].date}`;
+        deltaEl.className = "weight-delta flat";
+      } else {
+        const up = data.delta > 0;
+        deltaEl.textContent = `${up ? "↑" : "↓"} ${Math.abs(data.delta)} W since ${points[0].date}`;
+        deltaEl.className = `weight-delta ${up ? "up" : "down"}`;
+      }
+    }
+
+    renderFtpSparkline(points, "ftp-svg");
+
+    const statsEl = document.getElementById("ftp-stats");
+    if (statsEl) {
+      if (data.count > 0 && data.min != null && data.max != null) {
+        statsEl.textContent = `${data.count} recorded value${data.count === 1 ? "" : "s"} · range ${data.min} to ${data.max} W`;
+      } else {
+        statsEl.textContent = "";
+      }
+    }
+  }
+
+  async function loadFtp() {
+    let data;
+    try {
+      data = await api("/api/metrics/ftp-history");
+    } catch {
+      return;
+    }
+    renderFtpCard(data);
   }
 
   async function loadNutritionWeight() {

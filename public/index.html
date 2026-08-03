@@ -157,6 +157,19 @@
               <ul class="weight-readings" id="weight-readings"></ul>
               <p class="muted weight-note">From your Zwift ride data.</p>
             </div>
+          </div>
+
+          <div id="view-ftp-card" hidden>
+            <h2 class="section-title">FTP over time</h2>
+            <div class="card weight-card">
+              <div class="weight-head">
+                <div class="weight-current" id="ftp-current">--</div>
+                <div class="weight-delta flat" id="ftp-delta"></div>
+              </div>
+              <svg id="ftp-svg" class="weight-spark" viewBox="0 0 320 64" preserveAspectRatio="xMidYMid meet"></svg>
+              <div class="weight-stats" id="ftp-stats"></div>
+              <p class="muted weight-note">From Zwift auto-sync and your Trends edits. Each step is a recorded change.</p>
+            </div>
             <hr class="rule dash-rule">
           </div>
 

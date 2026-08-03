@@ -13,6 +13,7 @@ import { computeConsistency } from "../metrics/consistency";
 import { computeRecords } from "../metrics/records";
 import { computeDigest } from "../metrics/digest";
 import { computeWeightSeries } from "../metrics/weight";
+import { computeFtpSeries } from "../metrics/ftpHistory";
 import { weightGoal } from "./settings";
 import { computeG1Risk, computePacing } from "../metrics/g1risk";
 import { computeYoy } from "../metrics/yoy";
@@ -110,4 +111,10 @@ export function getReadinessRoute(): Response {
     "SELECT calendar_date, score, level FROM readiness ORDER BY calendar_date DESC LIMIT 14",
   ).all();
   return Response.json({ readiness: rows });
+}
+
+// GET /api/metrics/ftp-history: the FTP trend series for the dashboard card.
+// Pure read over ftp_history plus the live setting, recomputed each call.
+export function getFtpHistoryRoute(): Response {
+  return Response.json(computeFtpSeries());
 }
