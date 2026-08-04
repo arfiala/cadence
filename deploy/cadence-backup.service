@@ -1,0 +1,15 @@
+[Unit]
+Description=Cadence nightly off-site encrypted DB backup
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=ubuntu
+WorkingDirectory=/opt/cadence
+# BACKUP_* secrets live in the app env file (mode 600): BACKUP_S3_BUCKET,
+# BACKUP_S3_REGION, BACKUP_ENCRYPTION_KEY, BACKUP_S3_ACCESS_KEY_ID,
+# BACKUP_S3_SECRET_ACCESS_KEY. DB_PATH defaults to ./cadence.db under
+# WorkingDirectory when unset.
+EnvironmentFile=/opt/cadence/.env
+ExecStart=/home/ubuntu/.bun/bin/bun /opt/cadence/bin/backup.ts

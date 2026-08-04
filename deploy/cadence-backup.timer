@@ -1,0 +1,11 @@
+[Unit]
+Description=Run the Cadence DB backup nightly
+
+[Timer]
+# 03:32 UTC daily, staggered after the 03:12 Suretas backup on the same box.
+OnCalendar=*-*-* 03:32:00
+RandomizedDelaySec=600
+Persistent=true
+
+[Install]
+WantedBy=timers.target
